@@ -1,0 +1,2 @@
+[console_scripts]
+simul8 = simul8.cli.main:main

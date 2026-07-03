@@ -1,0 +1,6 @@
+The simulator is event-driven, not real-time.
+The core never depends on research modules.
+Research ideas are implemented as plugins, not engine changes.
+Reproducibility is more important than raw performance.
+Every experiment should be runnable from a configuration file.
+Every new paper should ideally require adding modules, not modifying the engine.
