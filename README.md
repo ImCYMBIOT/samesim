@@ -23,6 +23,11 @@ simul8/
 └── cli/           # CLI command line interface
 ```
 
+## Documentation
+
+For a deep dive into the architecture, component design, simulation loop lifecycle, and a guide on how to extend Simul8 by writing your own plugins, see the [Extended Documentation & Developer Guide](docs/extended_documentation.md).
+
+
 ## Getting Started
 
 ### Installation

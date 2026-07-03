@@ -2,10 +2,10 @@ schema_version: "1.0"
 
 experiment:
   name: "gossip_convergence_1000"
-  seed: 42
+  seed: 421
 
 simulation:
-  num_agents: 1000
+  num_agents: 100
   max_virtual_time: 200
   tick_interval: 1
 
