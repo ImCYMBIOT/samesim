@@ -134,10 +134,9 @@ class ExperimentRunner:
         # --- 7. Register metric collectors ---
         metrics_engine = MetricsEngine()
         for collector in metric_collectors:
-            # Optional two-phase init for collectors that need registry access
-            # (e.g. future state-snapshotting metrics). Safe to call if not defined.
+            # Optional two-phase init for collectors that need registry/topology access
             if hasattr(collector, "configure"):
-                collector.configure(agent_registry=agent_registry)
+                collector.configure(agent_registry=agent_registry, topology_manager=topology_manager)
             metrics_engine.register(collector)
 
         # --- 8. Assemble core ---
@@ -157,12 +156,66 @@ class ExperimentRunner:
             config=config,
         )
 
-        # --- 9. Run ---
+        # --- 9. Run with wall-clock timing ---
+        import time
+        start_wall_time = time.perf_counter()
         engine.run()
+        elapsed_wall_time = time.perf_counter() - start_wall_time
 
         # --- 10. Export ---
         series = metrics_engine.get_all_series()
+        written_paths = []
         for adapter in persistence_adapters:
             written = adapter.write(series, config, output_path)
             for path in written:
+                written_paths.append(str(path))
                 logger.info("Wrote results: %s", path)
+
+        # --- 11. Write summaries ---
+        self._write_summaries(config, elapsed_wall_time, written_paths, output_path)
+
+    def _write_summaries(
+        self,
+        config: ExperimentConfig,
+        elapsed_wall_time: float,
+        written_paths: list[str],
+        output_dir: Path,
+    ) -> None:
+        import json
+        
+        summary_data = {
+            "experiment_name": config.name,
+            "seed": config.seed,
+            "num_agents": config.simulation.num_agents,
+            "max_virtual_time": config.simulation.max_virtual_time,
+            "tick_interval": config.simulation.tick_interval,
+            "behavior_plugin": config.plugins.behavior,
+            "communication_plugin": config.plugins.communication,
+            "topology_plugin": config.plugins.topology,
+            "wall_clock_runtime_seconds": elapsed_wall_time,
+            "output_files": written_paths,
+            "schema_version": config.schema_version,
+        }
+
+        # Write summary.json
+        json_path = output_dir / "summary.json"
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(summary_data, f, indent=2)
+        logger.info("Wrote summary: %s", json_path)
+
+        # Write summary.md
+        md_path = output_dir / "summary.md"
+        with open(md_path, "w", encoding="utf-8") as f:
+            f.write(f"# Experiment Summary: {config.name}\n\n")
+            f.write(f"- **Seed**: {config.seed}\n")
+            f.write(f"- **Agents**: {config.simulation.num_agents}\n")
+            f.write(f"- **Max Virtual Time**: {config.simulation.max_virtual_time}\n")
+            f.write(f"- **Behavior**: `{config.plugins.behavior}`\n")
+            f.write(f"- **Communication**: `{config.plugins.communication}`\n")
+            f.write(f"- **Topology**: `{config.plugins.topology}`\n")
+            f.write(f"- **Wall-clock Runtime**: {elapsed_wall_time:.4f} seconds\n\n")
+            f.write("## Output Files\n")
+            for path in written_paths:
+                f.write(f"- `{path}`\n")
+        logger.info("Wrote summary: %s", md_path)
+

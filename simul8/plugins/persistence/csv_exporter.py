@@ -49,11 +49,24 @@ class CsvExporter(PersistencePort):
                 f.write(f"# metric: {s.name}\n")
                 f.write(f"# records: {len(s.records)}\n")
 
-                writer = csv.writer(f)
-                writer.writerow(["virtual_time", "value"])
+                # Determine if any records have tags and extract unique tag keys
+                tag_keys: list[str] = []
                 for record in s.records:
-                    writer.writerow([record.virtual_time, record.value])
+                    for k, _ in record.tags:
+                        if k not in tag_keys:
+                            tag_keys.append(k)
+
+                writer = csv.writer(f)
+                header = ["virtual_time", "value"] + tag_keys
+                writer.writerow(header)
+                for record in s.records:
+                    row = [record.virtual_time, record.value]
+                    if tag_keys:
+                        tag_dict = dict(record.tags)
+                        row.extend(tag_dict.get(k, "") for k in tag_keys)
+                    writer.writerow(row)
 
             written.append(filepath)
 
         return written
+

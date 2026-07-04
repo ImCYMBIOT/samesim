@@ -49,6 +49,22 @@ def main() -> None:
         help="Logging verbosity (default: INFO)",
     )
 
+    # --- visualize subcommand ---
+    viz_parser = subparsers.add_parser("visualize", help="Generate an interactive dashboard from results")
+    viz_parser.add_argument(
+        "results_dir",
+        type=Path,
+        nargs="?",
+        default=Path("./results"),
+        help="Directory containing experiment results (default: ./results)",
+    )
+    viz_parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Logging verbosity (default: INFO)",
+    )
+
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -60,6 +76,15 @@ def main() -> None:
     if args.command == "run":
         runner = ExperimentRunner()
         runner.run(args.config, args.output)
+    elif args.command == "visualize":
+        from .visualize import generate_dashboard
+        try:
+            db_path = generate_dashboard(args.results_dir)
+            print(f"Success! Dashboard written to: {db_path.resolve()}")
+        except Exception as e:
+            print(f"Error generating dashboard: {e}", file=sys.stderr)
+            sys.exit(1)
+
 
 
 if __name__ == "__main__":

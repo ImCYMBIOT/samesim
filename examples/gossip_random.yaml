@@ -1,0 +1,29 @@
+schema_version: "1.0"
+
+experiment:
+  name: "gossip_random"
+  seed: 42
+
+simulation:
+  num_agents: 100
+  max_virtual_time: 100
+  tick_interval: 1
+
+plugins:
+  behavior: "simul8.plugins.behaviors.gossip_behavior.GossipBehavior"
+  communication: "simul8.plugins.communication.gossip.GossipProtocol"
+  topology: "simul8.plugins.topologies.random_graph.ErdosRenyiTopology"
+  metrics:
+    - "simul8.plugins.metrics.message_count.MessageCountMetric"
+    - "simul8.plugins.metrics.convergence.ConvergenceMetric"
+    - "simul8.plugins.metrics.state_trace.TopologyMetric"
+    - "simul8.plugins.metrics.state_trace.StateTraceMetric"
+  persistence:
+    - "simul8.plugins.persistence.csv_exporter.CsvExporter"
+
+plugin_configs:
+  GossipBehavior:
+    initial_value_range: [0.0, 1.0]
+    fan_out: 2
+  ErdosRenyiTopology:
+    edge_probability: 0.08

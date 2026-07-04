@@ -1,0 +1,27 @@
+schema_version: "1.0"
+
+experiment:
+  name: "leader_random"
+  seed: 12345
+
+simulation:
+  num_agents: 50
+  max_virtual_time: 40
+  tick_interval: 1
+
+plugins:
+  behavior: "simul8.plugins.behaviors.leader_election.LeaderElectionBehavior"
+  communication: "simul8.plugins.communication.gossip.GossipProtocol"
+  topology: "simul8.plugins.topologies.random_graph.ErdosRenyiTopology"
+  metrics:
+    - "simul8.plugins.metrics.message_count.MessageCountMetric"
+    - "simul8.plugins.metrics.leader_metrics.LeaderConsensusMetric"
+    - "simul8.plugins.metrics.state_trace.TopologyMetric"
+    - "simul8.plugins.metrics.state_trace.StateTraceMetric"
+  persistence:
+    - "simul8.plugins.persistence.csv_exporter.CsvExporter"
+
+plugin_configs:
+  LeaderElectionBehavior: {}
+  ErdosRenyiTopology:
+    edge_probability: 0.12
