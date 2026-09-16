@@ -1,0 +1,33 @@
+schema_version: "1.0"
+
+experiment:
+  name: "sir_random"
+  seed: 9876
+
+simulation:
+  num_agents: 80
+  max_virtual_time: 60
+  tick_interval: 1
+
+plugins:
+  behavior: "simul8.plugins.behaviors.sir_behavior.SirEpidemicBehavior"
+  communication: "simul8.plugins.communication.broadcast.BroadcastProtocol"
+  topology: "simul8.plugins.topologies.watts_strogatz.WattsStrogatzTopology"
+  metrics:
+    - "simul8.plugins.metrics.message_count.MessageCountMetric"
+    - "simul8.plugins.metrics.sir_metrics.SirSusceptibleMetric"
+    - "simul8.plugins.metrics.sir_metrics.SirInfectedMetric"
+    - "simul8.plugins.metrics.sir_metrics.SirRecoveredMetric"
+    - "simul8.plugins.metrics.state_trace.TopologyMetric"
+    - "simul8.plugins.metrics.state_trace.StateTraceMetric"
+  persistence:
+    - "simul8.plugins.persistence.csv_exporter.CsvExporter"
+
+plugin_configs:
+  SirEpidemicBehavior:
+    transmission_rate: 0.25
+    recovery_rate: 0.12
+    initial_infected: 2
+  WattsStrogatzTopology:
+    k: 4
+    rewire_probability: 0.15
