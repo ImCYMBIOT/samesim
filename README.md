@@ -25,7 +25,7 @@ simul8/
 
 ## Documentation
 
-For a deep dive into the architecture, component design, simulation loop lifecycle, and a guide on how to extend Simul8 by writing your own plugins, see the [Extended Documentation & Developer Guide](docs/extended_documentation.md).
+For a deep dive into the architecture, component design, and simulation loop lifecycle, see the [Extended Documentation & Developer Guide](docs/extended_documentation.md). For step-by-step instructions on writing your own plugins (behaviors, topologies, protocols, metrics, exporters), see the [Plugin Development Guide](docs/plugin_development_guide.md).
 
 
 ## Getting Started

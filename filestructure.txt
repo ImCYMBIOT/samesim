@@ -8,7 +8,9 @@
 |-- architecture.md
 |-- design_manifesto.txt
 |-- docs
+    |-- Simul8_Research_Brief.docx
     |-- extended_documentation.md
+    |-- plugin_development_guide.md
 |-- examples
     |-- gossip_1000_agents.yaml
     |-- gossip_random.yaml
