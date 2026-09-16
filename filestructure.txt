@@ -17,6 +17,11 @@
     |-- gossip_ring.yaml
     |-- leader_random.yaml
     |-- sir_random.yaml
+|-- experiments
+    |-- gossip_topology_validation
+        |-- README.md
+        |-- full_results.json
+        |-- run_sweep.py
 |-- pyproject.toml
 |-- results
     |-- gossip_convergence_1000_convergence_variance.csv
