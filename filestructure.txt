@@ -21,6 +21,7 @@
     |-- gossip_topology_validation
         |-- README.md
         |-- full_results.json
+        |-- full_ws_ba_results.json
         |-- run_sweep.py
 |-- pyproject.toml
 |-- results
@@ -174,6 +175,7 @@
             |-- __pycache__
                 |-- __init__.cpython-312.pyc
                 |-- __init__.cpython-313.pyc
+                |-- barabasi_albert.cpython-312.pyc
                 |-- random_graph.cpython-312.pyc
                 |-- random_graph.cpython-313.pyc
                 |-- ring.cpython-312.pyc

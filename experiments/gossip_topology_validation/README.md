@@ -1,7 +1,8 @@
 # Gossip Convergence vs. Topology — Validation Study
 
-**Status:** preliminary validation pass (single fixed graph density, 5 seeds per
-point). This is the first of the three research directions proposed in
+**Status:** preliminary validation pass across four topologies (single fixed
+graph density, 5 seeds per point). This is the first of the three research
+directions proposed in
 [docs/Simul8_Research_Brief.docx](../../docs/Simul8_Research_Brief.docx) —
 picked first because it's also the cheapest way to sanity-check that Simul8's
 gossip pipeline produces results consistent with known graph-mixing theory,
@@ -10,8 +11,10 @@ before trusting it for a real study.
 ## Question
 
 Does Simul8's push-gossip convergence time behave the way graph mixing-time
-theory predicts — fast on a well-connected graph, much slower on a poorly
-connected one, with the gap widening as the network grows?
+theory predicts — fast on well-connected graphs, much slower on a poorly
+connected one, with the gap widening as the network grows? And does that hold
+consistently across different notions of "well-connected" (uniformly random,
+small-world, scale-free), not just one?
 
 ## Method
 
@@ -27,12 +30,20 @@ For each run, `converged_tick` is the first tick at which variance drops to
 - **Ring**: degree 2, fixed structure regardless of n.
   `n ∈ {10, 20, 40, 80, 160, 320}` — kept smaller since convergence is much
   slower here (see results).
+- **Watts–Strogatz**: `k=8` (fixed lattice degree — rewiring preserves
+  degree, so average degree stays exactly 8), `rewire_probability=0.15`
+  (the same value used in `examples/sir_random.yaml`). `n ∈ {50, 100, 200,
+  400, 800, 1600}`.
+- **Barabási–Albert**: `m=4` (average degree ≈ 2m = 8 for large n, matching
+  the other three arms). Same n range as Erdős–Rényi.
 - 5 seeds per `(topology, n)`, `max_virtual_time` calibrated per arm from a
   pilot run so every case has 5–15× headroom past its actual convergence tick.
 
-Run it yourself: `python run_sweep.py --mode full` (from this directory, with
-the `simul8` conda env active — ~60 runs, ~2–3 minutes). Raw output:
-`full_results.json`.
+Run it yourself (from this directory, with the `simul8` conda env active):
+`python run_sweep.py --mode full` (ring + Erdős–Rényi, ~60 runs, ~2–3 min)
+and `python run_sweep.py --mode full_ws_ba` (Watts–Strogatz + Barabási–Albert,
+~60 runs, ~1–2 min). Raw output: `full_results.json` /
+`full_ws_ba_results.json`.
 
 ## Results
 
@@ -54,19 +65,44 @@ Mean ticks to converge (±1 std, 5 seeds), log–log scale:
 | Erdős–Rényi | 400 | 10.6 | 0.80 |
 | Erdős–Rényi | 800 | 11.2 | 0.75 |
 | Erdős–Rényi | 1600 | 11.0 | 0.63 |
+| Watts–Strogatz | 50 | 7.4 | 0.80 |
+| Watts–Strogatz | 100 | 9.0 | 0.89 |
+| Watts–Strogatz | 200 | 10.2 | 0.98 |
+| Watts–Strogatz | 400 | 13.2 | 1.60 |
+| Watts–Strogatz | 800 | 12.6 | 1.36 |
+| Watts–Strogatz | 1600 | 13.4 | 0.80 |
+| Barabási–Albert | 50 | 10.8 | 1.60 |
+| Barabási–Albert | 100 | 12.4 | 1.36 |
+| Barabási–Albert | 200 | 14.4 | 1.85 |
+| Barabási–Albert | 400 | 16.0 | 0.89 |
+| Barabási–Albert | 800 | 15.2 | 0.75 |
+| Barabási–Albert | 1600 | 16.0 | 0.89 |
 
 Fitting `log(ticks) = slope · log(n) + c` by least squares:
 
-- **Erdős–Rényi: slope ≈ 0.01** — convergence time is flat from n=50 to
-  n=1600. No growth is even detectable at this scale, which is *stronger*
-  than the O(log n) bound would suggest (log n barely moves across this
-  range anyway).
-- **Ring: slope ≈ 0.99** — convergence time scales linearly with n.
+| Topology | Slope | Regime |
+|---|---:|---|
+| Ring | **0.99** | linear |
+| Watts–Strogatz | 0.18 | ~flat |
+| Barabási–Albert | 0.11 | ~flat |
+| Erdős–Rényi | **0.01** | flat |
 
-One outlier: Erdős–Rényi n=50 seed=4 did not cross the 1% threshold inside
-its window (it reached 97% variance reduction) and is excluded from that
-point's mean (n=4 instead of 5) — plausibly just seed variance at small n,
-not a bug in the pipeline.
+- **All three "well-connected" topologies are in the same flat/slow-growth
+  regime** — nowhere close to ring's near-linear growth — confirming the
+  qualitative theory holds across genuinely different graph families, not
+  just for one lucky case.
+- **A small but consistent ordering among the connected topologies**:
+  Erdős–Rényi is flattest, Barabási–Albert and Watts–Strogatz both show a
+  little more growth (slopes 0.11 and 0.18). Plausible mechanisms, not yet
+  tested directly: Barabási–Albert's degree heterogeneity (a few hub nodes
+  carry disproportionate traffic, a mild bottleneck effect documented in the
+  consensus literature for scale-free graphs) and Watts–Strogatz's residual
+  ring-locality at `rewire_probability=0.15` (only 15% of edges are rewired
+  away from the original ring lattice, so some local structure survives).
+- One outlier: Erdős–Rényi n=50 seed=4 did not cross the 1% threshold inside
+  its window (it reached 97% variance reduction) and is excluded from that
+  point's mean (n=4 instead of 5) — plausibly just seed variance at small n,
+  not a bug in the pipeline.
 
 ## Interpretation
 
@@ -103,11 +139,15 @@ the classical asynchronous-pairwise bound.
 
 ## What this doesn't cover yet (next steps)
 
-- Only one graph density (avg degree 8) tested for Erdős–Rényi — the
-  convergence/density relationship itself is untested.
-- Watts–Strogatz and Barabási–Albert (already implemented in Simul8) aren't
-  in this sweep yet — they're the natural next arms for the flagship study
-  described in the research brief.
+- Only one graph density (avg degree 8) tested per topology — the
+  convergence/density relationship itself is untested, and is the more
+  standard axis for the "topology → convergence" flagship study described
+  in the research brief (sweep density at fixed n, not just n at fixed
+  density as done here).
+- The Barabási–Albert / Watts–Strogatz ordering (slopes 0.11 and 0.18 vs.
+  Erdős–Rényi's 0.01) is observed but not yet explained mechanistically —
+  worth isolating (e.g. does the BA gap track hub degree, does the WS gap
+  shrink as `rewire_probability` increases toward 1?).
 - No comparison yet against an independent reference implementation (e.g.
   NetworkX + hand-rolled gossip, or PeerSim) — doing so would rule out any
   Simul8-specific implementation artifact as an explanation for the O(n)

@@ -107,12 +107,24 @@ def er_config(n: int) -> dict:
     return {"edge_probability": p}
 
 
+def ws_config(n: int) -> dict:
+    # k is the fixed initial-lattice degree; rewiring doesn't change degree.
+    return {"k": 8, "rewire_probability": 0.15}
+
+
+def ba_config(n: int) -> dict:
+    # avg degree approx 2m for large n; m=4 -> avg degree ~8, matching ER/WS.
+    return {"m": 4}
+
+
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", choices=["pilot", "full"], default="pilot")
+    parser.add_argument("--mode", choices=["pilot", "full", "pilot_ws_ba", "full_ws_ba"], default="pilot")
     args = parser.parse_args()
+
+    ER_NS = (50, 100, 200, 400, 800, 1600)
 
     if args.mode == "pilot":
         jobs = []
@@ -120,7 +132,7 @@ if __name__ == "__main__":
             jobs.append(("ring", "simul8.plugins.topologies.ring.RingTopology", {}, n, 6000, 1))
         for n in (50, 200, 800):
             jobs.append(("erdos_renyi", "simul8.plugins.topologies.random_graph.ErdosRenyiTopology", er_config(n), n, 200, 1))
-    else:
+    elif args.mode == "full":
         jobs = []
         seeds = (1, 2, 3, 4, 5)
         # Calibrated from pilot data: ring n=20/40/80/160/320 converged at
@@ -128,9 +140,23 @@ if __name__ == "__main__":
         for n in (10, 20, 40, 80, 160, 320):
             for s in seeds:
                 jobs.append(("ring", "simul8.plugins.topologies.ring.RingTopology", {}, n, max(300, 8 * n), s))
-        for n in (50, 100, 200, 400, 800, 1600):
+        for n in ER_NS:
             for s in seeds:
                 jobs.append(("erdos_renyi", "simul8.plugins.topologies.random_graph.ErdosRenyiTopology", er_config(n), n, 200, s))
+    elif args.mode == "pilot_ws_ba":
+        jobs = []
+        for n in (50, 800, 1600):
+            jobs.append(("watts_strogatz", "simul8.plugins.topologies.watts_strogatz.WattsStrogatzTopology", ws_config(n), n, 200, 1))
+            jobs.append(("barabasi_albert", "simul8.plugins.topologies.barabasi_albert.BarabasiAlbertTopology", ba_config(n), n, 200, 1))
+    else:  # full_ws_ba
+        jobs = []
+        seeds = (1, 2, 3, 4, 5)
+        for n in ER_NS:
+            for s in seeds:
+                jobs.append(("watts_strogatz", "simul8.plugins.topologies.watts_strogatz.WattsStrogatzTopology", ws_config(n), n, 200, s))
+        for n in ER_NS:
+            for s in seeds:
+                jobs.append(("barabasi_albert", "simul8.plugins.topologies.barabasi_albert.BarabasiAlbertTopology", ba_config(n), n, 200, s))
 
     results = []
     for i, (topo_name, topo_class, topo_cfg, n, max_t, seed) in enumerate(jobs):
