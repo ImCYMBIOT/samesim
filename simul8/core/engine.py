@@ -116,7 +116,10 @@ class SimulationEngine:
         """Execute the simulation from t=0 to termination.
 
         Termination conditions (first that triggers):
-            1. virtual_time >= config.simulation.max_virtual_time
+            1. The next queued event's virtual_time exceeds
+               config.simulation.max_virtual_time (checked via peek, before
+               dequeuing -- every event AT max_virtual_time is still
+               processed; only events strictly beyond it are excluded).
             2. EventQueue is empty (no more events to process)
         """
         logger.info(
@@ -138,8 +141,24 @@ class SimulationEngine:
         ))
 
         events_processed = 0
+        max_virtual_time = self._config.simulation.max_virtual_time
 
         while self._scheduler.has_events():
+            # Peek before dequeuing: stop only once the *next* event would
+            # fall strictly beyond the window, so every event AT
+            # max_virtual_time (including the final TickEvent and any
+            # deliveries landing exactly then) is still fully drained,
+            # rather than breaking after the first such event and silently
+            # dropping the rest of that same-instant batch.
+            next_time = self._scheduler.peek_next_time()
+            if next_time is not None and next_time > max_virtual_time:
+                logger.info(
+                    "Termination: max_virtual_time=%.1f reached (next event at t=%.1f is beyond it)",
+                    max_virtual_time,
+                    float(next_time),
+                )
+                break
+
             event = self._scheduler.next_event()
             if event is None:
                 break
@@ -147,15 +166,6 @@ class SimulationEngine:
             self._time.advance(event.virtual_time)
             self._dispatch(event)
             events_processed += 1
-
-            # Termination check after dispatch so the terminal tick completes
-            if event.virtual_time >= self._config.simulation.max_virtual_time:
-                logger.info(
-                    "Termination: max_virtual_time=%.1f reached at t=%.1f",
-                    self._config.simulation.max_virtual_time,
-                    float(event.virtual_time),
-                )
-                break
 
         # Emit the end marker synchronously (not through the queue)
         end_event = SimulationEndedEvent(

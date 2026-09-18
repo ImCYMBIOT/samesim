@@ -18,6 +18,7 @@
     |-- leader_random.yaml
     |-- sir_random.yaml
 |-- experiments
+    |-- external_validation
     |-- gossip_topology_validation
         |-- README.md
         |-- full_results.json
@@ -232,9 +233,11 @@
         |-- __pycache__
             |-- __init__.cpython-312.pyc
             |-- __init__.cpython-313.pyc
+            |-- test_engine_termination.cpython-312-pytest-9.1.1.pyc
             |-- test_gossip_experiment.cpython-312-pytest-9.1.1.pyc
             |-- test_gossip_experiment.cpython-313-pytest-8.3.3.pyc
             |-- test_gossip_experiment.cpython-313-pytest-9.1.1.pyc
+        |-- test_engine_termination.py
         |-- test_gossip_experiment.py
     |-- regression
         |-- __init__.py
