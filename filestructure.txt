@@ -235,7 +235,11 @@
             |-- test_gossip_1000_agents.cpython-312-pytest-9.1.1.pyc
             |-- test_gossip_1000_agents.cpython-313-pytest-8.3.3.pyc
             |-- test_gossip_1000_agents.cpython-313-pytest-9.1.1.pyc
+            |-- test_leader_election_1000_agents.cpython-312-pytest-9.1.1.pyc
+            |-- test_sir_1000_agents.cpython-312-pytest-9.1.1.pyc
         |-- test_gossip_1000_agents.py
+        |-- test_leader_election_1000_agents.py
+        |-- test_sir_1000_agents.py
     |-- unit
         |-- __init__.py
         |-- __pycache__
