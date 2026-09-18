@@ -19,6 +19,14 @@
     |-- sir_random.yaml
 |-- experiments
     |-- external_validation
+        |-- README.md
+        |-- event_count_vs_closed_form.py
+        |-- gossip_vs_reference.py
+        |-- leader_election_vs_diameter.py
+        |-- simul8_harness.py
+        |-- sir_vs_ndlib.py
+        |-- sir_vs_ndlib_results.json
+        |-- topology_vs_networkx.py
     |-- gossip_topology_validation
         |-- README.md
         |-- full_results.json
@@ -186,6 +194,7 @@
                 |-- __init__.cpython-312.pyc
                 |-- __init__.cpython-313.pyc
                 |-- barabasi_albert.cpython-312.pyc
+                |-- grid.cpython-312.pyc
                 |-- random_graph.cpython-312.pyc
                 |-- random_graph.cpython-313.pyc
                 |-- ring.cpython-312.pyc
@@ -289,11 +298,13 @@
                 |-- test_leader_election.cpython-312-pytest-9.1.1.pyc
                 |-- test_lossy_communication.cpython-312-pytest-9.1.1.pyc
                 |-- test_sir_behavior.cpython-312-pytest-9.1.1.pyc
+                |-- test_sir_broadcast_fanout.cpython-312-pytest-9.1.1.pyc
                 |-- test_topologies.cpython-312-pytest-9.1.1.pyc
                 |-- test_topologies.cpython-313-pytest-8.3.3.pyc
                 |-- test_topologies.cpython-313-pytest-9.1.1.pyc
             |-- test_leader_election.py
             |-- test_lossy_communication.py
             |-- test_sir_behavior.py
+            |-- test_sir_broadcast_fanout.py
             |-- test_topologies.py
         |-- test_architecture_boundaries.py

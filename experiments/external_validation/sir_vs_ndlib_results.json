@@ -1,0 +1,206 @@
+{
+  "ndlib": [
+    {
+      "peak_infected": 362,
+      "final_recovered": 500,
+      "extinction_tick": 60
+    },
+    {
+      "peak_infected": 357,
+      "final_recovered": 500,
+      "extinction_tick": 56
+    },
+    {
+      "peak_infected": 378,
+      "final_recovered": 499,
+      "extinction_tick": 76
+    },
+    {
+      "peak_infected": 358,
+      "final_recovered": 500,
+      "extinction_tick": 70
+    },
+    {
+      "peak_infected": 356,
+      "final_recovered": 498,
+      "extinction_tick": 76
+    },
+    {
+      "peak_infected": 357,
+      "final_recovered": 498,
+      "extinction_tick": null
+    },
+    {
+      "peak_infected": 361,
+      "final_recovered": 498,
+      "extinction_tick": 53
+    },
+    {
+      "peak_infected": 367,
+      "final_recovered": 500,
+      "extinction_tick": 69
+    },
+    {
+      "peak_infected": 358,
+      "final_recovered": 499,
+      "extinction_tick": 70
+    },
+    {
+      "peak_infected": 359,
+      "final_recovered": 499,
+      "extinction_tick": 64
+    },
+    {
+      "peak_infected": 360,
+      "final_recovered": 498,
+      "extinction_tick": 64
+    },
+    {
+      "peak_infected": 373,
+      "final_recovered": 498,
+      "extinction_tick": 55
+    },
+    {
+      "peak_infected": 365,
+      "final_recovered": 500,
+      "extinction_tick": 60
+    },
+    {
+      "peak_infected": 353,
+      "final_recovered": 498,
+      "extinction_tick": 72
+    },
+    {
+      "peak_infected": 364,
+      "final_recovered": 500,
+      "extinction_tick": 58
+    },
+    {
+      "peak_infected": 378,
+      "final_recovered": 498,
+      "extinction_tick": 65
+    },
+    {
+      "peak_infected": 356,
+      "final_recovered": 499,
+      "extinction_tick": 73
+    },
+    {
+      "peak_infected": 355,
+      "final_recovered": 500,
+      "extinction_tick": 96
+    },
+    {
+      "peak_infected": 365,
+      "final_recovered": 499,
+      "extinction_tick": 93
+    },
+    {
+      "peak_infected": 358,
+      "final_recovered": 498,
+      "extinction_tick": 65
+    }
+  ],
+  "simul8": [
+    {
+      "peak_infected": 370.0,
+      "final_recovered": 499.0,
+      "extinction_tick": 61
+    },
+    {
+      "peak_infected": 368.0,
+      "final_recovered": 500.0,
+      "extinction_tick": 61
+    },
+    {
+      "peak_infected": 369.0,
+      "final_recovered": 500.0,
+      "extinction_tick": 64
+    },
+    {
+      "peak_infected": 372.0,
+      "final_recovered": 496.0,
+      "extinction_tick": 64
+    },
+    {
+      "peak_infected": 352.0,
+      "final_recovered": 499.0,
+      "extinction_tick": 64
+    },
+    {
+      "peak_infected": 367.0,
+      "final_recovered": 500.0,
+      "extinction_tick": 64
+    },
+    {
+      "peak_infected": 368.0,
+      "final_recovered": 499.0,
+      "extinction_tick": 62
+    },
+    {
+      "peak_infected": 380.0,
+      "final_recovered": 500.0,
+      "extinction_tick": 62
+    },
+    {
+      "peak_infected": 365.0,
+      "final_recovered": 500.0,
+      "extinction_tick": 63
+    },
+    {
+      "peak_infected": 376.0,
+      "final_recovered": 498.0,
+      "extinction_tick": 62
+    },
+    {
+      "peak_infected": 373.0,
+      "final_recovered": 500.0,
+      "extinction_tick": 64
+    },
+    {
+      "peak_infected": 364.0,
+      "final_recovered": 498.0,
+      "extinction_tick": 63
+    },
+    {
+      "peak_infected": 369.0,
+      "final_recovered": 499.0,
+      "extinction_tick": 63
+    },
+    {
+      "peak_infected": 374.0,
+      "final_recovered": 497.0,
+      "extinction_tick": 63
+    },
+    {
+      "peak_infected": 362.0,
+      "final_recovered": 498.0,
+      "extinction_tick": 61
+    },
+    {
+      "peak_infected": 365.0,
+      "final_recovered": 500.0,
+      "extinction_tick": 65
+    },
+    {
+      "peak_infected": 358.0,
+      "final_recovered": 499.0,
+      "extinction_tick": 63
+    },
+    {
+      "peak_infected": 369.0,
+      "final_recovered": 500.0,
+      "extinction_tick": 64
+    },
+    {
+      "peak_infected": 364.0,
+      "final_recovered": 499.0,
+      "extinction_tick": 64
+    },
+    {
+      "peak_infected": 381.0,
+      "final_recovered": 500.0,
+      "extinction_tick": 64
+    }
+  ]
+}
