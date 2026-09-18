@@ -86,16 +86,23 @@ class SirEpidemicBehavior(BehaviorPort):
 
         next_state = current_state.with_value("status", next_status)
 
-        # 3. If infected, send an infection warning to neighbors
+        # 3. If infected, send a single infection warning -- the active
+        # communication protocol decides delivery. With BroadcastProtocol
+        # (the intended pairing for this behavior) that one message is
+        # fanned out to every neighbor by the protocol itself; sending one
+        # message per neighbor here as well would double that fan-out
+        # (each neighbor receiving deg(agent_id) copies instead of one),
+        # inflating the effective transmission rate far above beta.
+        # recipient_id is nominal here since BroadcastProtocol ignores it
+        # and recomputes deliveries from the topology.
         outbound: list[Message] = []
         if next_status == "I" and neighbors:
-            for neighbor_id in sorted(neighbors):
-                self._msg_counter += 1
-                outbound.append(Message(
-                    message_id=MessageId(self._msg_counter),
-                    sender_id=agent_id,
-                    recipient_id=neighbor_id,
-                    payload={"status": "I"},
-                ))
+            self._msg_counter += 1
+            outbound.append(Message(
+                message_id=MessageId(self._msg_counter),
+                sender_id=agent_id,
+                recipient_id=agent_id,
+                payload={"status": "I"},
+            ))
 
         return BehaviorResult(next_state=next_state, outbound_messages=outbound)
