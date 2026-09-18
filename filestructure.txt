@@ -23,6 +23,15 @@
         |-- full_results.json
         |-- full_ws_ba_results.json
         |-- run_sweep.py
+    |-- scaling_benchmark
+        |-- README.md
+        |-- naive_gossip.py
+        |-- naive_results.json
+        |-- run_scaling.py
+        |-- run_scaling_ring.py
+        |-- scaling_chart.html
+        |-- scaling_results.json
+        |-- scaling_ring_results.json
 |-- pyproject.toml
 |-- results
     |-- gossip_convergence_1000_convergence_variance.csv

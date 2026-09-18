@@ -1,0 +1,178 @@
+<title>Simul8 Scaling Benchmark</title>
+<style>
+  .viz-root{
+    color-scheme:light;
+    --surface-1:#fcfcfb; --page:#f9f9f7; --text-primary:#0b0b0b; --text-secondary:#52514e; --text-muted:#898781;
+    --grid:#e1e0d9; --baseline:#c3c2b7; --border:rgba(11,11,11,0.10);
+    --series-ring:#2a78d6; --series-ring-wash:rgba(42,120,214,0.08);
+    --series-er:#eb6834; --series-er-wash:rgba(235,104,52,0.08);
+  }
+  @media (prefers-color-scheme:dark){
+    :root:where(:not([data-theme="light"])) .viz-root{
+      color-scheme:dark;
+      --surface-1:#1a1a19; --page:#0d0d0d; --text-primary:#ffffff; --text-secondary:#c3c2b7; --text-muted:#898781;
+      --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,0.10);
+      --series-ring:#3987e5; --series-ring-wash:rgba(57,135,229,0.10);
+      --series-er:#d95926; --series-er-wash:rgba(217,89,38,0.10);
+    }
+  }
+  :root[data-theme="dark"] .viz-root{
+    color-scheme:dark;
+    --surface-1:#1a1a19; --page:#0d0d0d; --text-primary:#ffffff; --text-secondary:#c3c2b7; --text-muted:#898781;
+    --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,0.10);
+    --series-ring:#3987e5; --series-ring-wash:rgba(57,135,229,0.10);
+    --series-er:#d95926; --series-er-wash:rgba(217,89,38,0.10);
+  }
+  *{box-sizing:border-box;}
+  body{ background:var(--page); margin:0; padding:0 20px; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; color:var(--text-primary); }
+  .wrap{ max-width:800px; margin:0 auto; padding-block:40px 56px; position:relative; }
+  .eyebrow{ font-size:11px; letter-spacing:0.09em; text-transform:uppercase; color:var(--series-ring); font-weight:600; margin-bottom:8px; }
+  h1{ font-size:23px; font-weight:650; margin:0 0 6px 0; line-height:1.25; text-wrap:balance; }
+  .dek{ font-size:14.5px; color:var(--text-secondary); line-height:1.55; max-width:66ch; margin:0 0 22px 0; }
+  .card{ background:var(--surface-1); border:1px solid var(--border); border-radius:10px; padding:20px 20px 8px 20px; margin-bottom:20px; }
+  .legend{ display:flex; gap:20px; align-items:center; margin-bottom:10px; flex-wrap:wrap; }
+  .legend-item{ display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--text-secondary); }
+  .legend-item .n{ color:var(--text-muted); font-size:11px; }
+  svg{ width:100%; height:auto; display:block; overflow:visible; }
+  .gridline{ stroke:var(--grid); stroke-width:1; }
+  .baseline{ stroke:var(--baseline); stroke-width:1; }
+  .axis-label{ fill:var(--text-muted); font-size:11px; }
+  .axis-title{ fill:var(--text-secondary); font-size:11.5px; font-weight:600; }
+  .line{ fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .line-ring{ stroke:var(--series-ring); }
+  .line-er{ stroke:var(--series-er); stroke-dasharray:6 3; }
+  .mark{ cursor:pointer; stroke:var(--surface-1); stroke-width:1.6; }
+  .mark-ring{ fill:var(--series-ring); }
+  .mark-er{ fill:var(--series-er); }
+  .end-label{ font-size:12px; font-weight:650; }
+  .end-label-sub{ font-size:10px; font-weight:500; fill:var(--text-muted); }
+  .tooltip{
+    position:absolute; pointer-events:none; background:var(--text-primary); color:var(--surface-1);
+    font-size:12px; padding:6px 9px; border-radius:6px; line-height:1.45; white-space:nowrap;
+    transform:translate(-50%,-100%); margin-top:-10px; opacity:0; transition:opacity .1s;
+    font-variant-numeric:tabular-nums;
+  }
+  .tooltip.show{ opacity:1; }
+  .foot-note{ font-size:12px; color:var(--text-muted); margin-top:10px; padding-top:14px; border-top:1px solid var(--grid); line-height:1.6; }
+  table{ width:100%; border-collapse:collapse; margin-top:8px; font-size:12.5px; }
+  caption{ text-align:left; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted); font-weight:600; margin-bottom:8px; }
+  th,td{ text-align:right; padding:6px 10px; border-bottom:1px solid var(--grid); font-variant-numeric:tabular-nums; }
+  th:first-child,td:first-child{ text-align:left; }
+  th{ color:var(--text-muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.04em; }
+  @media (max-width:480px){ .wrap{ padding-block:28px 40px; } h1{ font-size:19px; } }
+</style>
+
+<div class="viz-root">
+<div class="wrap">
+  <div class="eyebrow">Scaling Benchmark</div>
+  <h1>Wall-clock time vs. agent count</h1>
+  <p class="dek">Same gossip experiment (50 fixed ticks, no early stopping), single run per point. The two lines aren't "two ways to run Simul8" — they isolate two different costs: the core engine's own scaling (Ring topology, O(n) to generate) versus the full pipeline including a topology generator plugin (Erdős–Rényi) that happens to be O(n²).</p>
+
+  <div class="card">
+    <div class="legend">
+      <div class="legend-item"><span style="width:22px;height:2px;display:inline-block;background:var(--series-ring)"></span>Ring — engine only <span class="n">local slope 1.0–1.1 throughout</span></div>
+      <div class="legend-item"><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="var(--series-er)" stroke-width="2" stroke-dasharray="6 3"/></svg>Erdős–Rényi — + O(n²) topology gen <span class="n">slope 0.89 → 1.37</span></div>
+    </div>
+
+    <svg viewBox="0 0 760 430" id="chart">
+      <line class="gridline" x1="91.8" y1="30" x2="91.8" y2="430"/>
+      <line class="gridline" x1="275.6" y1="30" x2="275.6" y2="430"/>
+      <line class="gridline" x1="459.4" y1="30" x2="459.4" y2="430"/>
+      <line class="gridline" x1="643.1" y1="30" x2="643.1" y2="430"/>
+      <line class="gridline" x1="70" y1="405.6" x2="670" y2="405.6"/>
+      <line class="gridline" x1="70" y1="295.6" x2="670" y2="295.6"/>
+      <line class="gridline" x1="70" y1="185.6" x2="670" y2="185.6"/>
+      <line class="gridline" x1="70" y1="75.6" x2="670" y2="75.6"/>
+      <line class="baseline" x1="70" y1="430" x2="670" y2="430"/>
+      <line class="baseline" x1="70" y1="30" x2="70" y2="430"/>
+
+      <text class="axis-label" x="91.8" y="446" text-anchor="middle">n=100</text>
+      <text class="axis-label" x="275.6" y="446" text-anchor="middle">n=1,000</text>
+      <text class="axis-label" x="459.4" y="446" text-anchor="middle">n=10,000</text>
+      <text class="axis-label" x="643.1" y="446" text-anchor="middle">n=100,000</text>
+      <text class="axis-title" x="370" y="466" text-anchor="middle">Agent count (log scale)</text>
+
+      <text class="axis-label" x="62" y="409" text-anchor="end">0.1s</text>
+      <text class="axis-label" x="62" y="299" text-anchor="end">1s</text>
+      <text class="axis-label" x="62" y="189" text-anchor="end">10s</text>
+      <text class="axis-label" x="62" y="79" text-anchor="end">100s</text>
+      <text class="axis-title" transform="translate(24,230) rotate(-90)" text-anchor="middle">Wall-clock time</text>
+
+      <polyline class="line line-ring" points="91.8,405.1 179.5,354.6 275.6,293.8 363.3,235.6 459.4,170.4 547.1,113.0 643.1,52.2"/>
+      <polyline class="line line-er" points="91.8,394.6 179.5,347.6 275.6,286.7 363.3,223.1 459.4,147.5 547.1,75.5"/>
+
+      <circle class="mark mark-ring" data-topo="Ring" data-n="100" data-t="0.101" cx="91.8" cy="405.1" r="5"/>
+      <circle class="mark mark-ring" data-topo="Ring" data-n="300" data-t="0.291" cx="179.5" cy="354.6" r="5"/>
+      <circle class="mark mark-ring" data-topo="Ring" data-n="1,000" data-t="1.039" cx="275.6" cy="293.8" r="5"/>
+      <circle class="mark mark-ring" data-topo="Ring" data-n="3,000" data-t="3.513" cx="363.3" cy="235.6" r="5"/>
+      <circle class="mark mark-ring" data-topo="Ring" data-n="10,000" data-t="13.759" cx="459.4" cy="170.4" r="5"/>
+      <circle class="mark mark-ring" data-topo="Ring" data-n="30,000" data-t="45.727" cx="547.1" cy="113.0" r="5"/>
+      <circle class="mark mark-ring" data-topo="Ring" data-n="100,000" data-t="163.357" cx="643.1" cy="52.2" r="5"/>
+
+      <circle class="mark mark-er" data-topo="Erdős–Rényi" data-n="100" data-t="0.126" cx="91.8" cy="394.6" r="5"/>
+      <circle class="mark mark-er" data-topo="Erdős–Rényi" data-n="300" data-t="0.337" cx="179.5" cy="347.6" r="5"/>
+      <circle class="mark mark-er" data-topo="Erdős–Rényi" data-n="1,000" data-t="1.204" cx="275.6" cy="286.7" r="5"/>
+      <circle class="mark mark-er" data-topo="Erdős–Rényi" data-n="3,000" data-t="4.567" cx="363.3" cy="223.1" r="5"/>
+      <circle class="mark mark-er" data-topo="Erdős–Rényi" data-n="10,000" data-t="22.209" cx="459.4" cy="147.5" r="5"/>
+      <circle class="mark mark-er" data-topo="Erdős–Rényi" data-n="30,000" data-t="100.377" cx="547.1" cy="75.5" r="5"/>
+
+      <text class="end-label" x="655" y="46" fill="var(--series-ring)">Ring</text>
+      <text class="end-label-sub" x="655" y="60">linear (engine)</text>
+      <text class="end-label" x="470" y="130" fill="var(--series-er)">Erdős–Rényi</text>
+      <text class="end-label-sub" x="470" y="144">bending toward n²</text>
+    </svg>
+    <div class="foot-note">Single run per point (this benchmark measures raw compute cost, not stochastic behavior — see the topology validation study for seed-averaged statistics). Erdős–Rényi capped at n=30,000: at that scale its O(n²) topology generator already dominates total time, and following the same trend to n=100,000 would take on the order of 20+ minutes for that step alone.</div>
+  </div>
+
+  <div class="card">
+    <table>
+      <caption>Full data — wall-clock time, throughput, peak memory</caption>
+      <thead><tr><th>n</th><th>Ring time</th><th>Ring events/s</th><th>Ring peak RSS</th><th>ER time</th></tr></thead>
+      <tbody>
+        <tr><td>100</td><td>0.10s</td><td>97,328</td><td>19.9 MB</td><td>0.13s</td></tr>
+        <tr><td>300</td><td>0.29s</td><td>101,065</td><td>23.6 MB</td><td>0.34s</td></tr>
+        <tr><td>1,000</td><td>1.04s</td><td>94,343</td><td>37.2 MB</td><td>1.20s</td></tr>
+        <tr><td>3,000</td><td>3.51s</td><td>83,713</td><td>76.3 MB</td><td>4.57s</td></tr>
+        <tr><td>10,000</td><td>13.76s</td><td>71,230</td><td>212.0 MB</td><td>22.21s</td></tr>
+        <tr><td>30,000</td><td>45.73s</td><td>64,296</td><td>601.0 MB</td><td>100.38s</td></tr>
+        <tr><td>100,000</td><td>163.36s</td><td>59,992</td><td>1,939.8 MB</td><td>— (not run, see note)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <table>
+      <caption>Architecture overhead — Simul8 vs. a bare-loop reference implementation (Ring topology, same RNG scheme, same per-tick work)</caption>
+      <thead><tr><th>n</th><th>Naive (bare loop)</th><th>Simul8 (full engine)</th><th>Ratio</th></tr></thead>
+      <tbody>
+        <tr><td>100</td><td>0.018s</td><td>0.101s</td><td>5.6×</td></tr>
+        <tr><td>1,000</td><td>0.144s</td><td>1.039s</td><td>7.2×</td></tr>
+        <tr><td>10,000</td><td>1.673s</td><td>13.759s</td><td>8.2×</td></tr>
+        <tr><td>100,000</td><td>20.338s</td><td>163.357s</td><td>8.0×</td></tr>
+      </tbody>
+    </table>
+    <div class="foot-note">The ratio grows slightly then plateaus around 8× — a roughly constant multiplier for determinism, extensibility, and the metrics/event pipeline, not a cost that compounds with scale.</div>
+  </div>
+
+  <div class="tooltip" id="tooltip"></div>
+</div>
+</div>
+
+<script>
+(function(){
+  const tooltip = document.getElementById('tooltip');
+  document.querySelectorAll('.mark').forEach(function(mark){
+    mark.addEventListener('mouseenter', function(){
+      const d = mark.dataset;
+      tooltip.innerHTML = '<b>' + d.topo + '</b>, n=' + d.n + '<br>' + d.t + 's';
+      tooltip.classList.add('show');
+    });
+    mark.addEventListener('mousemove', function(e){
+      const rect = mark.closest('.wrap').getBoundingClientRect();
+      tooltip.style.left = (e.clientX - rect.left + window.scrollX) + 'px';
+      tooltip.style.top = (e.clientY - rect.top + window.scrollY) + 'px';
+    });
+    mark.addEventListener('mouseleave', function(){ tooltip.classList.remove('show'); });
+  });
+})();
+</script>
