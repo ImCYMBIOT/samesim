@@ -17,7 +17,7 @@ Three things, each isolating a different question:
    chosen because `RingTopology.generate()` is O(n) — this isolates the
    *engine's own* scaling behavior from any one plugin's cost.
 2. **`run_scaling.py`** — the same sweep on **Erdős–Rényi** topology
-   (average degree 8), capped at n = 30,000. This measures the realistic
+   (average degree 8), n = 100 to 100,000. This measures the realistic
    full pipeline most experiments actually use.
 3. **`naive_gossip.py`** — a deliberately bare-bones reference
    implementation of the identical push-gossip protocol (same per-agent RNG
@@ -28,7 +28,7 @@ Three things, each isolating a different question:
    raw speed.
 
 Run them yourself (from this directory, `simul8` conda env active):
-`python run_scaling_ring.py`, `python run_scaling.py --ns 100,300,1000,3000,10000,30000`,
+`python run_scaling_ring.py`, `python run_scaling.py`,
 `python naive_gossip.py --ns 100,1000,10000,100000`.
 
 ## Result 1 — the engine itself scales linearly
@@ -50,31 +50,71 @@ for 50 ticks (9.8M events) completed in 163 seconds at ~60,000 events/sec,
 using ~1.9 GB peak memory (also roughly linear in n — see the full table in
 the chart).
 
-## Result 2 — an honest limitation: `ErdosRenyiTopology` is O(n²)
+## Result 2 — found and fixed: `ErdosRenyiTopology` was O(n²)
 
-The same sweep on Erdős–Rényi shows local slope climbing from 0.89 (small n,
-dominated by fixed overhead) to 1.37 (at n=10,000→30,000) — visibly bending
-toward quadratic, not staying flat like Ring did. The cause is in the code,
-not mysterious: [`simul8/plugins/topologies/random_graph.py`](../../simul8/plugins/topologies/random_graph.py)
-checks **every possible pair** of agents (`for i in range(n): for j in
+The first pass of this benchmark caught a real bug in the running: local
+slope on Erdős–Rényi climbed from 0.89 (small n) to 1.37 (n=10,000→30,000)
+— visibly bending toward quadratic, not staying flat like Ring did. The
+cause was in the code, not mysterious:
+[`ErdosRenyiTopology.generate()`](../../simul8/plugins/topologies/random_graph.py)
+checked **every possible pair** of agents (`for i in range(n): for j in
 range(i+1, n)`) regardless of `edge_probability` — O(n²) time no matter how
-sparse the resulting graph is. At n=30,000 that's ~450 million pair-checks,
-and it already dominates total runtime (100.4s total vs. Ring's 45.7s at the
-same n, despite doing *less* topology-relevant work per agent since Ring is
-degree-2 and ER here is degree-8).
+sparse the resulting graph was. At n=30,000 that's ~450 million pair-checks.
 
-This is a real, fixable limitation, not a fundamental one: the standard fix
-for generating sparse Erdős–Rényi graphs is to sample the *number* of edges
-directly (or use the fact that inter-edge gaps follow a geometric
-distribution) and only iterate over edges that actually get created — O(n +
-m) instead of O(n²), where m is the edge count. Worth a follow-up PR before
-running any topology-validation-style sweep past roughly n=30,000–50,000 on
-Erdős–Rényi. n=100,000 on this topology was not run — extrapolating the
-observed trend, that single data point would take on the order of 20+
-minutes by itself, which is why it's reported as a bounded estimate rather
-than a measurement.
+**Fixed** using the Batagelj–Brandes algorithm (*"Efficient generation of
+large random networks"*, 2005): since each pair is an independent
+Bernoulli(p) trial, the gap between consecutive edges follows a geometric
+distribution, so the generator can jump straight to the next edge instead of
+rejection-sampling every pair — O(n + m) where m is the actual edge count.
+Verified: same statistical properties (avg degree 7.99 vs. expected 8.0 at
+n=30,000, symmetric, all agents present — see the added cases in
+`tests/unit/plugins/test_topologies.py`), topology generation for n=30,000
+dropped from being the dominant cost to **0.17s** standalone, and n=100,000
+— previously estimated at 20+ minutes just for topology generation — now
+takes **0.82s**.
 
-## Result 3 — architecture overhead is real, and roughly constant
+This was a deliberate tradeoff, not a free fix: the new algorithm consumes
+the RNG stream differently than the old pair-by-pair version, so **the same
+seed now produces a different (but equally valid) Erdős–Rényi graph than it
+did before**. Bit-for-bit reproducibility of already-committed results
+(`results/`, both prior `experiments/` studies) is broken by this change,
+even though the statistical conclusions in those studies remain valid.
+`design_manifesto.txt` states reproducibility matters more than raw
+performance — this change was made anyway, deliberately, because it fixes
+an asymptotic complexity bug rather than trading away determinism itself
+(same seed still always produces the same graph, going forward).
+
+With the fix in place, the full n=100–100,000 range now stays in the same
+regime as Ring — local slope 0.98 to 1.25, no runaway growth:
+
+| n range | Ring slope | ER slope |
+|---|---:|---:|
+| 100 → 300 | 0.96 | 0.98 |
+| 300 → 1,000 | 1.06 | 1.10 |
+| 1,000 → 3,000 | 1.11 | 1.22 |
+| 3,000 → 10,000 | 1.13 | 1.24 |
+| 10,000 → 30,000 | 1.09 | 1.25 |
+| 30,000 → 100,000 | 1.06 | 1.09 |
+
+## Result 3 — a second, smaller finding: degree still costs something, just not asymptotically
+
+Even after the fix, Erdős–Rényi is consistently ~2× slower than Ring at
+matched n (324s vs. 163s at n=100,000), despite virtually identical event
+counts (9.78M vs. 9.80M). Two plausible explanations were directly tested
+and ruled out: a microbenchmark of `sorted(neighbors)` + `rng.sample(...)`
+showed no measurable difference between degree-2 and degree-8 neighbor sets
+(1.236 vs. 1.239 µs/call), and peak memory is nearly identical between the
+two topologies (1,988.8 MB vs. 1,939.8 MB at n=100,000), ruling out a
+GC/memory-pressure explanation. A `cProfile` pass pinned it down precisely:
+`GossipBehavior.step()`'s own execution time (not the engine — event
+dispatch, heap operations, and metrics costs are nearly identical between
+the two) is about 50% higher on Erdős–Rényi for the same call count. Most
+plausible remaining cause — larger, more variable inbox lists at average
+degree 8 vs. Ring's fixed degree 2 — is flagged but not yet isolated
+further; this is a real, bounded (not compounding) cost, not another
+quadratic bug.
+
+## Result 4 — architecture overhead is real, and roughly constant
 
 | n | naive (bare loop) | Simul8 (full engine) | ratio |
 |---:|---:|---:|---:|
@@ -98,8 +138,16 @@ either hiding it or overselling raw speed.
 
 - No comparison against an existing simulation tool (PeerSim, Mesa) at
   matched scale — same gap flagged in the topology validation study.
-- The O(n²) `ErdosRenyiTopology` fix described above hasn't been
-  implemented; this benchmark only diagnosed it.
+- The Erdős–Rényi vs. Ring per-tick cost gap (Result 3) is diagnosed down to
+  the specific function but not down to the specific line — a next pass
+  could compare inbox-size distributions directly rather than inferring
+  from profiler output.
 - Only gossip was benchmarked for performance; leader election and SIR have
   correctness regression coverage (`tests/regression/`) but no dedicated
   performance sweep.
+- The `gossip_topology_validation/` study's committed results predate this
+  fix and used the old O(n²) `ErdosRenyiTopology` — their statistical
+  conclusions (flat convergence time on ER/WS/BA vs. linear on Ring) aren't
+  affected, since that study never depended on generation speed, but a
+  from-scratch rerun would now produce different exact CSV values for the
+  same seeds.

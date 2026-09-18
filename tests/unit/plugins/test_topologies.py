@@ -69,3 +69,34 @@ class TestErdosRenyiTopology:
         avg_degree = sum(g.degree(a) for a in agents) / n
         # Allow ±5 from expected 19.9
         assert 14 < avg_degree < 26, f"Unexpected average degree: {avg_degree}"
+
+    def test_zero_probability_produces_no_edges(self):
+        """edge_probability=0.0 is a boundary case for the direct-edge-sampling
+        algorithm (log(1-p) would divide by zero) and must be special-cased."""
+        agents = make_ids(50)
+        g = ErdosRenyiTopology().generate(agents, {"edge_probability": 0.0}, random.Random(1))
+        assert all(g.degree(a) == 0 for a in agents)
+
+    def test_full_probability_produces_complete_graph(self):
+        """edge_probability=1.0 is the other boundary case (log(1-p) undefined)."""
+        n = 20
+        agents = make_ids(n)
+        g = ErdosRenyiTopology().generate(agents, {"edge_probability": 1.0}, random.Random(1))
+        assert all(g.degree(a) == n - 1 for a in agents)
+
+    def test_single_agent_no_neighbors(self):
+        g = ErdosRenyiTopology().generate(make_ids(1), {"edge_probability": 0.5}, random.Random(1))
+        assert g.degree(AgentId(0)) == 0
+
+    def test_matches_expected_edge_count_at_scale(self):
+        """Regression guard for the O(n+m) direct-edge-sampling algorithm:
+        edge count should track p*n*(n-1)/2 closely, not just the degree average."""
+        n = 5000
+        p = 8.0 / (n - 1)
+        agents = make_ids(n)
+        g = ErdosRenyiTopology().generate(agents, {"edge_probability": p}, random.Random(42))
+        actual_edges = sum(g.degree(a) for a in agents) // 2
+        expected_edges = p * n * (n - 1) / 2
+        assert 0.85 * expected_edges < actual_edges < 1.15 * expected_edges, (
+            f"actual={actual_edges} expected~={expected_edges:.0f}"
+        )

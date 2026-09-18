@@ -66,12 +66,12 @@
 <div class="wrap">
   <div class="eyebrow">Scaling Benchmark</div>
   <h1>Wall-clock time vs. agent count</h1>
-  <p class="dek">Same gossip experiment (50 fixed ticks, no early stopping), single run per point. The two lines aren't "two ways to run Simul8" — they isolate two different costs: the core engine's own scaling (Ring topology, O(n) to generate) versus the full pipeline including a topology generator plugin (Erdős–Rényi) that happens to be O(n²).</p>
+  <p class="dek">Same gossip experiment (50 fixed ticks, no early stopping), single run per point. <code>ErdosRenyiTopology</code> was O(n²) as of the first pass of this benchmark (checked every possible agent pair regardless of density) — fixed to O(n+m) using the Batagelj–Brandes direct-edge-sampling algorithm. Both topologies now run the full n=100–100,000 range.</p>
 
   <div class="card">
     <div class="legend">
-      <div class="legend-item"><span style="width:22px;height:2px;display:inline-block;background:var(--series-ring)"></span>Ring — engine only <span class="n">local slope 1.0–1.1 throughout</span></div>
-      <div class="legend-item"><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="var(--series-er)" stroke-width="2" stroke-dasharray="6 3"/></svg>Erdős–Rényi — + O(n²) topology gen <span class="n">slope 0.89 → 1.37</span></div>
+      <div class="legend-item"><span style="width:22px;height:2px;display:inline-block;background:var(--series-ring)"></span>Ring <span class="n">local slope 0.96–1.13 throughout</span></div>
+      <div class="legend-item"><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="var(--series-er)" stroke-width="2" stroke-dasharray="6 3"/></svg>Erdős–Rényi (avg degree 8) <span class="n">local slope 0.98–1.25</span></div>
     </div>
 
     <svg viewBox="0 0 760 430" id="chart">
@@ -79,10 +79,10 @@
       <line class="gridline" x1="275.6" y1="30" x2="275.6" y2="430"/>
       <line class="gridline" x1="459.4" y1="30" x2="459.4" y2="430"/>
       <line class="gridline" x1="643.1" y1="30" x2="643.1" y2="430"/>
-      <line class="gridline" x1="70" y1="405.6" x2="670" y2="405.6"/>
-      <line class="gridline" x1="70" y1="295.6" x2="670" y2="295.6"/>
-      <line class="gridline" x1="70" y1="185.6" x2="670" y2="185.6"/>
-      <line class="gridline" x1="70" y1="75.6" x2="670" y2="75.6"/>
+      <line class="gridline" x1="70" y1="406.8" x2="670" y2="406.8"/>
+      <line class="gridline" x1="70" y1="302.2" x2="670" y2="302.2"/>
+      <line class="gridline" x1="70" y1="197.6" x2="670" y2="197.6"/>
+      <line class="gridline" x1="70" y1="93.0" x2="670" y2="93.0"/>
       <line class="baseline" x1="70" y1="430" x2="670" y2="430"/>
       <line class="baseline" x1="70" y1="30" x2="70" y2="430"/>
 
@@ -92,50 +92,51 @@
       <text class="axis-label" x="643.1" y="446" text-anchor="middle">n=100,000</text>
       <text class="axis-title" x="370" y="466" text-anchor="middle">Agent count (log scale)</text>
 
-      <text class="axis-label" x="62" y="409" text-anchor="end">0.1s</text>
-      <text class="axis-label" x="62" y="299" text-anchor="end">1s</text>
-      <text class="axis-label" x="62" y="189" text-anchor="end">10s</text>
-      <text class="axis-label" x="62" y="79" text-anchor="end">100s</text>
+      <text class="axis-label" x="62" y="410" text-anchor="end">0.1s</text>
+      <text class="axis-label" x="62" y="306" text-anchor="end">1s</text>
+      <text class="axis-label" x="62" y="201" text-anchor="end">10s</text>
+      <text class="axis-label" x="62" y="97" text-anchor="end">100s</text>
       <text class="axis-title" transform="translate(24,230) rotate(-90)" text-anchor="middle">Wall-clock time</text>
 
-      <polyline class="line line-ring" points="91.8,405.1 179.5,354.6 275.6,293.8 363.3,235.6 459.4,170.4 547.1,113.0 643.1,52.2"/>
-      <polyline class="line line-er" points="91.8,394.6 179.5,347.6 275.6,286.7 363.3,223.1 459.4,147.5 547.1,75.5"/>
+      <polyline class="line line-ring" points="91.8,406.3 179.5,358.3 275.6,300.5 363.3,245.1 459.4,183.1 547.1,128.5 643.1,70.7"/>
+      <polyline class="line line-er" points="91.8,399.7 179.5,350.7 275.6,290.3 363.3,229.7 459.4,161.7 547.1,99.2 643.1,39.5"/>
 
-      <circle class="mark mark-ring" data-topo="Ring" data-n="100" data-t="0.101" cx="91.8" cy="405.1" r="5"/>
-      <circle class="mark mark-ring" data-topo="Ring" data-n="300" data-t="0.291" cx="179.5" cy="354.6" r="5"/>
-      <circle class="mark mark-ring" data-topo="Ring" data-n="1,000" data-t="1.039" cx="275.6" cy="293.8" r="5"/>
-      <circle class="mark mark-ring" data-topo="Ring" data-n="3,000" data-t="3.513" cx="363.3" cy="235.6" r="5"/>
-      <circle class="mark mark-ring" data-topo="Ring" data-n="10,000" data-t="13.759" cx="459.4" cy="170.4" r="5"/>
-      <circle class="mark mark-ring" data-topo="Ring" data-n="30,000" data-t="45.727" cx="547.1" cy="113.0" r="5"/>
-      <circle class="mark mark-ring" data-topo="Ring" data-n="100,000" data-t="163.357" cx="643.1" cy="52.2" r="5"/>
+      <circle class="mark mark-ring" data-topo="Ring" data-n="100" data-t="0.101" cx="91.8" cy="406.3" r="5"/>
+      <circle class="mark mark-ring" data-topo="Ring" data-n="300" data-t="0.291" cx="179.5" cy="358.3" r="5"/>
+      <circle class="mark mark-ring" data-topo="Ring" data-n="1,000" data-t="1.039" cx="275.6" cy="300.5" r="5"/>
+      <circle class="mark mark-ring" data-topo="Ring" data-n="3,000" data-t="3.513" cx="363.3" cy="245.1" r="5"/>
+      <circle class="mark mark-ring" data-topo="Ring" data-n="10,000" data-t="13.759" cx="459.4" cy="183.1" r="5"/>
+      <circle class="mark mark-ring" data-topo="Ring" data-n="30,000" data-t="45.727" cx="547.1" cy="128.5" r="5"/>
+      <circle class="mark mark-ring" data-topo="Ring" data-n="100,000" data-t="163.357" cx="643.1" cy="70.7" r="5"/>
 
-      <circle class="mark mark-er" data-topo="Erdős–Rényi" data-n="100" data-t="0.126" cx="91.8" cy="394.6" r="5"/>
-      <circle class="mark mark-er" data-topo="Erdős–Rényi" data-n="300" data-t="0.337" cx="179.5" cy="347.6" r="5"/>
-      <circle class="mark mark-er" data-topo="Erdős–Rényi" data-n="1,000" data-t="1.204" cx="275.6" cy="286.7" r="5"/>
-      <circle class="mark mark-er" data-topo="Erdős–Rényi" data-n="3,000" data-t="4.567" cx="363.3" cy="223.1" r="5"/>
-      <circle class="mark mark-er" data-topo="Erdős–Rényi" data-n="10,000" data-t="22.209" cx="459.4" cy="147.5" r="5"/>
-      <circle class="mark mark-er" data-topo="Erdős–Rényi" data-n="30,000" data-t="100.377" cx="547.1" cy="75.5" r="5"/>
+      <circle class="mark mark-er" data-topo="Erdős–Rényi" data-n="100" data-t="0.117" cx="91.8" cy="399.7" r="5"/>
+      <circle class="mark mark-er" data-topo="Erdős–Rényi" data-n="300" data-t="0.344" cx="179.5" cy="350.7" r="5"/>
+      <circle class="mark mark-er" data-topo="Erdős–Rényi" data-n="1,000" data-t="1.298" cx="275.6" cy="290.3" r="5"/>
+      <circle class="mark mark-er" data-topo="Erdős–Rényi" data-n="3,000" data-t="4.933" cx="363.3" cy="229.7" r="5"/>
+      <circle class="mark mark-er" data-topo="Erdős–Rényi" data-n="10,000" data-t="22.027" cx="459.4" cy="161.7" r="5"/>
+      <circle class="mark mark-er" data-topo="Erdős–Rényi" data-n="30,000" data-t="87.287" cx="547.1" cy="99.2" r="5"/>
+      <circle class="mark mark-er" data-topo="Erdős–Rényi" data-n="100,000" data-t="324.308" cx="643.1" cy="39.5" r="5"/>
 
-      <text class="end-label" x="655" y="46" fill="var(--series-ring)">Ring</text>
-      <text class="end-label-sub" x="655" y="60">linear (engine)</text>
-      <text class="end-label" x="470" y="130" fill="var(--series-er)">Erdős–Rényi</text>
-      <text class="end-label-sub" x="470" y="144">bending toward n²</text>
+      <text class="end-label" x="440" y="128" fill="var(--series-ring)">Ring</text>
+      <text class="end-label-sub" x="440" y="142">163s at n=100,000</text>
+      <text class="end-label" x="440" y="46" fill="var(--series-er)">Erdős–Rényi</text>
+      <text class="end-label-sub" x="440" y="60">324s at n=100,000</text>
     </svg>
-    <div class="foot-note">Single run per point (this benchmark measures raw compute cost, not stochastic behavior — see the topology validation study for seed-averaged statistics). Erdős–Rényi capped at n=30,000: at that scale its O(n²) topology generator already dominates total time, and following the same trend to n=100,000 would take on the order of 20+ minutes for that step alone.</div>
+    <div class="foot-note">Single run per point (this benchmark measures raw compute cost, not stochastic behavior — see the topology validation study for seed-averaged statistics). Both topologies now stay within local slope ~1–1.25 across the full range — no more runaway quadratic growth. Erdős–Rényi is still consistently ~2× slower than Ring at matched n despite virtually identical event counts (9.78M vs 9.80M at n=100,000); profiling (cProfile) traced this specifically to <code>GossipBehavior.step()</code>'s own execution time, not the engine — event dispatch, heap operations, and metrics costs are nearly identical between the two. Most plausible cause: larger, more variable neighbor and inbox lists at average degree 8 vs. Ring's fixed degree 2 — not yet isolated further.</div>
   </div>
 
   <div class="card">
     <table>
       <caption>Full data — wall-clock time, throughput, peak memory</caption>
-      <thead><tr><th>n</th><th>Ring time</th><th>Ring events/s</th><th>Ring peak RSS</th><th>ER time</th></tr></thead>
+      <thead><tr><th>n</th><th>Ring time</th><th>Ring events/s</th><th>Ring peak RSS</th><th>ER time</th><th>ER events/s</th><th>ER peak RSS</th></tr></thead>
       <tbody>
-        <tr><td>100</td><td>0.10s</td><td>97,328</td><td>19.9 MB</td><td>0.13s</td></tr>
-        <tr><td>300</td><td>0.29s</td><td>101,065</td><td>23.6 MB</td><td>0.34s</td></tr>
-        <tr><td>1,000</td><td>1.04s</td><td>94,343</td><td>37.2 MB</td><td>1.20s</td></tr>
-        <tr><td>3,000</td><td>3.51s</td><td>83,713</td><td>76.3 MB</td><td>4.57s</td></tr>
-        <tr><td>10,000</td><td>13.76s</td><td>71,230</td><td>212.0 MB</td><td>22.21s</td></tr>
-        <tr><td>30,000</td><td>45.73s</td><td>64,296</td><td>601.0 MB</td><td>100.38s</td></tr>
-        <tr><td>100,000</td><td>163.36s</td><td>59,992</td><td>1,939.8 MB</td><td>— (not run, see note)</td></tr>
+        <tr><td>100</td><td>0.10s</td><td>97,328</td><td>19.9 MB</td><td>0.12s</td><td>84,475</td><td>19.9 MB</td></tr>
+        <tr><td>300</td><td>0.29s</td><td>101,065</td><td>23.6 MB</td><td>0.34s</td><td>85,570</td><td>23.9 MB</td></tr>
+        <tr><td>1,000</td><td>1.04s</td><td>94,343</td><td>37.2 MB</td><td>1.30s</td><td>75,408</td><td>37.6 MB</td></tr>
+        <tr><td>3,000</td><td>3.51s</td><td>83,713</td><td>76.3 MB</td><td>4.93s</td><td>59,489</td><td>77.1 MB</td></tr>
+        <tr><td>10,000</td><td>13.76s</td><td>71,230</td><td>212.0 MB</td><td>22.03s</td><td>44,426</td><td>214.8 MB</td></tr>
+        <tr><td>30,000</td><td>45.73s</td><td>64,296</td><td>601.0 MB</td><td>87.29s</td><td>33,627</td><td>611.4 MB</td></tr>
+        <tr><td>100,000</td><td>163.36s</td><td>59,992</td><td>1,939.8 MB</td><td>324.31s</td><td>30,171</td><td>1,988.8 MB</td></tr>
       </tbody>
     </table>
   </div>
