@@ -6,7 +6,7 @@ from simul8.domain.message import Message
 from simul8.domain.state import AgentState
 from simul8.plugins.behaviors.leader_election import LeaderElectionBehavior
 from simul8.plugins.metrics.leader_metrics import LeaderConsensusMetric
-from simul8.core.agent_registry import AgentRegistry
+from simul8.domain.topology import TopologyGraph
 
 
 def test_leader_election_initialization():
@@ -49,14 +49,16 @@ def test_leader_election_step_adoption():
 
 
 def test_leader_consensus_metric():
-    registry = AgentRegistry()
-    # Create agents with manual states
-    aid0 = registry.create_agent(initial_state=AgentState(data={"uid": 10, "leader_id": 10}))
-    aid1 = registry.create_agent(initial_state=AgentState(data={"uid": 50, "leader_id": 50}))
-    aid2 = registry.create_agent(initial_state=AgentState(data={"uid": 30, "leader_id": 30}))
-    
+    # Plain domain data -- a metric plugin is testable with no core objects.
+    aid0, aid1, aid2 = AgentId(0), AgentId(1), AgentId(2)
+    initial_states = {
+        aid0: {"uid": 10, "leader_id": 10},
+        aid1: {"uid": 50, "leader_id": 50},
+        aid2: {"uid": 30, "leader_id": 30},
+    }
+
     metric = LeaderConsensusMetric()
-    metric.configure(registry)
+    metric.on_setup(TopologyGraph(agent_ids=frozenset(initial_states), adjacency={}), initial_states)
     
     # True leader should be 50 (max UID)
     assert metric._true_leader_id == 50

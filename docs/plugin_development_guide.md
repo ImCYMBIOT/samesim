@@ -23,13 +23,18 @@ Every plugin, regardless of which port it implements, must follow these rules.
 They're not stylistic preferences — the first two are enforced by tests that
 will fail your PR if violated.
 
-1. **No imports from `simul8.core` or `simul8.app`.**
+1. **No imports from `simul8.core` or `simul8.app`. No exceptions.**
    Checked automatically by
    [`tests/unit/test_architecture_boundaries.py`](../tests/unit/test_architecture_boundaries.py),
-   which parses every file under `simul8/plugins/` and fails the build on a
-   forbidden import. This is what keeps the core portable (including the
+   which resolves every import (absolute *and* relative) in every file under
+   `simul8/` and enforces the full layering: plugins may use only `domain`
+   and `ports`. This is what keeps the core portable (including the
    planned Rust port) and keeps a bad research idea from being able to touch
-   the scheduler.
+   the scheduler. If your plugin needs something the port doesn't give it,
+   that is a missing port feature — raise it, don't reach around it. (An
+   earlier version of this test only matched absolute imports, and two
+   metrics used `from ...core import` to receive the live, mutable agent
+   registry for months without it noticing.)
 
 2. **Zero-argument `__init__`.**
    `PluginLoader` (`simul8/app/plugin_loader.py`) instantiates every plugin
@@ -140,6 +145,20 @@ on_event(event, virtual_time) -> None            # must never raise
 get_series() -> MetricSeries
 reset() -> None
 ```
+
+Plus one optional hook:
+
+```python
+on_setup(topology, initial_states) -> None       # once, before the first event
+```
+
+Override it when a metric needs something no event carries — the graph
+structure (`TopologyMetric`) or a value derived from every agent's starting
+state (`LeaderConsensusMetric` finds the true maximum id this way). You get
+the immutable `TopologyGraph` and a read-only `{agent_id: state}` mapping,
+never the core objects behind them. A collector that still defines the old
+`configure()` hook is rejected at startup with an error, rather than being
+silently skipped.
 
 `MetricsEngine` only delivers events you subscribe to, so declare the
 narrowest set that gives you what you need. `on_event` must not raise —

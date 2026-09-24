@@ -3,15 +3,18 @@ LeaderConsensusMetric — tracks progress of leader election consensus.
 
 Calculates the percentage of agents that have adopted the true maximum leader ID.
 
-Uses the registry two-phase initialization (`configure()`) to inspect the initial
-states of all agents and discover the true maximum leader ID before the simulation starts.
+Reads every agent's initial state in on_setup() to discover the true maximum
+leader ID before the simulation starts.
 """
 from __future__ import annotations
 
-from ...core.agent_registry import AgentRegistry
+from collections.abc import Mapping
+from typing import Any
+
 from ...domain.event import AgentStateChangedEvent, Event, TickEvent
 from ...domain.ids import AgentId, MetricName, VirtualTime
 from ...domain.metric import MetricSeries
+from ...domain.topology import TopologyGraph
 from ...ports.metric_collector import MetricCollectorPort
 
 
@@ -20,20 +23,22 @@ class LeaderConsensusMetric(MetricCollectorPort):
 
     def __init__(self) -> None:
         self._series = MetricSeries(name=MetricName("leader_consensus_fraction"))
-        self._registry: AgentRegistry | None = None
         self._true_leader_id: int | None = None
         # Track the last known leader ID for each agent
         self._agent_leaders: dict[AgentId, int] = {}
 
-    def configure(self, agent_registry: AgentRegistry, **kwargs: Any) -> None:
-        """Scan registry to discover the true maximum leader ID."""
-        self._registry = agent_registry
+    def on_setup(
+        self,
+        topology: TopologyGraph,
+        initial_states: Mapping[AgentId, Mapping[str, Any]],
+    ) -> None:
+        """Scan initial states to discover the true maximum leader ID."""
         uids = []
-        for agent in agent_registry.iter_agents():
-            uid = agent.state.get("uid")
+        for agent_id, state in initial_states.items():
+            uid = state.get("uid")
             if uid is not None:
                 uids.append(uid)
-                self._agent_leaders[agent.agent_id] = uid
+                self._agent_leaders[agent_id] = uid
 
         if uids:
             self._true_leader_id = max(uids)

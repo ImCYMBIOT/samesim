@@ -26,7 +26,7 @@ from simul8.core.agent_registry import AgentRegistry  # noqa: E402
 from simul8.core.communication_layer import CommunicationLayer  # noqa: E402
 from simul8.core.engine import SimulationEngine  # noqa: E402
 from simul8.core.event_queue import EventQueue  # noqa: E402
-from simul8.core.metrics_engine import MetricsEngine  # noqa: E402
+from simul8.app.experiment_runner import register_metric_collectors  # noqa: E402
 from simul8.core.randomness_manager import RandomnessManager  # noqa: E402
 from simul8.core.scheduler import Scheduler  # noqa: E402
 from simul8.core.time_manager import TimeManager  # noqa: E402
@@ -100,11 +100,9 @@ def run_simul8(
 
     comm_protocol.initialize(topology_manager.topology, comm_config, rng_manager.global_rng)
 
-    metrics_engine = MetricsEngine()
-    for collector in metric_collectors:
-        if hasattr(collector, "configure"):
-            collector.configure(agent_registry=agent_registry, topology_manager=topology_manager)
-        metrics_engine.register(collector)
+    metrics_engine = register_metric_collectors(
+        metric_collectors, agent_registry, topology_manager.topology
+    )
 
     event_queue = EventQueue()
     time_manager = TimeManager()

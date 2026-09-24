@@ -9,6 +9,8 @@
 |-- design_manifesto.txt
 |-- docs
     |-- Simul8_Research_Brief.docx
+    |-- design
+        |-- event_model.md
     |-- extended_documentation.md
     |-- plugin_development_guide.md
 |-- examples
@@ -277,6 +279,7 @@
             |-- test_architecture_boundaries.cpython-313-pytest-8.3.3.pyc
             |-- test_architecture_boundaries.cpython-313-pytest-9.1.1.pyc
             |-- test_experiment_script_portability.cpython-312-pytest-9.1.1.pyc
+            |-- test_metric_collector_setup.cpython-312-pytest-9.1.1.pyc
         |-- core
             |-- __init__.py
             |-- __pycache__
@@ -321,3 +324,4 @@
             |-- test_topology_complexity.py
         |-- test_architecture_boundaries.py
         |-- test_experiment_script_portability.py
+        |-- test_metric_collector_setup.py

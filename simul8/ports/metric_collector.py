@@ -10,10 +10,13 @@ Design:
     proportional to actual subscriptions rather than total event volume.
 
 Contracts:
-    - MUST NOT import from simul8.core or simul8.app
-      (Exception: collectors needing agent state may accept an AgentRegistry
-       reference via a configure() method, which the ExperimentRunner calls
-       before registering the collector with MetricsEngine.)
+    - MUST NOT import from simul8.core or simul8.app -- no exceptions.
+      A collector that needs the starting picture (the graph, or every
+      agent's initial state) overrides on_setup(), which receives immutable
+      domain data only. There used to be a duck-typed configure() hook that
+      handed plugins the live AgentRegistry and TopologyManager -- core
+      objects with mutating methods -- and the boundary test could not see
+      it. The runner now rejects any collector that still defines one.
     - subscribed_events() MUST return a stable frozenset (same value every call)
     - on_event() MUST NOT raise exceptions (log and continue instead)
     - get_series() MUST be callable at any time during or after the simulation
@@ -25,14 +28,36 @@ Extension:
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
+from typing import Any
 
 from ..domain.event import Event
-from ..domain.ids import VirtualTime
+from ..domain.ids import AgentId, VirtualTime
 from ..domain.metric import MetricSeries
+from ..domain.topology import TopologyGraph
 
 
 class MetricCollectorPort(ABC):
     """Abstract contract for accumulating a single simulation metric."""
+
+    def on_setup(
+        self,
+        topology: TopologyGraph,
+        initial_states: Mapping[AgentId, Mapping[str, Any]],
+    ) -> None:
+        """Receive the starting picture, once, before the first event.
+
+        Optional -- the default does nothing. Override it when a metric
+        needs something no event carries: the graph structure, or a value
+        computable only from every agent's initial state (e.g. the true
+        maximum id a leader election should converge to).
+
+        Args:
+            topology:       The agent network (immutable).
+            initial_states: Each agent's state at t=0, in agent-id order,
+                            as read-only mappings -- the same form
+                            AgentStateChangedEvent.state_snapshot takes.
+        """
 
     @abstractmethod
     def subscribed_events(self) -> frozenset[type[Event]]:

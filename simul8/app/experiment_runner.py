@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from types import MappingProxyType
 
 from ..core.agent_registry import AgentRegistry
 from ..core.communication_layer import CommunicationLayer
@@ -33,6 +34,7 @@ from ..core.time_manager import TimeManager
 from ..core.topology_manager import TopologyManager
 from ..domain.experiment import ExperimentConfig
 from ..domain.ids import AgentId
+from ..domain.topology import TopologyGraph
 from ..ports.behavior import BehaviorPort
 from ..ports.communication import CommunicationProtocolPort
 from ..ports.metric_collector import MetricCollectorPort
@@ -42,6 +44,44 @@ from .config_loader import ConfigLoader
 from .plugin_loader import PluginLoader
 
 logger = logging.getLogger(__name__)
+
+
+def register_metric_collectors(
+    collectors: list[MetricCollectorPort],
+    agent_registry: AgentRegistry,
+    topology: TopologyGraph,
+) -> MetricsEngine:
+    """Hand each collector its starting picture and register it.
+
+    The one place collectors are set up, shared by ExperimentRunner and the
+    external-validation harness so the two cannot drift apart again.
+
+    Collectors only ever see immutable domain data: the TopologyGraph and a
+    read-only snapshot of every agent's initial state. Never the registry or
+    topology manager themselves -- those are core objects with mutating
+    methods, and handing them to plugins is what the architecture forbids.
+
+    Raises:
+        TypeError: If a collector still defines the removed configure()
+            hook. It would otherwise silently never be called, and the
+            metric would quietly report nothing -- a plausible-looking
+            wrong answer rather than an error.
+    """
+    initial_states = MappingProxyType({
+        agent.agent_id: MappingProxyType(agent.state.to_dict())
+        for agent in agent_registry.iter_agents()
+    })
+    engine = MetricsEngine()
+    for collector in collectors:
+        if hasattr(collector, "configure"):
+            raise TypeError(
+                f"{type(collector).__name__} defines configure(), which is no "
+                f"longer called. Override on_setup(topology, initial_states) "
+                f"instead -- see MetricCollectorPort."
+            )
+        collector.on_setup(topology, initial_states)
+        engine.register(collector)
+    return engine
 
 
 class ExperimentRunner:
@@ -132,12 +172,9 @@ class ExperimentRunner:
         comm_protocol.initialize(topology_manager.topology, comm_config, rng_manager.global_rng)
 
         # --- 7. Register metric collectors ---
-        metrics_engine = MetricsEngine()
-        for collector in metric_collectors:
-            # Optional two-phase init for collectors that need registry/topology access
-            if hasattr(collector, "configure"):
-                collector.configure(agent_registry=agent_registry, topology_manager=topology_manager)
-            metrics_engine.register(collector)
+        metrics_engine = register_metric_collectors(
+            metric_collectors, agent_registry, topology_manager.topology
+        )
 
         # --- 8. Assemble core ---
         event_queue = EventQueue()

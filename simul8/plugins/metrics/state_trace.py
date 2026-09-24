@@ -6,11 +6,13 @@ This data is used by the visualizer to animate graph states over time.
 """
 from __future__ import annotations
 
-from ...core.agent_registry import AgentRegistry
-from ...core.topology_manager import TopologyManager
+from collections.abc import Mapping
+from typing import Any
+
 from ...domain.event import AgentStateChangedEvent, Event, SimulationStartedEvent
-from ...domain.ids import MetricName, VirtualTime
+from ...domain.ids import AgentId, MetricName, VirtualTime
 from ...domain.metric import MetricSeries
+from ...domain.topology import TopologyGraph
 from ...ports.metric_collector import MetricCollectorPort
 
 
@@ -19,21 +21,21 @@ class TopologyMetric(MetricCollectorPort):
 
     def __init__(self) -> None:
         self._series = MetricSeries(name=MetricName("topology"))
-        self._topology_manager: TopologyManager | None = None
+        self._topology: TopologyGraph | None = None
 
-    def configure(
+    def on_setup(
         self,
-        agent_registry: AgentRegistry,
-        topology_manager: TopologyManager,
+        topology: TopologyGraph,
+        initial_states: Mapping[AgentId, Mapping[str, Any]],
     ) -> None:
-        self._topology_manager = topology_manager
+        self._topology = topology
 
     def subscribed_events(self) -> frozenset[type[Event]]:
         return frozenset({SimulationStartedEvent})
 
     def on_event(self, event: Event, virtual_time: VirtualTime) -> None:
-        if isinstance(event, SimulationStartedEvent) and self._topology_manager:
-            topology = self._topology_manager.topology
+        if isinstance(event, SimulationStartedEvent) and self._topology is not None:
+            topology = self._topology
             # Iterate through all agents and their neighbors to log edges
             seen_edges = set()
             for u in sorted(topology.all_agent_ids()):
@@ -54,7 +56,7 @@ class TopologyMetric(MetricCollectorPort):
 
     def reset(self) -> None:
         self._series = MetricSeries(name=MetricName("topology"))
-        self._topology_manager = None
+        self._topology = None
 
 
 class StateTraceMetric(MetricCollectorPort):

@@ -6,10 +6,10 @@ The core engine is domain-agnostic and manages only agents, virtual time, event 
 
 ## Features
 
-- **Clean Hexagonal Architecture**: Strictly separated domain, ports, core engine, and application layers.
-- **Deterministic and Reproducible**: Built-in seedable randomness per agent (`seed XOR agent_id`) ensures 100% reproducible runs regardless of concurrency or scale.
-- **Pluggable Architecture**: Easily swap behaviors, communication protocols, network topologies, metrics, and persistence exporters.
-- **High Performance & Lean**: Native Python with zero heavy dependencies (YAML library only). Built with future Rust portability in mind.
+- **Clean Hexagonal Architecture**: Strictly separated domain, ports, core engine, and application layers. Plugins cannot import the core; a test enforces it.
+- **Deterministic and Reproducible**: Every agent gets its own seeded RNG (`seed XOR agent_id`), and events are ordered by `(virtual_time, priority, event_id)`, so the same seed always produces the same run.
+- **Pluggable Architecture**: Swap behaviors, communication protocols, network topologies, metrics, and exporters from YAML. No core changes needed.
+- **Lean**: Pure Python with a single runtime dependency (PyYAML). Built with a future Rust port in mind. See [By the numbers](#by-the-numbers) for what that costs in speed.
 
 ## Directory Structure
 
@@ -27,6 +27,94 @@ simul8/
 
 For a deep dive into the architecture, component design, and simulation loop lifecycle, see the [Extended Documentation & Developer Guide](docs/extended_documentation.md). For step-by-step instructions on writing your own plugins (behaviors, topologies, protocols, metrics, exporters), see the [Plugin Development Guide](docs/plugin_development_guide.md).
 
+
+## What a run produces
+
+Each experiment writes self-describing CSV time series (a comment header carries the experiment name, seed, and schema version) plus a `summary.json` / `summary.md` with the config and wall-clock runtime:
+
+```
+# experiment: sir_random
+# seed: 9876
+# schema_version: 1.0
+# metric: sir_infected
+virtual_time,value
+0.0,2.0
+1.0,5.0
+...
+```
+
+| Plugin type | Included |
+|---|---|
+| Behaviors | Gossip averaging, leader election (max-id flooding), SIR epidemic |
+| Protocols | Gossip (point-to-point), broadcast, lossy (configurable drop rate) |
+| Topologies | Ring, 2-D grid (optional wrap), Erdős–Rényi, Watts–Strogatz, Barabási–Albert |
+| Metrics | Convergence variance, message count, S/I/R counts, leader-consensus fraction, full per-agent state trace, topology edge list |
+| Exporters | CSV |
+
+All five example configs in `examples/` finish in under 0.4 s each.
+
+## By the numbers
+
+Everything below comes from committed scripts under [`experiments/`](experiments/) with raw JSON next to them. Re-run any of it with the commands in each study's README.
+
+### Scale
+
+Gossip (fan-out 2), 50 ticks, one core, pure Python:
+
+| Agents | Events processed | Wall time | Throughput | Peak memory |
+|---:|---:|---:|---:|---:|
+| 1,000 | 100,052 | 1.3 s | ~77k events/s | 38 MB |
+| 10,000 | 1,000,052 | 16.5 s | ~60k events/s | 216 MB |
+| 30,000 | 3,000,052 | 57 s | ~53k events/s | 612 MB |
+| 100,000 | 9.8 M | 163 s | ~60k events/s | 1.9 GB |
+
+- **The engine scales linearly.** On a ring, the local log-log slope of runtime vs. agents stays between 0.96 and 1.13 from 100 to 100,000 agents. On Erdős–Rényi (average degree 8) it's 0.81–1.35, mildly superlinear: runtime is 1.0× Ring's at 300 agents and 2.0× at 100,000. The extra cost has been traced to `GossipBehavior.step()`, not the engine, but not yet to a specific line.
+- **No topology generator is quadratic.** Erdős–Rényi with 100,000 agents builds in 0.82 s. A contract test fails the build if any generator, including future ones, grows quadratically.
+- **The architecture costs about an order of magnitude.** A bare-loop implementation of the same gossip protocol runs 6–12× faster across our measurements, and the ratio stops growing above ~1,000 agents. That overhead pays for the event queue, determinism, and plugin isolation.
+
+*The 100,000-agent row predates a fix that restored a dropped final tick (+2.04% events). The other rows are from the corrected engine. Timings were taken on a developer laptop and vary about ±10% run to run. Slopes and event counts are the reliable figures.*
+
+### Correctness against independent tools
+
+Simul8 was checked against software and math it shares no code with, on the identical input graph:
+
+| Check | Simul8 | Reference | Verdict |
+|---|---|---|---|
+| SIR epidemic, 500 agents, 20 seeds: peak infected | 368.3 ± 6.9 | 362.0 ± 7.2 ([NDlib](https://ndlib.readthedocs.io)) | Within 1.7% |
+| SIR: final recovered | 499.1 | 498.9 (NDlib) | Match |
+| Gossip ticks to converge, 300 agents, 15 seeds | 11.3 ± 1.6 | 12.3 ± 1.8 (independent numpy impl.) | Distributions overlap |
+| Watts–Strogatz clustering / avg. path | 0.4164 / 4.094 | 0.4164 / 4.094 ([NetworkX](https://networkx.org)) | Exact |
+| Ring and grid diameter / avg. path | 250 / 125.25, 20 / 10.03 | Identical (NetworkX) | Exact |
+| Erdős–Rényi, Barabási–Albert structure | avg. degree, diameter, clustering | NetworkX | Within single-sample noise |
+| Leader election consensus time | ≤ diameter in 15/15 cases (n = 50–1,000) | Graph diameter (analytical bound) | Always within bound |
+| Total messages delivered | n × fan-out × ticks | Closed-form count | Exact |
+
+These checks found three real bugs, which are fixed and have regression tests: an O(n²) topology generator, a dropped final tick, and a double fan-out that inflated SIR transmission by ~28%. Details: [`experiments/external_validation/`](experiments/external_validation/).
+
+### Reproducing theory
+
+Gossip convergence time vs. network size (5 seeds per point, average degree 8), fitted log-log slope:
+
+| Topology | Slope | Meaning |
+|---|---:|---|
+| Ring | 0.99 | Grows linearly with n |
+| Watts–Strogatz | 0.16 | Nearly flat |
+| Barabási–Albert | 0.11 | Nearly flat |
+| Erdős–Rényi | 0.05 | Flat |
+
+This matches mixing-time theory qualitatively: well-connected graphs converge in roughly constant time, and a cycle doesn't. The study was re-run end to end on the current engine, and every slope reproduced. Details: [`experiments/gossip_topology_validation/`](experiments/gossip_topology_validation/).
+
+### Tests
+
+**251 passing** (unit, integration, regression). Four of the suites are *contract tests that discover their targets automatically*, so they also cover plugins and files that don't exist yet:
+- every behavior × protocol pairing delivers exactly once per intended recipient
+- no topology generator scales quadratically
+- every module respects the layering (`plugins` → `domain`, `ports` only), with relative imports resolved
+- no committed script hardcodes a machine-specific path
+
+## What it can't do yet
+
+Agents currently run on a synchronous global tick, every message takes exactly one tick, and the network is fixed for the whole run. Latency distributions, timer-driven protocols (Raft, heartbeats), asynchronous gossip, and churn aren't expressible yet. The design for adding them is in [docs/design/event_model.md](docs/design/event_model.md).
 
 ## Getting Started
 
