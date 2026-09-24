@@ -207,14 +207,18 @@ Local slopes are unchanged in character:
 | 1,000 → 3,000 | 1.11 | 1.18 |
 | 3,000 → 10,000 | 1.11 | 1.35 |
 | 10,000 → 30,000 | 1.13 | 1.26 |
+| 30,000 → 100,000 | 0.92 | 0.86 |
 
-### Two caveats, stated plainly
+### Measurement notes
 
-**The n=100,000 point was not re-run.** The machine had 1.4 GB of RAM
-available against that point's ~1.9 GB peak, so it would have measured the
-swap subsystem rather than Simul8. The re-run caps at n=30,000. The
-headline "100,000 agents in 163s" figure therefore still rests on the
-pre-audit measurement.
+**The n=100,000 point was run separately**, once the machine had enough
+free memory (3.7 GB available against the point's ~2 GB peak; swap usage
+stayed flat through the run, so the timing is not paging). It reproduces:
+10,000,052 events (+2.04%, identical to every other point), 172 s on Ring
+and 294 s on Erdős–Rényi, 2.0 GB peak. The 30,000 → 100,000 local slope is
+0.92 on Ring and 0.86 on Erdős–Rényi, so the engine is still linear at
+the top of the range. The overhead ratio against the naive loop at that
+point is 11.0× (15.7 s naive).
 
 **Absolute timings are not comparable between the two passes.** Measured
 throughput came out 5–25% lower across the board, but *erratically* — with

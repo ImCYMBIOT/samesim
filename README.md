@@ -66,13 +66,13 @@ Gossip (fan-out 2), 50 ticks, one core, pure Python:
 | 1,000 | 100,052 | 1.3 s | ~77k events/s | 38 MB |
 | 10,000 | 1,000,052 | 16.5 s | ~60k events/s | 216 MB |
 | 30,000 | 3,000,052 | 57 s | ~53k events/s | 612 MB |
-| 100,000 | 9.8 M | 163 s | ~60k events/s | 1.9 GB |
+| 100,000 | 10,000,052 | 172 s | ~58k events/s | 2.0 GB |
 
-- **The engine scales linearly.** On a ring, the local log-log slope of runtime vs. agents stays between 0.96 and 1.13 from 100 to 100,000 agents. On Erdős–Rényi (average degree 8) it's 0.81–1.35, mildly superlinear: runtime is 1.0× Ring's at 300 agents and 2.0× at 100,000. The extra cost has been traced to `GossipBehavior.step()`, not the engine, but not yet to a specific line.
+- **The engine scales linearly.** On a ring, the local log-log slope of runtime vs. agents stays between 0.92 and 1.13 from 100 to 100,000 agents. On Erdős–Rényi (average degree 8) it's 0.81–1.35, mildly superlinear in the middle of the range: runtime is 1.0× Ring's at 300 agents and 1.7× at 100,000. The extra cost has been traced to `GossipBehavior.step()`, not the engine, but not yet to a specific line.
 - **No topology generator is quadratic.** Erdős–Rényi with 100,000 agents builds in 0.82 s. A contract test fails the build if any generator, including future ones, grows quadratically.
 - **The architecture costs about an order of magnitude.** A bare-loop implementation of the same gossip protocol runs 6–12× faster across our measurements, and the ratio stops growing above ~1,000 agents. That overhead pays for the event queue, determinism, and plugin isolation.
 
-*The 100,000-agent row predates a fix that restored a dropped final tick (+2.04% events). The other rows are from the corrected engine. Timings were taken on a developer laptop and vary about ±10% run to run. Slopes and event counts are the reliable figures.*
+*All rows are from the current engine. Timings were taken on a developer laptop and vary about ±10% run to run. Slopes and event counts are the reliable figures.*
 
 ### Correctness against independent tools
 

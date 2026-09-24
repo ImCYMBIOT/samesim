@@ -58,5 +58,15 @@
     "events_per_second": 28804.52575920231,
     "peak_rss_kb": 636544,
     "peak_rss_delta_kb": 413200
+  },
+  {
+    "n": 100000,
+    "seed": 1,
+    "max_virtual_time": 50,
+    "wall_seconds": 294.201209492001,
+    "events_processed": 9984352,
+    "events_per_second": 33937.15483780655,
+    "peak_rss_kb": 2044720,
+    "peak_rss_delta_kb": 2026488
   }
 ]
