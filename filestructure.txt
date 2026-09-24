@@ -1,3 +1,6 @@
+|-- .github
+    |-- workflows
+        |-- tests.yml
 |-- .gitignore
 |-- .pytest_cache
     |-- .gitignore
@@ -57,17 +60,27 @@
 |-- simul8
     |-- __init__.py
     |-- __pycache__
+        |-- __init__.cpython-310.pyc
+        |-- __init__.cpython-311.pyc
         |-- __init__.cpython-312.pyc
         |-- __init__.cpython-313.pyc
     |-- app
         |-- __init__.py
         |-- __pycache__
+            |-- __init__.cpython-310.pyc
+            |-- __init__.cpython-311.pyc
             |-- __init__.cpython-312.pyc
             |-- __init__.cpython-313.pyc
+            |-- config_loader.cpython-310.pyc
+            |-- config_loader.cpython-311.pyc
             |-- config_loader.cpython-312.pyc
             |-- config_loader.cpython-313.pyc
+            |-- experiment_runner.cpython-310.pyc
+            |-- experiment_runner.cpython-311.pyc
             |-- experiment_runner.cpython-312.pyc
             |-- experiment_runner.cpython-313.pyc
+            |-- plugin_loader.cpython-310.pyc
+            |-- plugin_loader.cpython-311.pyc
             |-- plugin_loader.cpython-312.pyc
             |-- plugin_loader.cpython-313.pyc
         |-- config_loader.py
@@ -85,24 +98,44 @@
     |-- core
         |-- __init__.py
         |-- __pycache__
+            |-- __init__.cpython-310.pyc
+            |-- __init__.cpython-311.pyc
             |-- __init__.cpython-312.pyc
             |-- __init__.cpython-313.pyc
+            |-- agent_registry.cpython-310.pyc
+            |-- agent_registry.cpython-311.pyc
             |-- agent_registry.cpython-312.pyc
             |-- agent_registry.cpython-313.pyc
+            |-- communication_layer.cpython-310.pyc
+            |-- communication_layer.cpython-311.pyc
             |-- communication_layer.cpython-312.pyc
             |-- communication_layer.cpython-313.pyc
+            |-- engine.cpython-310.pyc
+            |-- engine.cpython-311.pyc
             |-- engine.cpython-312.pyc
             |-- engine.cpython-313.pyc
+            |-- event_queue.cpython-310.pyc
+            |-- event_queue.cpython-311.pyc
             |-- event_queue.cpython-312.pyc
             |-- event_queue.cpython-313.pyc
+            |-- metrics_engine.cpython-310.pyc
+            |-- metrics_engine.cpython-311.pyc
             |-- metrics_engine.cpython-312.pyc
             |-- metrics_engine.cpython-313.pyc
+            |-- randomness_manager.cpython-310.pyc
+            |-- randomness_manager.cpython-311.pyc
             |-- randomness_manager.cpython-312.pyc
             |-- randomness_manager.cpython-313.pyc
+            |-- scheduler.cpython-310.pyc
+            |-- scheduler.cpython-311.pyc
             |-- scheduler.cpython-312.pyc
             |-- scheduler.cpython-313.pyc
+            |-- time_manager.cpython-310.pyc
+            |-- time_manager.cpython-311.pyc
             |-- time_manager.cpython-312.pyc
             |-- time_manager.cpython-313.pyc
+            |-- topology_manager.cpython-310.pyc
+            |-- topology_manager.cpython-311.pyc
             |-- topology_manager.cpython-312.pyc
             |-- topology_manager.cpython-313.pyc
         |-- agent_registry.py
@@ -117,22 +150,40 @@
     |-- domain
         |-- __init__.py
         |-- __pycache__
+            |-- __init__.cpython-310.pyc
+            |-- __init__.cpython-311.pyc
             |-- __init__.cpython-312.pyc
             |-- __init__.cpython-313.pyc
+            |-- agent.cpython-310.pyc
+            |-- agent.cpython-311.pyc
             |-- agent.cpython-312.pyc
             |-- agent.cpython-313.pyc
+            |-- event.cpython-310.pyc
+            |-- event.cpython-311.pyc
             |-- event.cpython-312.pyc
             |-- event.cpython-313.pyc
+            |-- experiment.cpython-310.pyc
+            |-- experiment.cpython-311.pyc
             |-- experiment.cpython-312.pyc
             |-- experiment.cpython-313.pyc
+            |-- ids.cpython-310.pyc
+            |-- ids.cpython-311.pyc
             |-- ids.cpython-312.pyc
             |-- ids.cpython-313.pyc
+            |-- message.cpython-310.pyc
+            |-- message.cpython-311.pyc
             |-- message.cpython-312.pyc
             |-- message.cpython-313.pyc
+            |-- metric.cpython-310.pyc
+            |-- metric.cpython-311.pyc
             |-- metric.cpython-312.pyc
             |-- metric.cpython-313.pyc
+            |-- state.cpython-310.pyc
+            |-- state.cpython-311.pyc
             |-- state.cpython-312.pyc
             |-- state.cpython-313.pyc
+            |-- topology.cpython-310.pyc
+            |-- topology.cpython-311.pyc
             |-- topology.cpython-312.pyc
             |-- topology.cpython-313.pyc
         |-- agent.py
@@ -146,69 +197,130 @@
     |-- plugins
         |-- __init__.py
         |-- __pycache__
+            |-- __init__.cpython-310.pyc
+            |-- __init__.cpython-311.pyc
             |-- __init__.cpython-312.pyc
             |-- __init__.cpython-313.pyc
         |-- behaviors
             |-- __init__.py
             |-- __pycache__
+                |-- __init__.cpython-310.pyc
+                |-- __init__.cpython-311.pyc
                 |-- __init__.cpython-312.pyc
                 |-- __init__.cpython-313.pyc
+                |-- gossip_behavior.cpython-310.pyc
+                |-- gossip_behavior.cpython-311.pyc
                 |-- gossip_behavior.cpython-312.pyc
                 |-- gossip_behavior.cpython-313.pyc
+                |-- leader_election.cpython-310.pyc
+                |-- leader_election.cpython-311.pyc
                 |-- leader_election.cpython-312.pyc
+                |-- leader_election.cpython-313.pyc
+                |-- sir_behavior.cpython-310.pyc
+                |-- sir_behavior.cpython-311.pyc
                 |-- sir_behavior.cpython-312.pyc
+                |-- sir_behavior.cpython-313.pyc
             |-- gossip_behavior.py
             |-- leader_election.py
             |-- sir_behavior.py
         |-- communication
             |-- __init__.py
             |-- __pycache__
+                |-- __init__.cpython-310.pyc
+                |-- __init__.cpython-311.pyc
                 |-- __init__.cpython-312.pyc
                 |-- __init__.cpython-313.pyc
+                |-- broadcast.cpython-310.pyc
+                |-- broadcast.cpython-311.pyc
                 |-- broadcast.cpython-312.pyc
+                |-- broadcast.cpython-313.pyc
+                |-- gossip.cpython-310.pyc
+                |-- gossip.cpython-311.pyc
                 |-- gossip.cpython-312.pyc
                 |-- gossip.cpython-313.pyc
+                |-- lossy.cpython-310.pyc
+                |-- lossy.cpython-311.pyc
                 |-- lossy.cpython-312.pyc
+                |-- lossy.cpython-313.pyc
             |-- broadcast.py
             |-- gossip.py
             |-- lossy.py
         |-- metrics
             |-- __init__.py
             |-- __pycache__
+                |-- __init__.cpython-310.pyc
+                |-- __init__.cpython-311.pyc
                 |-- __init__.cpython-312.pyc
                 |-- __init__.cpython-313.pyc
+                |-- convergence.cpython-310.pyc
+                |-- convergence.cpython-311.pyc
                 |-- convergence.cpython-312.pyc
                 |-- convergence.cpython-313.pyc
+                |-- leader_metrics.cpython-310.pyc
+                |-- leader_metrics.cpython-311.pyc
                 |-- leader_metrics.cpython-312.pyc
+                |-- leader_metrics.cpython-313.pyc
+                |-- message_count.cpython-310.pyc
+                |-- message_count.cpython-311.pyc
                 |-- message_count.cpython-312.pyc
                 |-- message_count.cpython-313.pyc
+                |-- sir_metrics.cpython-310.pyc
+                |-- sir_metrics.cpython-311.pyc
                 |-- sir_metrics.cpython-312.pyc
+                |-- sir_metrics.cpython-313.pyc
+                |-- state_trace.cpython-310.pyc
+                |-- state_trace.cpython-311.pyc
                 |-- state_trace.cpython-312.pyc
+                |-- state_trace.cpython-313.pyc
+                |-- trace_digest.cpython-310.pyc
+                |-- trace_digest.cpython-311.pyc
+                |-- trace_digest.cpython-312.pyc
+                |-- trace_digest.cpython-313.pyc
             |-- convergence.py
             |-- leader_metrics.py
             |-- message_count.py
             |-- sir_metrics.py
             |-- state_trace.py
+            |-- trace_digest.py
         |-- persistence
             |-- __init__.py
             |-- __pycache__
+                |-- __init__.cpython-310.pyc
+                |-- __init__.cpython-311.pyc
                 |-- __init__.cpython-312.pyc
                 |-- __init__.cpython-313.pyc
+                |-- csv_exporter.cpython-310.pyc
+                |-- csv_exporter.cpython-311.pyc
                 |-- csv_exporter.cpython-312.pyc
                 |-- csv_exporter.cpython-313.pyc
             |-- csv_exporter.py
         |-- topologies
             |-- __init__.py
             |-- __pycache__
+                |-- __init__.cpython-310.pyc
+                |-- __init__.cpython-311.pyc
                 |-- __init__.cpython-312.pyc
                 |-- __init__.cpython-313.pyc
+                |-- barabasi_albert.cpython-310.pyc
+                |-- barabasi_albert.cpython-311.pyc
                 |-- barabasi_albert.cpython-312.pyc
+                |-- barabasi_albert.cpython-313.pyc
+                |-- grid.cpython-310.pyc
+                |-- grid.cpython-311.pyc
                 |-- grid.cpython-312.pyc
+                |-- grid.cpython-313.pyc
+                |-- random_graph.cpython-310.pyc
+                |-- random_graph.cpython-311.pyc
                 |-- random_graph.cpython-312.pyc
                 |-- random_graph.cpython-313.pyc
+                |-- ring.cpython-310.pyc
+                |-- ring.cpython-311.pyc
                 |-- ring.cpython-312.pyc
                 |-- ring.cpython-313.pyc
+                |-- watts_strogatz.cpython-310.pyc
+                |-- watts_strogatz.cpython-311.pyc
                 |-- watts_strogatz.cpython-312.pyc
+                |-- watts_strogatz.cpython-313.pyc
             |-- barabasi_albert.py
             |-- grid.py
             |-- random_graph.py
@@ -217,16 +329,28 @@
     |-- ports
         |-- __init__.py
         |-- __pycache__
+            |-- __init__.cpython-310.pyc
+            |-- __init__.cpython-311.pyc
             |-- __init__.cpython-312.pyc
             |-- __init__.cpython-313.pyc
+            |-- behavior.cpython-310.pyc
+            |-- behavior.cpython-311.pyc
             |-- behavior.cpython-312.pyc
             |-- behavior.cpython-313.pyc
+            |-- communication.cpython-310.pyc
+            |-- communication.cpython-311.pyc
             |-- communication.cpython-312.pyc
             |-- communication.cpython-313.pyc
+            |-- metric_collector.cpython-310.pyc
+            |-- metric_collector.cpython-311.pyc
             |-- metric_collector.cpython-312.pyc
             |-- metric_collector.cpython-313.pyc
+            |-- persistence.cpython-310.pyc
+            |-- persistence.cpython-311.pyc
             |-- persistence.cpython-312.pyc
             |-- persistence.cpython-313.pyc
+            |-- topology_generator.cpython-310.pyc
+            |-- topology_generator.cpython-311.pyc
             |-- topology_generator.cpython-312.pyc
             |-- topology_generator.cpython-313.pyc
         |-- behavior.py
@@ -244,14 +368,28 @@
 |-- tests
     |-- __init__.py
     |-- __pycache__
+        |-- __init__.cpython-310.pyc
+        |-- __init__.cpython-311.pyc
         |-- __init__.cpython-312.pyc
         |-- __init__.cpython-313.pyc
+        |-- conftest.cpython-310-pytest-9.1.1.pyc
+        |-- conftest.cpython-311-pytest-9.1.1.pyc
+        |-- conftest.cpython-312-pytest-9.1.1.pyc
+        |-- conftest.cpython-313-pytest-9.1.1.pyc
+    |-- conftest.py
     |-- integration
         |-- __init__.py
         |-- __pycache__
+            |-- __init__.cpython-310.pyc
+            |-- __init__.cpython-311.pyc
             |-- __init__.cpython-312.pyc
             |-- __init__.cpython-313.pyc
+            |-- test_engine_termination.cpython-310-pytest-9.1.1.pyc
+            |-- test_engine_termination.cpython-311-pytest-9.1.1.pyc
             |-- test_engine_termination.cpython-312-pytest-9.1.1.pyc
+            |-- test_engine_termination.cpython-313-pytest-9.1.1.pyc
+            |-- test_gossip_experiment.cpython-310-pytest-9.1.1.pyc
+            |-- test_gossip_experiment.cpython-311-pytest-9.1.1.pyc
             |-- test_gossip_experiment.cpython-312-pytest-9.1.1.pyc
             |-- test_gossip_experiment.cpython-313-pytest-8.3.3.pyc
             |-- test_gossip_experiment.cpython-313-pytest-9.1.1.pyc
@@ -260,40 +398,82 @@
     |-- regression
         |-- __init__.py
         |-- __pycache__
+            |-- __init__.cpython-310.pyc
+            |-- __init__.cpython-311.pyc
             |-- __init__.cpython-312.pyc
             |-- __init__.cpython-313.pyc
+            |-- probes.cpython-310.pyc
+            |-- probes.cpython-311.pyc
+            |-- probes.cpython-312.pyc
+            |-- probes.cpython-313.pyc
+            |-- test_golden_traces.cpython-310-pytest-9.1.1.pyc
+            |-- test_golden_traces.cpython-311-pytest-9.1.1.pyc
+            |-- test_golden_traces.cpython-312-pytest-9.1.1.pyc
+            |-- test_golden_traces.cpython-313-pytest-9.1.1.pyc
+            |-- test_gossip_1000_agents.cpython-310-pytest-9.1.1.pyc
+            |-- test_gossip_1000_agents.cpython-311-pytest-9.1.1.pyc
             |-- test_gossip_1000_agents.cpython-312-pytest-9.1.1.pyc
             |-- test_gossip_1000_agents.cpython-313-pytest-8.3.3.pyc
             |-- test_gossip_1000_agents.cpython-313-pytest-9.1.1.pyc
+            |-- test_leader_election_1000_agents.cpython-310-pytest-9.1.1.pyc
+            |-- test_leader_election_1000_agents.cpython-311-pytest-9.1.1.pyc
             |-- test_leader_election_1000_agents.cpython-312-pytest-9.1.1.pyc
+            |-- test_leader_election_1000_agents.cpython-313-pytest-9.1.1.pyc
+            |-- test_sir_1000_agents.cpython-310-pytest-9.1.1.pyc
+            |-- test_sir_1000_agents.cpython-311-pytest-9.1.1.pyc
             |-- test_sir_1000_agents.cpython-312-pytest-9.1.1.pyc
+            |-- test_sir_1000_agents.cpython-313-pytest-9.1.1.pyc
+        |-- golden
+            |-- traces.json
+        |-- probes.py
+        |-- test_golden_traces.py
         |-- test_gossip_1000_agents.py
         |-- test_leader_election_1000_agents.py
         |-- test_sir_1000_agents.py
     |-- unit
         |-- __init__.py
         |-- __pycache__
+            |-- __init__.cpython-310.pyc
+            |-- __init__.cpython-311.pyc
             |-- __init__.cpython-312.pyc
             |-- __init__.cpython-313.pyc
+            |-- test_architecture_boundaries.cpython-310-pytest-9.1.1.pyc
+            |-- test_architecture_boundaries.cpython-311-pytest-9.1.1.pyc
             |-- test_architecture_boundaries.cpython-312-pytest-9.1.1.pyc
             |-- test_architecture_boundaries.cpython-313-pytest-8.3.3.pyc
             |-- test_architecture_boundaries.cpython-313-pytest-9.1.1.pyc
+            |-- test_experiment_script_portability.cpython-310-pytest-9.1.1.pyc
+            |-- test_experiment_script_portability.cpython-311-pytest-9.1.1.pyc
             |-- test_experiment_script_portability.cpython-312-pytest-9.1.1.pyc
+            |-- test_experiment_script_portability.cpython-313-pytest-9.1.1.pyc
+            |-- test_metric_collector_setup.cpython-310-pytest-9.1.1.pyc
+            |-- test_metric_collector_setup.cpython-311-pytest-9.1.1.pyc
             |-- test_metric_collector_setup.cpython-312-pytest-9.1.1.pyc
+            |-- test_metric_collector_setup.cpython-313-pytest-9.1.1.pyc
         |-- core
             |-- __init__.py
             |-- __pycache__
+                |-- __init__.cpython-310.pyc
+                |-- __init__.cpython-311.pyc
                 |-- __init__.cpython-312.pyc
                 |-- __init__.cpython-313.pyc
+                |-- test_agent_registry.cpython-310-pytest-9.1.1.pyc
+                |-- test_agent_registry.cpython-311-pytest-9.1.1.pyc
                 |-- test_agent_registry.cpython-312-pytest-9.1.1.pyc
                 |-- test_agent_registry.cpython-313-pytest-8.3.3.pyc
                 |-- test_agent_registry.cpython-313-pytest-9.1.1.pyc
+                |-- test_event_queue.cpython-310-pytest-9.1.1.pyc
+                |-- test_event_queue.cpython-311-pytest-9.1.1.pyc
                 |-- test_event_queue.cpython-312-pytest-9.1.1.pyc
                 |-- test_event_queue.cpython-313-pytest-8.3.3.pyc
                 |-- test_event_queue.cpython-313-pytest-9.1.1.pyc
+                |-- test_randomness_manager.cpython-310-pytest-9.1.1.pyc
+                |-- test_randomness_manager.cpython-311-pytest-9.1.1.pyc
                 |-- test_randomness_manager.cpython-312-pytest-9.1.1.pyc
                 |-- test_randomness_manager.cpython-313-pytest-8.3.3.pyc
                 |-- test_randomness_manager.cpython-313-pytest-9.1.1.pyc
+                |-- test_time_manager.cpython-310-pytest-9.1.1.pyc
+                |-- test_time_manager.cpython-311-pytest-9.1.1.pyc
                 |-- test_time_manager.cpython-312-pytest-9.1.1.pyc
                 |-- test_time_manager.cpython-313-pytest-8.3.3.pyc
                 |-- test_time_manager.cpython-313-pytest-9.1.1.pyc
@@ -304,17 +484,44 @@
         |-- plugins
             |-- __init__.py
             |-- __pycache__
+                |-- __init__.cpython-310.pyc
+                |-- __init__.cpython-311.pyc
                 |-- __init__.cpython-312.pyc
                 |-- __init__.cpython-313.pyc
+                |-- test_addressing_contract.cpython-310-pytest-9.1.1.pyc
+                |-- test_addressing_contract.cpython-311-pytest-9.1.1.pyc
                 |-- test_addressing_contract.cpython-312-pytest-9.1.1.pyc
+                |-- test_addressing_contract.cpython-313-pytest-9.1.1.pyc
+                |-- test_leader_election.cpython-310-pytest-9.1.1.pyc
+                |-- test_leader_election.cpython-311-pytest-9.1.1.pyc
                 |-- test_leader_election.cpython-312-pytest-9.1.1.pyc
+                |-- test_leader_election.cpython-313-pytest-9.1.1.pyc
+                |-- test_lossy_communication.cpython-310-pytest-9.1.1.pyc
+                |-- test_lossy_communication.cpython-311-pytest-9.1.1.pyc
                 |-- test_lossy_communication.cpython-312-pytest-9.1.1.pyc
+                |-- test_lossy_communication.cpython-313-pytest-9.1.1.pyc
+                |-- test_sir_behavior.cpython-310-pytest-9.1.1.pyc
+                |-- test_sir_behavior.cpython-311-pytest-9.1.1.pyc
                 |-- test_sir_behavior.cpython-312-pytest-9.1.1.pyc
+                |-- test_sir_behavior.cpython-313-pytest-9.1.1.pyc
+                |-- test_sir_broadcast_fanout.cpython-310-pytest-9.1.1.pyc
+                |-- test_sir_broadcast_fanout.cpython-311-pytest-9.1.1.pyc
                 |-- test_sir_broadcast_fanout.cpython-312-pytest-9.1.1.pyc
+                |-- test_sir_broadcast_fanout.cpython-313-pytest-9.1.1.pyc
+                |-- test_topologies.cpython-310-pytest-9.1.1.pyc
+                |-- test_topologies.cpython-311-pytest-9.1.1.pyc
                 |-- test_topologies.cpython-312-pytest-9.1.1.pyc
                 |-- test_topologies.cpython-313-pytest-8.3.3.pyc
                 |-- test_topologies.cpython-313-pytest-9.1.1.pyc
+                |-- test_topology_complexity.cpython-310-pytest-9.1.1.pyc
+                |-- test_topology_complexity.cpython-311-pytest-9.1.1.pyc
                 |-- test_topology_complexity.cpython-312-pytest-9.1.1.pyc
+                |-- test_topology_complexity.cpython-312.pyc
+                |-- test_topology_complexity.cpython-313-pytest-9.1.1.pyc
+                |-- test_trace_digest.cpython-310-pytest-9.1.1.pyc
+                |-- test_trace_digest.cpython-311-pytest-9.1.1.pyc
+                |-- test_trace_digest.cpython-312-pytest-9.1.1.pyc
+                |-- test_trace_digest.cpython-313-pytest-9.1.1.pyc
             |-- test_addressing_contract.py
             |-- test_leader_election.py
             |-- test_lossy_communication.py
@@ -322,6 +529,7 @@
             |-- test_sir_broadcast_fanout.py
             |-- test_topologies.py
             |-- test_topology_complexity.py
+            |-- test_trace_digest.py
         |-- test_architecture_boundaries.py
         |-- test_experiment_script_portability.py
         |-- test_metric_collector_setup.py

@@ -1,0 +1,43 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  # Required. Every supported Python version must pass the full suite,
+  # including the golden traces -- the same seed must produce the same run
+  # on every version pyproject.toml claims to support. (Before math.fsum,
+  # every gossip run differed between 3.11 and 3.12.)
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install -e ".[dev]"
+      - run: python -m pytest -q
+
+  # Informational until first confirmed green. The golden traces were
+  # recorded on Linux; two topology generators use math.log, whose last
+  # ulp can differ between C libraries. A failure here is a real
+  # cross-platform reproducibility finding to investigate, not flakiness.
+  cross-os-determinism:
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: python -m pytest -q tests/regression/test_golden_traces.py

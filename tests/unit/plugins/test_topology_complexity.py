@@ -14,14 +14,31 @@ plugins package, so a newly added topology is covered automatically.
 Why a timing test: the failure mode is purely asymptotic (a plugin that
 enumerates all n candidates inside a per-node loop), and it produces
 correct graphs -- only slowly. There is nothing to assert about the output
-itself. Thresholds are deliberately loose: doubling n should roughly
-double the work, and true quadratic growth quadruples it, so the bar is
-set between those at 3.0x with the best of several runs to damp noise.
+itself.
+
+How it measures, and why -- this test has been wrong twice:
+
+  - It fits the growth EXPONENT by least squares over four sizes (n = 1k,
+    2k, 4k, 8k), rather than trusting a single ratio between two sizes.
+  - It disables the cyclic garbage collector while timing, as timeit
+    does. GC work grows with the number of live objects, which makes
+    linear code measure as mildly superlinear and noisy.
+  - The bar is exponent 1.7. Measured with this method, every correct
+    generator lands at 0.99-1.45 across repeated trials, and the pre-fix
+    quadratic Watts-Strogatz lands near 2.
+
+History: first it doubled n with a 3.0x bar (linear ~2x, quadratic ~4x);
+a genuinely linear generator hit 3.06x from timer noise. Then it
+quadrupled n with an 8x bar; correct generators reached 7.3x, because
+"linear means 4x" ignores GC and memory effects. A guard that flakes gets
+ignored, which is worse than having none.
 """
 from __future__ import annotations
 
+import gc
 import importlib
 import inspect
+import math
 import pkgutil
 import random
 import time
@@ -42,10 +59,9 @@ CONFIGS: dict[str, dict] = {
     "RingTopology": {},
 }
 
-SMALL_N = 2_000
-LARGE_N = 4_000
-REPEATS = 3
-MAX_GROWTH_RATIO = 3.0  # linear ~2.0, quadratic ~4.0
+SIZES = (1_000, 2_000, 4_000, 8_000)
+REPEATS = 5
+MAX_EXPONENT = 1.7  # correct generators measure 0.99-1.45; quadratic ~2.0
 
 
 def _discover() -> list[type]:
@@ -78,12 +94,24 @@ def _best_time(generator_cls: type, n: int) -> float:
     agent_ids = [AgentId(i) for i in range(n)]
     config = _config_for(generator_cls, n)
     best = float("inf")
-    for _ in range(REPEATS):
-        generator = generator_cls()
-        start = time.perf_counter()
-        generator.generate(agent_ids, config, random.Random(1))
-        best = min(best, time.perf_counter() - start)
+    gc.collect()
+    gc.disable()
+    try:
+        for _ in range(REPEATS):
+            generator = generator_cls()
+            start = time.perf_counter()
+            generator.generate(agent_ids, config, random.Random(1))
+            best = min(best, time.perf_counter() - start)
+    finally:
+        gc.enable()
     return best
+
+
+def _fitted_exponent(times: list[float]) -> float:
+    xs = [math.log(n) for n in SIZES]
+    ys = [math.log(t) for t in times]
+    mx, my = sum(xs) / len(xs), sum(ys) / len(ys)
+    return sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / sum((x - mx) ** 2 for x in xs)
 
 
 def test_discovery_found_the_generators():
@@ -93,20 +121,19 @@ def test_discovery_found_the_generators():
 
 @pytest.mark.parametrize("generator_cls", GENERATORS, ids=lambda c: c.__name__)
 def test_generator_does_not_scale_quadratically(generator_cls):
-    small = _best_time(generator_cls, SMALL_N)
-    large = _best_time(generator_cls, LARGE_N)
+    times = [_best_time(generator_cls, n) for n in SIZES]
 
     # Generators fast enough to sit in timer noise can't be measured
     # meaningfully, and are by definition not the problem this guards.
-    if large < 0.005:
-        pytest.skip(f"{generator_cls.__name__} too fast at n={LARGE_N} to measure reliably")
+    if times[-1] < 0.005:
+        pytest.skip(f"{generator_cls.__name__} too fast at n={SIZES[-1]} to measure reliably")
 
-    ratio = large / small
-    assert ratio < MAX_GROWTH_RATIO, (
-        f"{generator_cls.__name__} took {ratio:.2f}x longer when n doubled "
-        f"({small * 1000:.1f}ms at n={SMALL_N} -> {large * 1000:.1f}ms at n={LARGE_N}). "
-        f"Linear growth is ~2x and quadratic is ~4x, so this looks quadratic -- "
-        f"typically an O(n) scan (e.g. building a candidate list over all "
-        f"agent_ids) nested inside a per-node loop. Prefer rejection sampling "
-        f"or direct edge sampling."
+    exponent = _fitted_exponent(times)
+    timings = ", ".join(f"n={n}: {t * 1000:.1f}ms" for n, t in zip(SIZES, times))
+    assert exponent < MAX_EXPONENT, (
+        f"{generator_cls.__name__} generation time grows as n^{exponent:.2f} "
+        f"({timings}). Linear generators measure ~1.0-1.45 here and quadratic "
+        f"~2.0, so this looks quadratic -- typically an O(n) scan (e.g. building "
+        f"a candidate list over all agent_ids) nested inside a per-node loop. "
+        f"Prefer rejection sampling or direct edge sampling."
     )

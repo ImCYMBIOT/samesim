@@ -1,6 +1,7 @@
 # Design: Latency, Asynchronous Activation, and Churn
 
-**Status:** proposal, not implemented. Nothing in `simul8/core` has changed yet.
+**Status:** Phase 0 **done**. Phases 1–3 are proposals; nothing in
+`simul8/core` has changed for them yet.
 **Scope:** the engine's time model. Three capabilities that the core cannot
 express today, delivered in four independently shippable phases.
 
@@ -70,6 +71,38 @@ every later phase relies on it.
 
 Regenerating the hashes is a deliberate act (`--update-golden`) that shows up
 in review. It shouldn't happen as a side effect.
+
+### As built
+
+- **Fingerprint:** `TraceDigestMetric` (`simul8/plugins/metrics/trace_digest.py`)
+  folds the topology, initial states, every delivered message and every
+  state change into a running SHA-256, recorded per tick. Engine event ids
+  are excluded so a pure refactor that renumbers events isn't flagged.
+- **Coverage:** every behavior × protocol × topology (discovered, so new
+  plugins are included automatically) at tick intervals 1.0 and 0.5, plus
+  every file written by every example. 120 matrix cells + 5 examples, ~9 s.
+- **A probe behavior** (`tests/regression/probes.py`) records its exact
+  inbox (sender, message id, send time, addressing mode, in order) into
+  its state. It was added after mutation-testing the guard. Reversing the
+  engine's inbox order changed *no* trace, because no shipped behavior is
+  order-sensitive on CPython 3.12. The guard's sensitivity can't depend on
+  which plugins happen to exist, so the probe pins what the engine controls
+  directly.
+- **Mutation-tested:** reversed inbox order → 30 probe cells fail at
+  t=1.0. Latency doubled only when `tick_interval != 1` → exactly the 45
+  dt=0.5 cells fail and no dt=1.0 cell does.
+
+### What Phase 0 found
+
+Running the golden traces on Python 3.11 failed **every gossip run** (30
+cells + 3 examples), while everything else matched. The cause is CPython 3.12
+changing builtin `sum()` of floats to compensated summation.
+`GossipBehavior` and `ConvergenceMetric` now use `math.fsum`, which is
+correctly rounded and so identical on all versions. It also reproduces the
+3.12 results exactly, so no recorded trace had to change. The full suite now
+passes bit-identically on 3.10, 3.11, 3.12 and 3.13, and CI enforces that on
+every push. Cross-OS determinism (macOS, Windows) runs in CI as an
+informational job until first confirmed green.
 
 ## 4. Phase 1: per-message latency
 

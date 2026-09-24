@@ -7,7 +7,7 @@ The core engine is domain-agnostic and manages only agents, virtual time, event 
 ## Features
 
 - **Clean Hexagonal Architecture**: Strictly separated domain, ports, core engine, and application layers. Plugins cannot import the core; a test enforces it.
-- **Deterministic and Reproducible**: Every agent gets its own seeded RNG (`seed XOR agent_id`), and events are ordered by `(virtual_time, priority, event_id)`, so the same seed always produces the same run.
+- **Deterministic and Reproducible**: Every agent gets its own seeded RNG (`seed XOR agent_id`), and events are ordered by `(virtual_time, priority, event_id)`, so the same seed produces the same run, bit for bit, on Python 3.10 through 3.13. CI checks this on every push. `TraceDigestMetric` gives each run a SHA-256 fingerprint you can publish with a result as a reproducibility receipt.
 - **Pluggable Architecture**: Swap behaviors, communication protocols, network topologies, metrics, and exporters from YAML. No core changes needed.
 - **Lean**: Pure Python with a single runtime dependency (PyYAML). Built with a future Rust port in mind. See [By the numbers](#by-the-numbers) for what that costs in speed.
 
@@ -48,7 +48,7 @@ virtual_time,value
 | Behaviors | Gossip averaging, leader election (max-id flooding), SIR epidemic |
 | Protocols | Gossip (point-to-point), broadcast, lossy (configurable drop rate) |
 | Topologies | Ring, 2-D grid (optional wrap), Erdős–Rényi, Watts–Strogatz, Barabási–Albert |
-| Metrics | Convergence variance, message count, S/I/R counts, leader-consensus fraction, full per-agent state trace, topology edge list |
+| Metrics | Convergence variance, message count, S/I/R counts, leader-consensus fraction, full per-agent state trace, topology edge list, run fingerprint (SHA-256 per tick) |
 | Exporters | CSV |
 
 All five example configs in `examples/` finish in under 0.4 s each.
@@ -106,11 +106,12 @@ This matches mixing-time theory qualitatively: well-connected graphs converge in
 
 ### Tests
 
-**251 passing** (unit, integration, regression). Four of the suites are *contract tests that discover their targets automatically*, so they also cover plugins and files that don't exist yet:
+**389 passing on each of Python 3.10, 3.11, 3.12 and 3.13** (unit, integration, regression). Five of the suites are *contract tests that discover their targets automatically*, so they also cover plugins and files that don't exist yet:
 - every behavior × protocol pairing delivers exactly once per intended recipient
 - no topology generator scales quadratically
 - every module respects the layering (`plugins` → `domain`, `ports` only), with relative imports resolved
 - no committed script hardcodes a machine-specific path
+- **golden traces**: every behavior × protocol × topology is fingerprinted, so any change that alters a single delivered message fails the build and names the first tick that diverged
 
 ## What it can't do yet
 

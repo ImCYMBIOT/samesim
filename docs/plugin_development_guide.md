@@ -52,6 +52,14 @@ will fail your PR if violated.
      does this (`sorted_neighbors = sorted(neighbors)`) before sampling.
    - Per-agent randomness is already seeded correctly for you by
      `RandomnessManager` as `seed XOR agent_id` — don't re-seed it yourself.
+   - Reduce floats with `math.fsum`, never builtin `sum()`. CPython 3.12
+     changed `sum()` of floats to a compensated algorithm, so the same code
+     gives different last bits on 3.11 and 3.12 — and in an iterated
+     simulation those bits compound into a different run. `fsum` is
+     correctly rounded, hence identical on every version and for any input
+     order. This isn't hypothetical: every `GossipBehavior` run used to
+     differ between 3.11 and 3.12 with the same seed. Integer sums (counts)
+     are exact and fine with `sum()`.
 
 4. **Referenced by dotted path.** A plugin is wired into an experiment purely
    by its import path as a string, e.g.
@@ -274,6 +282,13 @@ anywhere, but you do have to pass them:
       scale quadratically. A failure here usually means an O(n) scan over
       `agent_ids` nested inside a per-node loop — reach for rejection sampling
       or direct edge sampling instead.
+- [ ] **Behaviors, protocols, topologies:** `tests/regression/test_golden_traces.py`
+      runs every behavior × protocol × topology and pins a fingerprint of
+      the entire run. A *new* plugin fails it until recorded — run
+      `pytest tests/regression/test_golden_traces.py --update-golden` and
+      commit the JSON diff. An *existing* plugin failing it means your change
+      altered someone's simulation; the failure names the first tick that
+      diverged.
 - [ ] **Any committed `.py` file:** `test_experiment_script_portability.py`
       fails on a hardcoded absolute path (`/home/...`, `/tmp/...`, a Windows
       drive). Derive the repo root from `Path(__file__)`, write outputs next

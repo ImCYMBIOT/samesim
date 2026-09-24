@@ -146,9 +146,12 @@ It's now fixed by rejection sampling (slope 1.85 → 0.93; n=4,000 went from
 411ms to 16ms), and the class is guarded structurally rather than
 per-plugin: `tests/unit/plugins/test_topology_complexity.py` sweeps every
 topology generator, discovering them by walking the package so generators
-that don't exist yet are covered too. Against the pre-fix numbers that
-guard trips at 3.61× growth versus its 3.0× threshold, so it would have
-caught this.
+that don't exist yet are covered too. It fits the growth exponent over
+four sizes with the garbage collector disabled: correct generators
+measure n^0.99–1.45, the bar is 1.7, and the pre-fix Watts–Strogatz
+measures n^1.94, so it would have caught this. (The first two versions of
+this guard compared a single ratio between two sizes and flaked on correct
+code; see the test's docstring.)
 
 Also worth knowing when reading the numbers above: they were measured
 before the engine-termination fix, so each run executed ~49 of its nominal

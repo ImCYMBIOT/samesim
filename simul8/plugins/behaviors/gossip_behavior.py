@@ -14,6 +14,7 @@ Configuration (plugin_configs.GossipBehavior):
 """
 from __future__ import annotations
 
+import math
 import random
 from typing import Any
 
@@ -79,7 +80,11 @@ class GossipBehavior(BehaviorPort):
         if inbox:
             received_values = [msg.get("value", my_value) for msg in inbox]
             all_values = [my_value] + received_values
-            my_value = sum(all_values) / len(all_values)
+            # math.fsum, not sum(): fsum is correctly rounded, so the mean is
+            # identical for any inbox order on every Python version. Builtin
+            # sum() of floats changed algorithm in CPython 3.12, and with it
+            # every gossip run -- same seed, different result on 3.11.
+            my_value = math.fsum(all_values) / len(all_values)
 
         next_state = current_state.with_value("value", my_value)
 

@@ -17,6 +17,8 @@ plugin would track those.
 """
 from __future__ import annotations
 
+import math
+
 from ...domain.event import AgentStateChangedEvent, Event, TickEvent
 from ...domain.ids import AgentId, MetricName, VirtualTime
 from ...domain.metric import MetricSeries
@@ -65,5 +67,7 @@ class ConvergenceMetric(MetricCollectorPort):
     def _compute_variance(values: list[float]) -> float:
         """Population variance: E[(X - mean)^2]."""
         n = len(values)
-        mean = sum(values) / n
-        return sum((v - mean) ** 2 for v in values) / n
+        # fsum for version-independent, order-independent results (see
+        # GossipBehavior.step for why builtin sum() is not enough).
+        mean = math.fsum(values) / n
+        return math.fsum((v - mean) ** 2 for v in values) / n
