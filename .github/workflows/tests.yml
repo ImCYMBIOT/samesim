@@ -23,13 +23,13 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: python -m pytest -q
 
-  # Informational until first confirmed green. The golden traces were
-  # recorded on Linux; two topology generators use math.log, whose last
-  # ulp can differ between C libraries. A failure here is a real
-  # cross-platform reproducibility finding to investigate, not flakiness.
+  # Required. Golden traces are recorded on Linux and must reproduce
+  # bit-for-bit on macOS and Windows. Two topology generators use math.log,
+  # whose last ulp can in principle differ between C libraries; a failure
+  # here is a real cross-platform reproducibility finding, not flakiness.
+  # (Informational until the first run, 2026-09-24, which passed.)
   cross-os-determinism:
     runs-on: ${{ matrix.os }}
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:

@@ -7,7 +7,7 @@ The core engine is domain-agnostic and manages only agents, virtual time, event 
 ## Features
 
 - **Clean Hexagonal Architecture**: Strictly separated domain, ports, core engine, and application layers. Plugins cannot import the core; a test enforces it.
-- **Deterministic and Reproducible**: Every agent gets its own seeded RNG (`seed XOR agent_id`), and events are ordered by `(virtual_time, priority, event_id)`, so the same seed produces the same run, bit for bit, on Python 3.10 through 3.13. CI checks this on every push. `TraceDigestMetric` gives each run a SHA-256 fingerprint you can publish with a result as a reproducibility receipt.
+- **Deterministic and Reproducible**: Every agent gets its own seeded RNG (`seed XOR agent_id`), and events are ordered by `(virtual_time, priority, event_id)`, so the same seed produces the same run, bit for bit, on Python 3.10 through 3.13 and across Linux, macOS and Windows. CI checks this on every push. `TraceDigestMetric` gives each run a SHA-256 fingerprint you can publish with a result as a reproducibility receipt.
 - **Pluggable Architecture**: Swap behaviors, communication protocols, network topologies, metrics, and exporters from YAML. No core changes needed.
 - **Lean**: Pure Python with a single runtime dependency (PyYAML). Built with a future Rust port in mind. See [By the numbers](#by-the-numbers) for what that costs in speed.
 

@@ -101,8 +101,9 @@ changing builtin `sum()` of floats to compensated summation.
 correctly rounded and so identical on all versions. It also reproduces the
 3.12 results exactly, so no recorded trace had to change. The full suite now
 passes bit-identically on 3.10, 3.11, 3.12 and 3.13, and CI enforces that on
-every push. Cross-OS determinism (macOS, Windows) runs in CI as an
-informational job until first confirmed green.
+every push. The first CI run also confirmed the Linux-recorded golden
+traces reproduce bit-for-bit on macOS and Windows, so that job is now
+required too.
 
 ## 4. Phase 1: per-message latency
 
