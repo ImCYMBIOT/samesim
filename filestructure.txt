@@ -20,6 +20,8 @@
 |-- experiments
     |-- external_validation
         |-- README.md
+        |-- __pycache__
+            |-- simul8_harness.cpython-312.pyc
         |-- event_count_vs_closed_form.py
         |-- gossip_vs_reference.py
         |-- leader_election_vs_diameter.py
@@ -295,6 +297,7 @@
             |-- __pycache__
                 |-- __init__.cpython-312.pyc
                 |-- __init__.cpython-313.pyc
+                |-- test_addressing_contract.cpython-312-pytest-9.1.1.pyc
                 |-- test_leader_election.cpython-312-pytest-9.1.1.pyc
                 |-- test_lossy_communication.cpython-312-pytest-9.1.1.pyc
                 |-- test_sir_behavior.cpython-312-pytest-9.1.1.pyc
@@ -302,9 +305,12 @@
                 |-- test_topologies.cpython-312-pytest-9.1.1.pyc
                 |-- test_topologies.cpython-313-pytest-8.3.3.pyc
                 |-- test_topologies.cpython-313-pytest-9.1.1.pyc
+                |-- test_topology_complexity.cpython-312-pytest-9.1.1.pyc
+            |-- test_addressing_contract.py
             |-- test_leader_election.py
             |-- test_lossy_communication.py
             |-- test_sir_behavior.py
             |-- test_sir_broadcast_fanout.py
             |-- test_topologies.py
+            |-- test_topology_complexity.py
         |-- test_architecture_boundaries.py

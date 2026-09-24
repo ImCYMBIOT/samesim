@@ -1,5 +1,15 @@
 # Gossip Convergence vs. Topology — Validation Study
 
+> **Committed numbers predate three engine/plugin fixes.** They were
+> produced before the O(n²) topology-generator fixes, the engine
+> termination fix (each run executed one tick fewer than nominal), and the
+> addressing-contract fix. None of those touch what this study concludes —
+> it measures *convergence scaling with n* on gossip, which used the
+> already-correct `GossipBehavior` + `GossipProtocol` pairing and never
+> depended on generation speed — but a from-scratch rerun would produce
+> different exact CSV values for the same seeds. Treat the slopes as
+> current and the per-run digits as historical.
+
 **Status:** preliminary validation pass across four topologies (single fixed
 graph density, 5 seeds per point). This is the first of the three research
 directions proposed in

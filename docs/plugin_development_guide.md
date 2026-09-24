@@ -54,6 +54,15 @@ will fail your PR if violated.
    separate registration step — if the class exists, is importable, and
    subclasses the right port, it works.
 
+5. **Behaviors and protocols: respect the addressing contract.**
+   A behavior either addresses each message itself (`broadcast=False`) *or*
+   asks for its whole neighborhood (`broadcast=True`) — never both. A
+   protocol decides *whether and when* a message arrives, never *who else*
+   receives it. Full rules and the reasoning are in
+   [CommunicationProtocolPort](#communicationprotocolport--how-a-sent-message-actually-gets-delivered)
+   below; `tests/unit/plugins/test_addressing_contract.py` enforces it
+   across every behavior × protocol pair automatically, including yours.
+
 ## The five ports
 
 | Port | Directory | One instance per... | Existing examples |
@@ -87,11 +96,31 @@ initialize(topology, config, rng) -> None      # once, after topology is built
 route(message, sender_id, topology) -> list[tuple[AgentId, Message]]
 ```
 
-The behavior decides *what* to send and to whom it's addressed; the protocol
-decides delivery semantics — fan-out, loss, latency. `GossipProtocol` is a
-pass-through (`[(message.recipient_id, message)]`); `BroadcastProtocol` fans
-out to every neighbor; `LossyProtocol` wraps another protocol and drops
-messages probabilistically.
+The behavior decides *what* to send and *who it's addressed to*; the protocol
+decides whether and when it arrives — loss, latency, duplication. Crucially,
+**a protocol never invents recipients**:
+
+| `Message.broadcast` | Behavior says | Protocol may deliver to |
+|---|---|---|
+| `False` (default) | "send this to *this* neighbor" | `recipient_id`, or nobody (dropped) |
+| `True` | "expose my whole neighborhood" | any subset of `neighbors(sender_id)` |
+
+This one flag is what makes **any behavior safe to pair with any protocol**.
+Pick the mode that matches your algorithm:
+
+- **Enumerating neighbors yourself** (you choose *which* ones — gossip's
+  random fan-out, leader election's flood): emit one message per target with
+  `broadcast=False`. `GossipBehavior` and `LeaderElectionBehavior` do this.
+- **Wanting the whole neighborhood** without caring who's in it (epidemic
+  exposure): emit **one** message with `broadcast=True` and let the protocol
+  enumerate. `SirEpidemicBehavior` does this.
+
+> **Do not do both.** Enumerating neighbors *and* relying on protocol fan-out
+> multiplies deliveries by the sender's degree. It doesn't crash — it silently
+> inflates effective rates. This exact bug shipped in `SirEpidemicBehavior`
+> and skewed an epidemic curve ~28% before an external cross-check against
+> NDlib caught it. `tests/unit/plugins/test_addressing_contract.py` now sweeps
+> every behavior × protocol pair and will fail if it returns.
 
 ### TopologyGeneratorPort — the agent network graph
 
@@ -214,3 +243,15 @@ not just on isolated method calls.
       only want the fast subset.
 - [ ] If it's a new experiment type worth demonstrating, add an example config
       under `examples/`.
+
+Two contract tests pick up your plugin automatically — you don't register it
+anywhere, but you do have to pass them:
+
+- [ ] **Behaviors and protocols:** `test_addressing_contract.py` pairs your
+      plugin with every counterpart and asserts each intended neighbor gets
+      exactly one delivery under a lossless protocol. A failure here usually
+      means you enumerated neighbors *and* set `broadcast=True`.
+- [ ] **Topologies:** `test_topology_complexity.py` asserts generation doesn't
+      scale quadratically. A failure here usually means an O(n) scan over
+      `agent_ids` nested inside a per-node loop — reach for rejection sampling
+      or direct edge sampling instead.

@@ -27,7 +27,11 @@ Event dispatch ordering within a TickEvent:
     MessageDeliveredEvent: accumulated into pending inbox; NOT immediately dispatched
     to the behavior. Inbox is drained at the next TickEvent.
 
-Delivery latency: 1 virtual tick (messages sent at T arrive at T+1).
+Delivery latency: exactly one tick. Messages sent during the tick at T
+arrive at T + tick_interval, i.e. they are waiting in the inbox at the
+very next tick, whatever the tick_interval is. (This used to be hardcoded
+as T + 1.0, which only coincided with one tick when tick_interval was 1.0
+-- at tick_interval=0.25 it silently meant four ticks of latency.)
 This avoids within-tick ordering issues and is configurable in future.
 """
 from __future__ import annotations
@@ -245,7 +249,9 @@ class SimulationEngine:
             self._metrics.on_event(state_event, event.virtual_time)
 
             # Route and schedule outbound messages
-            delivery_time = VirtualTime(event.virtual_time + 1.0)
+            delivery_time = VirtualTime(
+                event.virtual_time + self._config.simulation.tick_interval
+            )
             for msg in result.outbound_messages:
                 deliveries = self._comm.route(msg, agent.agent_id, topology)
                 for recipient_id, delivered_msg in deliveries:

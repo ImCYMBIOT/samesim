@@ -83,7 +83,7 @@ writeup; noted here because it's the same "closed-form check catches a real
 bug" story, one level lower in the stack (the engine itself, not a
 behavior plugin).
 
-## Everything else: clean matches, no further bugs found
+## Everything else: clean matches — within the coverage these checks have
 
 Checks #2, #3, and #4 turned up no discrepancies beyond expected stochastic
 variation between independently-seeded implementations. Notably, #3
@@ -92,6 +92,22 @@ exactly (deterministic constructions), Erdős–Rényi/Watts–Strogatz/
 Barabási–Albert within statistical noise of a single-realization
 comparison. #4 (leader election) never once exceeded its theoretical bound
 across 15 cases spanning n=50 to n=1,000.
+
+**Read that with the coverage in mind, though.** Each check exercises one
+behavior paired with one protocol — check #2 covers `GossipBehavior` +
+`GossipProtocol`, check #1 covers `SirEpidemicBehavior` +
+`BroadcastProtocol`. That is 2 cells of a 3×3 behavior×protocol matrix, and
+a later audit found **6 of the then-12 combinations broken** — including one
+the SIR fix itself introduced. Passing these five checks means the paths
+they touch are right; it never meant the whole matrix was.
+
+That gap is now closed structurally rather than by adding more one-off
+comparisons: `tests/unit/plugins/test_addressing_contract.py` sweeps every
+behavior × protocol pair, and `test_topology_complexity.py` sweeps every
+topology generator. Both discover plugins by walking the package, so they
+cover plugins that don't exist yet. See the root-cause writeup in
+[docs/plugin_development_guide.md](../../docs/plugin_development_guide.md)
+for the addressing contract those tests enforce.
 
 ## What this doesn't cover yet
 

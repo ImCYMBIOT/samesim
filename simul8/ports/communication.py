@@ -3,13 +3,32 @@ CommunicationProtocolPort — the contract for message routing.
 
 Purpose:
     Defines HOW messages travel through the network.
-    The behavior plugin decides WHAT to send and to WHOM (by addressing Message).
-    This protocol decides delivery semantics: fanout, latency, loss (future).
+    The behavior plugin decides WHAT to send and WHO it is addressed to
+    (via Message.recipient_id and Message.broadcast).
+    This protocol decides delivery semantics: loss, latency, duplication.
+
+Addressing contract (the rule that makes every behavior safe with every
+protocol -- see Message.broadcast):
+
+        broadcast=False  ->  recipients MUST be a subset of {recipient_id}
+        broadcast=True   ->  recipients MUST be a subset of neighbors(sender_id)
+
+    A protocol decides whether and when a message arrives. It MUST NOT
+    invent recipients the addressing mode did not authorise. Concretely: a
+    protocol may drop a message, delay it, or deliver it -- it may not turn
+    one addressed message into a copy for every neighbor. Violating this
+    multiplies deliveries by the sender's degree whenever it is paired with
+    a behavior that already enumerates its own neighbors, which is a silent
+    correctness bug rather than a crash (it inflates effective rates).
+
+    tests/unit/plugins/test_addressing_contract.py sweeps every
+    behavior x protocol pair and enforces exactly this.
 
 Contracts:
     - MUST NOT import from simul8.core or simul8.app
     - MUST NOT access agent state directly
     - route() MUST be deterministic given the same inputs and RNG state
+    - route() MUST honour the addressing contract above
 
 Extension:
     Implement to add new communication mechanisms:
@@ -67,9 +86,10 @@ class CommunicationProtocolPort(ABC):
         The engine schedules one MessageDeliveredEvent per returned pair.
 
         Examples:
-            - GossipProtocol: returns [(message.recipient_id, message)]
-              (the behavior already selected the target)
-            - BroadcastProtocol: returns one pair per neighbor of sender_id
+            - addressed message (broadcast=False): return
+              [(message.recipient_id, message)] -- or [] to drop it
+            - broadcast message (broadcast=True): return one pair per
+              neighbor of sender_id -- or a subset, to drop some
 
         Args:
             message:   The outbound message produced by the behavior.

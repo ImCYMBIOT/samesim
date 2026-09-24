@@ -134,6 +134,28 @@ reproducibility, and a plugin architecture that can't be broken by a bad
 research idea — and it's worth being able to state precisely rather than
 either hiding it or overselling raw speed.
 
+## Postscript — the same bug was hiding in Watts–Strogatz
+
+A later audit found `WattsStrogatzTopology` carrying the **identical O(n²)
+pattern** (an O(n) candidate-list scan inside the rewiring loop), measuring
+a local slope of 1.85 — untouched, because this benchmark only ever
+exercised Ring and Erdős–Rényi. Fixing the instance a benchmark happens to
+hit is not the same as fixing the class.
+
+It's now fixed by rejection sampling (slope 1.85 → 0.93; n=4,000 went from
+411ms to 16ms), and the class is guarded structurally rather than
+per-plugin: `tests/unit/plugins/test_topology_complexity.py` sweeps every
+topology generator, discovering them by walking the package so generators
+that don't exist yet are covered too. Against the pre-fix numbers that
+guard trips at 3.61× growth versus its 3.0× threshold, so it would have
+caught this.
+
+Also worth knowing when reading the numbers above: they were measured
+before the engine-termination fix, so each run executed ~49 of its nominal
+50 ticks. That's a ~2% uniform undercount across every point — it shifts
+the absolute timings slightly and leaves the slopes, which are what this
+study concludes from, unaffected.
+
 ## What this doesn't cover yet
 
 - No comparison against an existing simulation tool (PeerSim, Mesa) at
