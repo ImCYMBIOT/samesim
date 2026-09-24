@@ -16,16 +16,21 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 import sys
 import time
 from pathlib import Path
 
 import yaml
 
-sys.path.insert(0, "/home/agnivesh/Desktop/simul8")
+# Repo root, derived from this file so the script runs from any checkout.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from simul8.app.experiment_runner import ExperimentRunner  # noqa: E402
 
-SCRATCH = Path("/tmp/claude-1000/-home-agnivesh-Desktop-simul8/8d6013d0-83ba-439f-8d2e-520098154174/scratchpad/gossip_validation")
+HERE = Path(__file__).resolve().parent
+# Intermediate configs and per-run CSVs. Kept out of the repo by default
+# (see .gitignore); override with SIMUL8_EXPERIMENT_WORK to relocate.
+SCRATCH = Path(os.environ.get("SIMUL8_EXPERIMENT_WORK", HERE / "_work"))
 CONFIG_DIR = SCRATCH / "configs"
 RESULTS_DIR = SCRATCH / "results"
 CONFIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -166,7 +171,7 @@ if __name__ == "__main__":
         print(f"    -> converged={r['converged']} at tick={r['converged_tick']} "
               f"final_var={r['final_variance']:.6g} wall={r['wall_seconds']:.2f}s", flush=True)
 
-    out_json = SCRATCH / f"{args.mode}_results.json"
+    out_json = HERE / f"{args.mode}_results.json"
     with open(out_json, "w") as f:
         json.dump(results, f, indent=2)
     print(f"\nWrote {out_json}")

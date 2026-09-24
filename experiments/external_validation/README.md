@@ -122,3 +122,29 @@ for the addressing contract those tests enforce.
   a systems/tools contribution, and matching noisy real data with unknown
   confounding parameters is a different (harder, less relevant) kind of
   validation than checking against a trusted independent implementation.
+
+## Postscript — the "run it yourself" instructions were false
+
+Every README in `experiments/` tells the reader to run the scripts
+themselves. Until 2026-09-24 that was not true of a single one of them: ten
+scripts hardcoded an absolute repo root under one developer's home
+directory, and five wrote their results into an agent session's scratchpad
+directory whose path contained a UUID. On a fresh clone they would have
+failed on import, or silently written their output somewhere other than
+where these READMEs say to look.
+
+Nothing caught it because the scripts worked perfectly on the one machine
+they were written on — the same shape as the other bugs documented here:
+correct-looking behavior that was never exercised outside its original
+context. It is fixed (paths now derive from `Path(__file__)`; intermediate
+work goes to a gitignored `_work/` overridable via `SIMUL8_EXPERIMENT_WORK`)
+and guarded by `tests/unit/test_experiment_script_portability.py`, which
+sweeps every committed `.py` file rather than the five that happened to be
+wrong.
+
+All five checks above have been re-verified from a foreign working
+directory on the post-audit engine: topology matches NetworkX, leader
+election stays within the diameter bound, the closed-form event count now
+agrees **exactly** (it was short by one tick before the engine fix), gossip
+matches the numpy reference (11.27 vs. 12.33 mean ticks), and SIR matches
+NDlib (368.3 vs. 362.0 peak infected — unchanged, as expected).

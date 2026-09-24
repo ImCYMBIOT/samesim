@@ -16,13 +16,15 @@ import csv
 import json
 import logging
 import resource
+import os
 import sys
 import time
 from pathlib import Path
 
 import yaml
 
-sys.path.insert(0, "/home/agnivesh/Desktop/simul8")
+# Repo root, derived from this file so the script runs from any checkout.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from simul8.app.experiment_runner import ExperimentRunner  # noqa: E402
 
 
@@ -38,7 +40,10 @@ class _EventsCapture(logging.Handler):
             # record.args = (name, events_processed, final_time)
             self.events_processed = record.args[1]
 
-SCRATCH = Path("/tmp/claude-1000/-home-agnivesh-Desktop-simul8/8d6013d0-83ba-439f-8d2e-520098154174/scratchpad/scaling_benchmark")
+HERE = Path(__file__).resolve().parent
+# Intermediate configs and per-run CSVs. Kept out of the repo by default
+# (see .gitignore); override with SIMUL8_EXPERIMENT_WORK to relocate.
+SCRATCH = Path(os.environ.get("SIMUL8_EXPERIMENT_WORK", HERE / "_work"))
 CONFIG_DIR = SCRATCH / "configs"
 RESULTS_DIR = SCRATCH / "results"
 CONFIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -133,7 +138,7 @@ if __name__ == "__main__":
             results.append(r)
             print(f"    -> wall={r['wall_seconds']:.3f}s peak_rss={r['peak_rss_kb']/1024:.1f}MB", flush=True)
 
-    out_json = SCRATCH / "scaling_results.json"
+    out_json = HERE / "scaling_results.json"
     with open(out_json, "w") as f:
         json.dump(results, f, indent=2)
     print(f"\nWrote {out_json}")

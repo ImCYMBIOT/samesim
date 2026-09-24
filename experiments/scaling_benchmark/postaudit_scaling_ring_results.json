@@ -1,0 +1,56 @@
+[
+  {
+    "n": 100,
+    "seed": 1,
+    "max_virtual_time": 50,
+    "wall_seconds": 0.12030613599927165,
+    "events_processed": 10052,
+    "events_per_second": 83553.51052136574,
+    "peak_rss_kb": 20416
+  },
+  {
+    "n": 300,
+    "seed": 1,
+    "max_virtual_time": 50,
+    "wall_seconds": 0.36232114899939916,
+    "events_processed": 30052,
+    "events_per_second": 82942.99155043207,
+    "peak_rss_kb": 24384
+  },
+  {
+    "n": 1000,
+    "seed": 1,
+    "max_virtual_time": 50,
+    "wall_seconds": 1.2928410549993714,
+    "events_processed": 100052,
+    "events_per_second": 77389.25029732185,
+    "peak_rss_kb": 38540
+  },
+  {
+    "n": 3000,
+    "seed": 1,
+    "max_virtual_time": 50,
+    "wall_seconds": 4.361580921999121,
+    "events_processed": 300052,
+    "events_per_second": 68794.32145499936,
+    "peak_rss_kb": 79192
+  },
+  {
+    "n": 10000,
+    "seed": 1,
+    "max_virtual_time": 50,
+    "wall_seconds": 16.532937007999863,
+    "events_processed": 1000052,
+    "events_per_second": 60488.466115615185,
+    "peak_rss_kb": 221088
+  },
+  {
+    "n": 30000,
+    "seed": 1,
+    "max_virtual_time": 50,
+    "wall_seconds": 57.12234922100106,
+    "events_processed": 3000052,
+    "events_per_second": 52519.758744394036,
+    "peak_rss_kb": 626176
+  }
+]

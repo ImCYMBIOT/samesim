@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import statistics
+import os
 import sys
 from pathlib import Path
 
@@ -28,7 +29,8 @@ import ndlib.models.epidemics as ep
 sys.path.insert(0, str(Path(__file__).parent))
 from simul8_harness import networkx_to_topology_graph, run_simul8  # noqa: E402
 
-sys.path.insert(0, "/home/agnivesh/Desktop/simul8")
+# Repo root, derived from this file so the script runs from any checkout.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from simul8.domain.ids import AgentId  # noqa: E402
 from simul8.plugins.behaviors.sir_behavior import SirEpidemicBehavior  # noqa: E402
 from simul8.plugins.communication.broadcast import BroadcastProtocol  # noqa: E402
@@ -116,8 +118,8 @@ if __name__ == "__main__":
         print(f"{key}: ndlib  mean={m1:.1f} std={s1:.1f} range=[{lo1},{hi1}]")
         print(f"{key}: simul8 mean={m2:.1f} std={s2:.1f} range=[{lo2},{hi2}]")
 
-    out = Path("/tmp/claude-1000/-home-agnivesh-Desktop-simul8/8d6013d0-83ba-439f-8d2e-520098154174/scratchpad/external_validation")
+    out = Path(__file__).resolve().parent
     out.mkdir(parents=True, exist_ok=True)
-    with open(out / "sir_vs_ndlib.json", "w") as f:
+    with open(out / "sir_vs_ndlib_results.json", "w") as f:
         json.dump(results, f, indent=2)
-    print(f"\nWrote {out / 'sir_vs_ndlib.json'}")
+    print(f"\nWrote {out / 'sir_vs_ndlib_results.json'}")

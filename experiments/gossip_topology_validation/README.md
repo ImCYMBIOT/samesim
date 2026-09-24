@@ -1,14 +1,26 @@
 # Gossip Convergence vs. Topology — Validation Study
 
-> **Committed numbers predate three engine/plugin fixes.** They were
-> produced before the O(n²) topology-generator fixes, the engine
-> termination fix (each run executed one tick fewer than nominal), and the
-> addressing-contract fix. None of those touch what this study concludes —
-> it measures *convergence scaling with n* on gossip, which used the
-> already-correct `GossipBehavior` + `GossipProtocol` pairing and never
-> depended on generation speed — but a from-scratch rerun would produce
-> different exact CSV values for the same seeds. Treat the slopes as
-> current and the per-run digits as historical.
+> **Re-run on the corrected engine (2026-09-24): every conclusion holds.**
+> The committed CSV/JSON numbers below predate three engine/plugin fixes
+> (the O(n²) topology generators, the engine-termination off-by-one, and the
+> addressing contract). The full sweep has since been re-run on the fixed
+> code — raw output in `postaudit_full_results.json` /
+> `postaudit_full_ws_ba_results.json` — and the fitted slopes come back
+> materially identical:
+>
+> | Topology | Slope (original) | Slope (post-audit) |
+> |---|---:|---:|
+> | Ring | 0.99 | **0.99** |
+> | Watts–Strogatz | 0.18 | 0.16 |
+> | Barabási–Albert | 0.11 | 0.11 |
+> | Erdős–Rényi | 0.01 | 0.05 |
+>
+> The ring exponent reproduces exactly, and the ordering among the three
+> well-connected topologies (ER flattest, then BA, then WS) is preserved.
+> Per-run tick counts differ slightly — the termination fix gives each run
+> one more tick and the ER generator consumes its RNG stream differently, so
+> the same seed now yields a different (equally valid) graph. Treat the
+> tables below as the original pass and the slopes as confirmed twice.
 
 **Status:** preliminary validation pass across four topologies (single fixed
 graph density, 5 seeds per point). This is the first of the three research

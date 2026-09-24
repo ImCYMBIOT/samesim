@@ -33,11 +33,16 @@
         |-- README.md
         |-- full_results.json
         |-- full_ws_ba_results.json
+        |-- postaudit_full_results.json
+        |-- postaudit_full_ws_ba_results.json
         |-- run_sweep.py
     |-- scaling_benchmark
         |-- README.md
         |-- naive_gossip.py
         |-- naive_results.json
+        |-- postaudit_naive_results.json
+        |-- postaudit_scaling_results.json
+        |-- postaudit_scaling_ring_results.json
         |-- run_scaling.py
         |-- run_scaling_ring.py
         |-- scaling_chart.html
@@ -271,6 +276,7 @@
             |-- test_architecture_boundaries.cpython-312-pytest-9.1.1.pyc
             |-- test_architecture_boundaries.cpython-313-pytest-8.3.3.pyc
             |-- test_architecture_boundaries.cpython-313-pytest-9.1.1.pyc
+            |-- test_experiment_script_portability.cpython-312-pytest-9.1.1.pyc
         |-- core
             |-- __init__.py
             |-- __pycache__
@@ -314,3 +320,4 @@
             |-- test_topologies.py
             |-- test_topology_complexity.py
         |-- test_architecture_boundaries.py
+        |-- test_experiment_script_portability.py

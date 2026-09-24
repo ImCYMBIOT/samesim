@@ -27,11 +27,14 @@ Fairness notes (so the comparison means something):
 """
 from __future__ import annotations
 
+import os
 import random
 import sys
 import time
+from pathlib import Path
 
-sys.path.insert(0, "/home/agnivesh/Desktop/simul8")
+# Repo root, derived from this file so the script runs from any checkout.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from simul8.domain.ids import AgentId  # noqa: E402
 from simul8.plugins.topologies.ring import RingTopology  # noqa: E402
 
@@ -88,6 +91,6 @@ if __name__ == "__main__":
         results.append(r)
         print(f"    -> wall={r['wall_seconds']:.3f}s", flush=True)
 
-    out = Path("/tmp/claude-1000/-home-agnivesh-Desktop-simul8/8d6013d0-83ba-439f-8d2e-520098154174/scratchpad/scaling_benchmark/naive_results.json")
+    out = Path(__file__).resolve().parent / "naive_results.json"
     out.write_text(json.dumps(results, indent=2))
     print(f"\nWrote {out}")

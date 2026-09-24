@@ -17,7 +17,8 @@ from pathlib import Path
 
 import networkx as nx
 
-sys.path.insert(0, "/home/agnivesh/Desktop/simul8")
+# Repo root, derived from this file so the script runs from any checkout.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from simul8.domain.ids import AgentId  # noqa: E402
 from simul8.plugins.topologies.barabasi_albert import BarabasiAlbertTopology  # noqa: E402
 from simul8.plugins.topologies.grid import GridTopology  # noqa: E402

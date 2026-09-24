@@ -173,3 +173,61 @@ study concludes from, unaffected.
   affected, since that study never depended on generation speed, but a
   from-scratch rerun would now produce different exact CSV values for the
   same seeds.
+
+## Post-audit re-run (2026-09-24) — every conclusion reproduces
+
+The study above was measured on the pre-audit engine. It has now been
+re-run end-to-end on the corrected code. Raw output:
+`postaudit_scaling_ring_results.json`, `postaudit_scaling_results.json`,
+`postaudit_naive_results.json` (the original files are kept unchanged
+alongside them, so the two passes can be diffed).
+
+**The termination fix is confirmed to three significant figures.** Event
+counts rose by **exactly 2.04% at every single point**, on both topologies
+— the restored 50th tick, and nothing else:
+
+| n | events before | events after | Δ |
+|---:|---:|---:|---:|
+| 100 | 9,852 | 10,052 | +2.03% |
+| 1,000 | 98,052 | 100,052 | +2.04% |
+| 30,000 | 2,940,052 | 3,000,052 | +2.04% |
+
+A uniform delta across three orders of magnitude is what a correct
+off-by-one fix should look like; anything n-dependent would have meant the
+fix changed dynamics rather than just restoring the dropped tick. The
+independent check agrees: `event_count_vs_closed_form.py` now reports
+`actual = expected = 60000` exactly, where it previously came up short.
+
+Local slopes are unchanged in character:
+
+| n range | Ring slope | ER slope |
+|---|---:|---:|
+| 100 → 300 | 1.00 | 0.81 |
+| 300 → 1,000 | 1.06 | 1.08 |
+| 1,000 → 3,000 | 1.11 | 1.18 |
+| 3,000 → 10,000 | 1.11 | 1.35 |
+| 10,000 → 30,000 | 1.13 | 1.26 |
+
+### Two caveats, stated plainly
+
+**The n=100,000 point was not re-run.** The machine had 1.4 GB of RAM
+available against that point's ~1.9 GB peak, so it would have measured the
+swap subsystem rather than Simul8. The re-run caps at n=30,000. The
+headline "100,000 agents in 163s" figure therefore still rests on the
+pre-audit measurement.
+
+**Absolute timings are not comparable between the two passes.** Measured
+throughput came out 5–25% lower across the board, but *erratically* — with
+no trend in n, which is not what a real regression looks like. Re-running
+n=1,000 five times on identical code gave 79,450–87,756 events/s, a **10.5%
+spread**, so most of that gap is machine load on a box that was already
+2.8 GB into swap. The overhead ratio against the naive reference lands at
+10–12× here versus the 8× measured earlier; given ±10% measurement noise on
+each of the two numbers in that ratio, the honest statement is "roughly an
+order of magnitude, and flat in n" — which both passes support — rather
+than any specific multiplier.
+
+This is a real limitation of benchmarking on a developer workstation, and
+it is the reason the *slopes* and the *event counts* are what this study
+draws conclusions from: both are robust to load, and the event counts are
+fully deterministic.

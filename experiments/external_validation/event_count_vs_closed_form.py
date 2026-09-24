@@ -26,7 +26,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from simul8_harness import networkx_to_topology_graph, run_simul8  # noqa: E402
 
-sys.path.insert(0, "/home/agnivesh/Desktop/simul8")
+# Repo root, derived from this file so the script runs from any checkout.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import networkx as nx  # noqa: E402
 
 from simul8.domain.ids import AgentId  # noqa: E402

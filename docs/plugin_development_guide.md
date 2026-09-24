@@ -255,3 +255,11 @@ anywhere, but you do have to pass them:
       scale quadratically. A failure here usually means an O(n) scan over
       `agent_ids` nested inside a per-node loop — reach for rejection sampling
       or direct edge sampling instead.
+- [ ] **Any committed `.py` file:** `test_experiment_script_portability.py`
+      fails on a hardcoded absolute path (`/home/...`, `/tmp/...`, a Windows
+      drive). Derive the repo root from `Path(__file__)`, write outputs next
+      to the script, and make scratch locations overridable by environment
+      variable. This one exists because ten committed experiment scripts
+      hardcoded one developer's home directory while their READMEs told
+      readers to "run it yourself" — they ran fine on the machine they were
+      written on, which is precisely why it went unnoticed.

@@ -16,9 +16,11 @@ from __future__ import annotations
 
 import random
 import sys
+from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, "/home/agnivesh/Desktop/simul8")
+# Repo root, derived from this file so the script runs from any checkout.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from simul8.core.agent_registry import AgentRegistry  # noqa: E402
 from simul8.core.communication_layer import CommunicationLayer  # noqa: E402

@@ -71,3 +71,6 @@ venv.bak/
 
 # Project specific
 results/
+
+# Experiment intermediate configs / per-run CSVs (see experiments/*/README.md)
+experiments/*/_work/
