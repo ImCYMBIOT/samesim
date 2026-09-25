@@ -20,6 +20,12 @@ A follower resets its election timer when it grants a vote or hears a
 heartbeat from the current leader. A leader sends heartbeats every
 heartbeat_interval. Each agent votes at most once per term.
 
+Crash recovery (with churn): term and voted_for survive a crash, role and
+votes do not (see on_recover). Cluster membership is every agent the
+behavior has initialized; agents that join mid-run enlarge the majority,
+which is NOT Raft's joint-consensus membership change -- use joins with
+care.
+
 Raft assumes every server can reach every other, and a majority is counted
 over the whole cluster. Use a complete topology (ErdosRenyiTopology with
 edge_probability: 1.0); on a sparser graph a candidate can only collect
@@ -29,6 +35,12 @@ Configuration (plugin_configs.RaftElectionBehavior):
     election_timeout_min: float  (default 150)
     election_timeout_max: float  (default 300)
     heartbeat_interval:   float  (default 50; should be well below the timeout)
+    initial_leader:       int    (optional) start in steady state: this agent
+                                 is leader of term 1 and every other agent a
+                                 follower that voted for it. For experiments
+                                 that begin from a running cluster, like
+                                 crashing the leader. Default: cold start,
+                                 everyone a follower in term 0.
 
 Timeouts are in virtual-time units; the defaults match the paper's
 recommended 150-300 ms with a millisecond time unit.
@@ -75,6 +87,14 @@ class RaftElectionBehavior(BehaviorPort):
         if not self._heartbeat > 0:
             raise ValueError(f"RaftElectionBehavior: heartbeat_interval must be > 0, got {self._heartbeat}")
         self._agent_rngs[agent_id] = rng
+        leader = config.get("initial_leader")
+        if leader is not None:
+            leader = int(leader)
+            if int(agent_id) == leader:
+                return AgentState(data={"role": "leader", "term": 1, "voted_for": leader,
+                                        "votes": [leader], "leader_id": leader})
+            return AgentState(data={"role": "follower", "term": 1, "voted_for": leader,
+                                    "votes": [], "leader_id": leader})
         return AgentState(data={"role": "follower", "term": 0, "voted_for": None,
                                 "votes": [], "leader_id": None})
 
@@ -85,7 +105,12 @@ class RaftElectionBehavior(BehaviorPort):
     # -- messages -----------------------------------------------------------
 
     def step(self, agent_id, current_state, inbox, neighbors, virtual_time) -> BehaviorResult:
-        if not inbox:  # bootstrap: every agent starts as a follower
+        if not inbox:  # bootstrap
+            if current_state.get("role") == "leader":  # steady-state start (initial_leader)
+                return BehaviorResult(
+                    next_state=current_state,
+                    outbound_messages=[self._broadcast(agent_id, "heartbeat", current_state.get("term"))],
+                    set_timers=[Timer(HEARTBEAT, self._heartbeat)])
             return BehaviorResult(next_state=current_state, set_timers=[self._election_timer(agent_id)])
 
         s = dict(current_state.data)
@@ -138,6 +163,21 @@ class RaftElectionBehavior(BehaviorPort):
         if len(s["votes"]) >= self._majority:  # a one-agent cluster elects itself
             s.update(role="leader", leader_id=int(agent_id))
         return self._transition(agent_id, False, s, out, True, virtual_time)
+
+    # -- crash recovery -----------------------------------------------------
+
+    def on_recover(self, agent_id, current_state, neighbors, virtual_time) -> BehaviorResult:
+        """Restart after a crash (Raft section 5.1).
+
+        Raft keeps currentTerm and votedFor on stable storage, and that is
+        what makes a restart safe: a node that forgot it had voted could vote
+        again in the same term and elect a second leader. Role and votes are
+        volatile, so the node comes back as a follower, with no known leader,
+        and a fresh election timeout.
+        """
+        s = dict(current_state.data)
+        s.update(role="follower", votes=[], leader_id=None)
+        return BehaviorResult(next_state=AgentState(data=s), set_timers=[self._election_timer(agent_id)])
 
     # -- helpers ------------------------------------------------------------
 

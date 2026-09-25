@@ -51,23 +51,31 @@ from __future__ import annotations
 import itertools
 import logging
 import math
+from collections.abc import Callable
+from types import MappingProxyType
 from typing import Optional
 
 from ..domain.event import (
     AgentStateChangedEvent,
     AgentWakeEvent,
+    DynamicsWakeEvent,
     Event,
     MessageDeliveredEvent,
+    MessageLostEvent,
     SimulationEndedEvent,
     SimulationStartedEvent,
     TickEvent,
     TimerFiredEvent,
+    TopologyChangeEvent,
 )
 from ..domain.experiment import ExperimentConfig
 from ..domain.ids import AgentId, EventId, MessageId, VirtualTime
 from ..domain.message import Message
+from ..domain.state import AgentState
 from ..domain.topology import TopologyGraph
+from ..domain.topology_change import TopologyChange
 from ..ports.behavior import BehaviorPort, BehaviorResult
+from ..ports.topology_dynamics import TopologyDynamicsPort
 from .agent_registry import AgentRegistry
 from .communication_layer import CommunicationLayer
 from .metrics_engine import MetricsEngine
@@ -78,6 +86,8 @@ from .topology_manager import TopologyManager
 logger = logging.getLogger(__name__)
 
 # Same-instant ordering, lowest first:
+#   changes    -- churn applies first: an agent failing at t does not
+#                 receive messages arriving at t; one joining at t does ...
 #   deliveries -- every message due at an instant is in its inbox ...
 #   wakes      -- ... before the recipient runs on the batch (event mode) ...
 #   timers     -- ... before timers due at that instant, so a message can
@@ -85,6 +95,7 @@ logger = logging.getLogger(__name__)
 #   ticks      -- ... and metrics sample only after all of it.
 # Synchronous mode only uses deliveries and ticks; their relative order is
 # the same as it has always been.
+TOPOLOGY_PRIORITY = -1
 DELIVERY_PRIORITY = 0
 WAKE_PRIORITY = 1
 TIMER_PRIORITY = 2
@@ -124,6 +135,8 @@ class SimulationEngine:
         metrics_engine: MetricsEngine,
         behavior: BehaviorPort,
         config: ExperimentConfig,
+        dynamics: TopologyDynamicsPort | None = None,
+        join_agent: Callable[[AgentId], AgentState] | None = None,
     ) -> None:
         self._scheduler = scheduler
         self._time = time_manager
@@ -133,6 +146,11 @@ class SimulationEngine:
         self._metrics = metrics_engine
         self._behavior = behavior
         self._config = config
+        # Churn (optional). join_agent builds a joining agent's initial state
+        # (behavior.initialize with its per-agent RNG); supplied by the runner.
+        self._dynamics = dynamics
+        self._join_agent = join_agent
+        self._failed: set[AgentId] = set()
 
         # Monotonically increasing counters for unique IDs (no global state)
         self._event_id_counter: itertools.count[int] = itertools.count()
@@ -188,6 +206,8 @@ class SimulationEngine:
             virtual_time=self._tick_time(0),
             priority=TICK_PRIORITY,
         ))
+        if self._dynamics is not None:
+            self._schedule_dynamics(VirtualTime(0.0))
 
         events_processed = 0
         max_virtual_time = self._config.simulation.max_virtual_time
@@ -243,12 +263,18 @@ class SimulationEngine:
         if isinstance(event, TickEvent):
             self._handle_tick(event)
         elif isinstance(event, MessageDeliveredEvent):
-            self._handle_message_delivered(event)
+            if not self._handle_message_delivered(event):
+                return  # lost to a failed recipient; metrics saw a MessageLostEvent
         elif isinstance(event, AgentWakeEvent):
+            if event.agent_id in self._failed:
+                return  # the agent failed; it never ran
             self._handle_wake(event)
         elif isinstance(event, TimerFiredEvent):
             if not self._handle_timer(event):
                 return  # superseded: it never happened, so metrics don't see it
+        elif isinstance(event, DynamicsWakeEvent):
+            self._handle_dynamics(event.virtual_time)
+            return  # metrics see the TopologyChangeEvent it emits instead
         self._metrics.on_event(event, event.virtual_time)
 
     def _handle_tick(self, event: TickEvent) -> None:
@@ -270,6 +296,8 @@ class SimulationEngine:
         if not self._event_mode:
             topology = self._topology.topology
             for agent in self._agents.iter_agents():
+                if agent.agent_id in self._failed:
+                    continue
                 result = self._behavior.step(
                     agent_id=agent.agent_id,
                     current_state=agent.state,
@@ -288,17 +316,24 @@ class SimulationEngine:
                 priority=TICK_PRIORITY,
             ))
 
-    def _handle_message_delivered(self, event: MessageDeliveredEvent) -> None:
+    def _handle_message_delivered(self, event: MessageDeliveredEvent) -> bool:
         """Put a delivered message in the recipient's inbox.
 
         Synchronous: drained at the next tick. Event activation: drained by
         the recipient's wake at this same instant, scheduled here if this is
         the first message reaching it now.
+
+        Returns False if the recipient has failed: the message is lost,
+        counted, and reported to metrics as a MessageLostEvent instead.
         """
+        if event.recipient_id in self._failed:
+            self._report_lost(event.recipient_id, event.message, "recipient_failed", event.virtual_time)
+            return False
         self._pending_inbox.setdefault(event.recipient_id, []).append(event.message)
         self._comm.record_delivery()
         if self._event_mode and self._wake_pending.get(event.recipient_id) != event.virtual_time:
             self._schedule_wake(event.recipient_id, event.virtual_time)
+        return True
 
     def _handle_wake(self, event: AgentWakeEvent) -> None:
         """Event activation: run step() on everything that reached the agent now."""
@@ -323,7 +358,7 @@ class SimulationEngine:
         mechanism alone keeps a superseded timer from firing.
         """
         key = (event.agent_id, event.tag)
-        if self._timers.get(key) != event.event_id:
+        if self._timers.get(key) != event.event_id or event.agent_id in self._failed:
             return False
         del self._timers[key]
         topology = self._topology.topology
@@ -447,6 +482,106 @@ class SimulationEngine:
                 f"at t={now!r} (float resolution); use a larger delay."
             )
         return later
+
+    # ------------------------------------------------------------------
+    # Churn
+    # ------------------------------------------------------------------
+
+    def _handle_dynamics(self, now: VirtualTime) -> None:
+        """Ask the dynamics plugin for its change, apply it, report it to
+        metrics, and schedule the plugin's next turn.
+
+        Order: joins, edge additions, edge removals, failures, recoveries.
+        Every precondition is checked before anything is applied, so an
+        invalid change fails cleanly, naming the plugin.
+        """
+        name = type(self._dynamics).__name__
+        states = MappingProxyType({
+            agent.agent_id: MappingProxyType(agent.state.to_dict())
+            for agent in self._agents.iter_agents()
+        })
+        change = self._dynamics.change(self._topology.topology, now, states, frozenset(self._failed))
+        if not isinstance(change, TopologyChange):
+            raise TypeError(f"{name}.change() must return a TopologyChange, got {change!r}")
+
+        problems = []
+        for a in sorted(change.fail):
+            if a not in self._agents:
+                problems.append(f"fail: agent {a} does not exist")
+            elif a in self._failed:
+                problems.append(f"fail: agent {a} has already failed")
+        for a in sorted(change.recover):
+            if a not in self._failed:
+                problems.append(f"recover: agent {a} has not failed")
+        for a in sorted(change.join):
+            if a in self._agents or int(a) < 0:
+                problems.append(f"join: id {a} is negative or already in use")
+        if change.join and self._join_agent is None:
+            problems.append("join: this engine was built without a way to initialize new agents")
+        if problems:
+            raise ValueError(f"{name} produced an invalid change at t={now!r}:\n  " + "\n  ".join(problems))
+
+        topology = self._topology.topology
+        if change.is_structural:
+            for a in sorted(change.join):
+                self._agents.add_agent(a, self._join_agent(a))
+            try:
+                topology = self._topology.apply(change)
+            except ValueError as err:
+                raise ValueError(f"{name} produced an invalid change at t={now!r}: {err}") from None
+            self._comm.topology_changed(topology)
+            if self._event_mode:
+                for a in sorted(change.join):
+                    self._schedule_wake(a, now)  # bootstrap step for the newcomer
+
+        discarded: list[tuple[AgentId, Message]] = []
+        for a in sorted(change.fail):
+            self._failed.add(a)
+            for key in [k for k in self._timers if k[0] == a]:
+                self._cancel_timer(*key)
+            self._wake_pending.pop(a, None)
+            # Defensive: inboxes are drained at the instant they fill in both
+            # activation modes, so nothing should be waiting here -- but if
+            # anything is, it is reported, never silently dropped.
+            discarded.extend((a, m) for m in self._pending_inbox.pop(a, []))
+        for a in change.recover:
+            self._failed.discard(a)
+
+        # Report the change before its consequences, so metrics see an agent
+        # recover before they see it run.
+        if not change.is_empty():
+            self._metrics.on_event(TopologyChangeEvent(
+                event_id=self._next_event_id(), virtual_time=now, change=change), now)
+        for a, message in discarded:
+            self._report_lost(a, message, "discarded_on_failure", now)
+        if self._event_mode:
+            for a in sorted(change.recover):
+                result = self._behavior.on_recover(
+                    agent_id=a,
+                    current_state=self._agents.get(a).state,
+                    neighbors=topology.neighbors(a),
+                    virtual_time=now,
+                )
+                self._apply(a, result, now, topology)
+
+        self._schedule_dynamics(now)
+
+    def _schedule_dynamics(self, now: VirtualTime) -> None:
+        name = type(self._dynamics).__name__
+        delay = self._dynamics.next_time(self._topology.topology, now, frozenset(self._failed))
+        if delay is None:
+            return
+        at = self._after(now, delay, f"{name}.next_time()")
+        if at > self._config.simulation.max_virtual_time:
+            return
+        self._scheduler.schedule(DynamicsWakeEvent(
+            event_id=self._next_event_id(), virtual_time=at, priority=TOPOLOGY_PRIORITY))
+
+    def _report_lost(self, recipient: AgentId, message: Message, reason: str, now: VirtualTime) -> None:
+        self._comm.record_loss()
+        self._metrics.on_event(MessageLostEvent(
+            event_id=self._next_event_id(), virtual_time=now, source_id=message.sender_id,
+            recipient_id=recipient, message=message, reason=reason), now)
 
     # ------------------------------------------------------------------
     # Tick arithmetic

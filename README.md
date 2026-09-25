@@ -55,8 +55,9 @@ virtual_time,value
 | Behaviors | Gossip averaging, leader election (max-id flooding), SIR epidemic, asynchronous pairwise gossip (Boyd et al.), Raft leader election |
 | Protocols | Gossip (point-to-point), broadcast, lossy (configurable drop rate), latency (constant, uniform, exponential or lognormal per-message delay, plus loss) |
 | Topologies | Ring, 2-D grid (optional wrap), Erdős–Rényi, Watts–Strogatz, Barabási–Albert |
-| Metrics | Convergence variance, message count, S/I/R counts, leader-consensus fraction, full per-agent state trace, topology edge list, run fingerprint (SHA-256 per tick), Raft elections and election-safety violations |
+| Metrics | Convergence variance, message count, S/I/R counts, leader-consensus fraction, full per-agent state trace, topology edge list, run fingerprint (SHA-256 per tick), Raft elections and election-safety violations, running agents and lost messages under churn |
 | Exporters | CSV |
+| Churn (optional) | Scheduled faults with state-based targeting ("crash whoever is leader at t=1000"), random Poisson failure/recovery |
 
 All five example configs in `examples/` finish in under 0.4 s each.
 
@@ -113,22 +114,27 @@ This matches mixing-time theory qualitatively: well-connected graphs converge in
 
 The ring's linear slope is an artifact of the 1% convergence threshold. At a 1e-4 threshold the ring is about quadratic (fitted slope 1.82 for synchronous push gossip, 1.78 for Boyd et al.'s asynchronous pairwise gossip), which matches the classical O(n²) result. Details: [`experiments/async_gossip_validation/`](experiments/async_gossip_validation/).
 
-Raft leader election reproduces the qualitative findings of the Raft paper (Ongaro & Ousterhout 2014, Fig. 16). Without timeout randomization no leader is ever elected. A 150–300 ms range elects in the first term every time. Timeouts near the network delay cause about 26 unnecessary re-elections per 5 seconds. Election Safety (at most one leader per term) held in all 5,500 trials. Details: [`experiments/raft_election_validation/`](experiments/raft_election_validation/).
+Raft leader election reproduces the qualitative findings of the Raft paper (Ongaro & Ousterhout 2014, Fig. 16). From a cold start without timeout randomization, no leader is ever elected. A 150–300 ms range elects in the first term every time. Timeouts near the network delay cause about 26 unnecessary re-elections per 5 seconds. In the paper's actual scenario, crashing the leader of a running cluster, a 150–300 ms range restores a leader in a median of 186 ms (p95 325 ms). Election Safety (at most one leader per term) held in all 11,000 trials across both studies. Details: [`experiments/raft_election_validation/`](experiments/raft_election_validation/).
 
 With per-message latency, gossip convergence time grows linearly with mean delay (R² ≥ 0.997). At equal mean, exponential delays converge 23% faster than constant ones at mean 16 but slower at mean 1, so the shape of the delay distribution matters, not just its average. Details: [`experiments/latency_validation/`](experiments/latency_validation/).
 
 ### Tests
 
-**678 passing on each of Python 3.10, 3.11, 3.12 and 3.13** (unit, integration, regression). Five of the suites are *contract tests that discover their targets automatically*, so they also cover plugins and files that don't exist yet:
+**872 passing on each of Python 3.10, 3.11, 3.12 and 3.13** (unit, integration, regression). Six of the suites are *contract tests that discover their targets automatically*, so they also cover plugins and files that don't exist yet:
 - every behavior × protocol pairing delivers exactly once per intended recipient
 - no topology generator scales quadratically
 - every module respects the layering (`plugins` → `domain`, `ports` only), with relative imports resolved
 - no committed script hardcodes a machine-specific path
+- under random churn, no failed agent ever runs or receives a message, for every behavior × activation mode × protocol
 - **golden traces**: every behavior × protocol × topology is fingerprinted, so any change that alters a single delivered message fails the build and names the first tick that diverged
 
 ## What it can't do yet
 
-The network is fixed for the whole run: nodes can't join, leave or fail, and links can't break. That rules out churn, fault-tolerance and crash-recovery studies (including Raft's leader-crash scenario) until Phase 3. Per-message latency (Phase 1) and event-driven agents with timers (Phase 2) have landed. The design is in [docs/design/event_model.md](docs/design/event_model.md).
+All three phases of the time-model design are in: per-message latency, event-driven agents with timers, and churn (nodes that fail, recover and join, and links that change). See [docs/design/event_model.md](docs/design/event_model.md). Still missing:
+
+- **Network partitions and asymmetric links.** Churn fails nodes, not links in one direction. A partition can be modeled with `remove_edges`, but the messages already in flight across it still arrive.
+- **Log replication.** `RaftElectionBehavior` is Raft's leader election only.
+- **Scale beyond ~10⁵ agents.** It's pure Python at about 60k events/s.
 
 ## Getting Started
 

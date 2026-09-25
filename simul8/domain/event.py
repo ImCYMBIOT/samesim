@@ -131,9 +131,49 @@ class TimerFiredEvent(Event):
     tag: str = field(kw_only=True)
 
 
+@dataclass(frozen=True)
+class DynamicsWakeEvent(Event):
+    """Churn: time for the dynamics plugin to act (TopologyDynamicsPort).
+
+    Engine-internal. Handled before anything else due at the same instant,
+    so an agent failing at t does not receive messages arriving at t.
+    """
+
+
+@dataclass(frozen=True)
+class TopologyChangeEvent(Event):
+    """Churn: the batch of failures, recoveries, joins and edge changes that
+    was just applied. Emitted to metrics (not scheduled) after application.
+    """
+
+    change: "TopologyChange" = field(kw_only=True)  # type: ignore[name-defined]  # noqa: F821
+
+
+@dataclass(frozen=True)
+class MessageLostEvent(Event):
+    """A message that will never be processed, and why.
+
+    reason "recipient_failed": it arrived at an agent that had failed.
+    reason "discarded_on_failure": it was in an agent's inbox, delivered
+    but not yet processed, when that agent failed.
+
+    Metrics receive this INSTEAD of a MessageDeliveredEvent for the first
+    reason. Lost messages are always reported, never silently dropped.
+    """
+
+    recipient_id: AgentId = field(kw_only=True)
+    message: "Message" = field(kw_only=True)  # type: ignore[name-defined]  # noqa: F821
+    reason: str = field(kw_only=True)
+
+
 # Avoid circular import: Message is defined in domain/message.py which imports
 # from domain/ids.py only. We reference it via string annotation above.
 from .message import Message  # noqa: E402 — must be after class definitions
 
 # Patch the forward reference so isinstance checks work at runtime.
 MessageDeliveredEvent.__dataclass_fields__["message"].type = Message
+MessageLostEvent.__dataclass_fields__["message"].type = Message
+
+from .topology_change import TopologyChange  # noqa: E402
+
+TopologyChangeEvent.__dataclass_fields__["change"].type = TopologyChange

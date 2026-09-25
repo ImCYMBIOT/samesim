@@ -40,6 +40,7 @@ class CommunicationLayer:
         self._protocol = protocol
         self._messages_sent: int = 0
         self._messages_delivered: int = 0
+        self._messages_lost: int = 0
 
     def route(
         self,
@@ -93,10 +94,19 @@ class CommunicationLayer:
         """
         self._messages_delivered += 1
 
+    def record_loss(self) -> None:
+        """Count a message that will never be processed (churn)."""
+        self._messages_lost += 1
+
+    def topology_changed(self, topology: TopologyGraph) -> None:
+        """Tell the protocol the graph changed, so it can refresh caches."""
+        self._protocol.on_topology_changed(topology)
+
     def reset_counters(self) -> None:
         """Reset send/deliver counters. Used between multi-run resets."""
         self._messages_sent = 0
         self._messages_delivered = 0
+        self._messages_lost = 0
 
     @property
     def protocol_name(self) -> str:
@@ -106,6 +116,10 @@ class CommunicationLayer:
     @property
     def messages_sent(self) -> int:
         return self._messages_sent
+
+    @property
+    def messages_lost(self) -> int:
+        return self._messages_lost
 
     @property
     def messages_delivered(self) -> int:

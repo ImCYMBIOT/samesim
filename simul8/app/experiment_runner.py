@@ -39,6 +39,7 @@ from ..ports.behavior import BehaviorPort
 from ..ports.communication import CommunicationProtocolPort
 from ..ports.metric_collector import MetricCollectorPort
 from ..ports.persistence import PersistencePort
+from ..ports.topology_dynamics import TopologyDynamicsPort
 from ..ports.topology_generator import TopologyGeneratorPort
 from .config_loader import ConfigLoader, ConfigValidationError
 from .plugin_loader import PluginLoader
@@ -157,6 +158,10 @@ class ExperimentRunner:
             config.plugins.communication, CommunicationProtocolPort
         )
         check_activation_compatible(behavior, config)
+        dynamics: TopologyDynamicsPort | None = (
+            self._plugin_loader.load(config.plugins.dynamics, TopologyDynamicsPort)
+            if config.plugins.dynamics else None
+        )
         metric_collectors: list[MetricCollectorPort] = [
             self._plugin_loader.load(cp, MetricCollectorPort)
             for cp in config.plugins.metrics
@@ -194,6 +199,20 @@ class ExperimentRunner:
         comm_config = config.plugin_configs.get(comm_class_name, {})
         comm_protocol.initialize(topology_manager.topology, comm_config, rng_manager.global_rng)
 
+        # --- 6b. Churn (optional) ---
+        # Its own RNG stream, so adding churn never shifts the protocol's or
+        # the topology generator's draws.
+        if dynamics is not None:
+            dyn_name = config.plugins.dynamics.rsplit(".", 1)[-1]
+            dynamics.initialize(topology_manager.topology,
+                                config.plugin_configs.get(dyn_name, {}),
+                                rng_manager.stream("dynamics"))
+
+        def join_agent(agent_id: AgentId):
+            # A joining agent is initialized exactly as it would have been
+            # at t=0: same behavior config, same per-agent RNG (seed XOR id).
+            return behavior.initialize(agent_id, behavior_config, rng_manager.get_agent_rng(agent_id))
+
         # --- 7. Register metric collectors ---
         metrics_engine = register_metric_collectors(
             metric_collectors, agent_registry, topology_manager.topology
@@ -214,6 +233,8 @@ class ExperimentRunner:
             metrics_engine=metrics_engine,
             behavior=behavior,
             config=config,
+            dynamics=dynamics,
+            join_agent=join_agent,
         )
 
         # --- 9. Run with wall-clock timing ---

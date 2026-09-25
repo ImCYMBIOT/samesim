@@ -93,6 +93,17 @@ class CommunicationProtocolPort(ABC):
         """
         ...
 
+    def on_topology_changed(self, topology: TopologyGraph) -> None:
+        """Churn changed the graph (agents joined, or edges were added or
+        removed). Default: nothing.
+
+        A protocol that derives data from the topology in initialize() MUST
+        refresh it here, or it will route on a graph that no longer exists.
+        route() always receives the current graph; this is only for caches.
+        Failures and recoveries do not change the graph and are not reported:
+        a network does not know a node has crashed.
+        """
+
     @abstractmethod
     def route(
         self,

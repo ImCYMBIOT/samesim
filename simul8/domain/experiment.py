@@ -51,6 +51,7 @@ class PluginsConfig:
     topology: str
     metrics: tuple[str, ...] = ()
     persistence: tuple[str, ...] = ()
+    dynamics: str | None = None  # optional TopologyDynamicsPort (churn)
 
 
 @dataclass(frozen=True)

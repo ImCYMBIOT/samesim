@@ -18,6 +18,11 @@ What is pinned:
               to a single delivery anywhere fails here. Per-tick digests
               are stored, so a failure names the first tick that diverged.
 
+    CHURN     Every behavior x activation mode x protocol on one graph under
+              RandomChurn: failures, recoveries, lost messages and
+              recovery hooks. (ScheduledChurn is pinned by the Raft
+              leader-crash example.)
+
     EXAMPLES  Every config in examples/, with every CSV it writes hashed
               byte-for-byte -- covering the metric and exporter plugins
               the matrix does not exercise.
@@ -136,11 +141,24 @@ def _matrix_key(b, p, t, dt, mode="synchronous") -> str:
     return f"{b.__name__}|{p.__name__}|{t.__name__}|dt={dt}{suffix}"
 
 
+CHURN = [(b, p, mode) for b in BEHAVIORS
+         for mode in sorted(getattr(b, "activation_modes", {"synchronous"}))
+         for p in PROTOCOLS]
+CHURN_TOPOLOGY = "ErdosRenyiTopology"
+CHURN_CONFIG = {"failure_rate": 0.02, "recovery_rate": 0.2}
+
+
+def _churn_key(b, p, mode) -> str:
+    return _matrix_key(b, p, next(t for t in TOPOLOGIES if t.__name__ == CHURN_TOPOLOGY),
+                       1.0, mode) + "|churn"
+
+
 def _example_key(path: Path) -> str:
     return f"example:{path.stem}"
 
 
 EXPECTED_KEYS = {"matrix": {_matrix_key(*c) for c in MATRIX},
+                 "churn": {_churn_key(*c) for c in CHURN},
                  "examples": {_example_key(e) for e in EXAMPLES}}
 
 
@@ -152,7 +170,9 @@ class _Golden:
     def __init__(self, update: bool) -> None:
         self.update = update
         self.data = (json.loads(GOLDEN_PATH.read_text())
-                     if GOLDEN_PATH.exists() else {"matrix": {}, "examples": {}})
+                     if GOLDEN_PATH.exists() else {})
+        for section in EXPECTED_KEYS:
+            self.data.setdefault(section, {})
         self.dirty = False
 
     def check(self, section: str, key: str, actual: dict) -> None:
@@ -272,6 +292,34 @@ def test_matrix_trace_is_unchanged(behavior, protocol, topology, dt, mode, tmp_p
     out = _run(cfg, tmp_path)
     golden.check("matrix", _matrix_key(behavior, protocol, topology, dt, mode),
                  _digest_record(out, name))
+
+
+@pytest.mark.parametrize("behavior,protocol,mode", CHURN, ids=[_churn_key(*c) for c in CHURN])
+def test_churn_trace_is_unchanged(behavior, protocol, mode, tmp_path, golden):
+    name = "golden"
+    topology = next(t for t in TOPOLOGIES if t.__name__ == CHURN_TOPOLOGY)
+    cfg = {
+        "schema_version": "1.0",
+        "experiment": {"name": name, "seed": SEED},
+        "simulation": {"num_agents": N_AGENTS, "max_virtual_time": MAX_TIME,
+                       "tick_interval": 1.0, "activation": mode},
+        "plugins": {
+            "behavior": _path(behavior),
+            "communication": _path(protocol),
+            "topology": _path(topology),
+            "dynamics": "simul8.plugins.dynamics.random_churn.RandomChurn",
+            "metrics": [DIGEST_METRIC],
+            "persistence": [CSV_EXPORTER],
+        },
+        "plugin_configs": {
+            behavior.__name__: BEHAVIOR_CONFIGS.get(behavior.__name__, {}),
+            protocol.__name__: PROTOCOL_CONFIGS.get(protocol.__name__, {}),
+            topology.__name__: TOPOLOGY_CONFIGS.get(topology.__name__, {}),
+            "RandomChurn": CHURN_CONFIG,
+        },
+    }
+    out = _run(cfg, tmp_path)
+    golden.check("churn", _churn_key(behavior, protocol, mode), _digest_record(out, name))
 
 
 @pytest.mark.parametrize("example", EXAMPLES, ids=lambda p: p.stem)

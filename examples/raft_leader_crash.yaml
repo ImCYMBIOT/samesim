@@ -1,0 +1,44 @@
+# Raft leader crash and recovery -- the scenario of Figure 16 in Ongaro &
+# Ousterhout (2014). A 5-node cluster elects a leader; at t=1000 ms whoever
+# is leader crashes (ScheduledChurn resolves "where role = leader" at that
+# moment); the survivors elect a new leader; at t=2500 ms the old leader
+# restarts with its term and vote intact and rejoins as a follower.
+schema_version: "1.0"
+
+experiment:
+  name: "raft_leader_crash"
+  seed: 7
+
+simulation:
+  num_agents: 5
+  max_virtual_time: 4000
+  tick_interval: 10
+  activation: event
+
+plugins:
+  behavior: "simul8.plugins.behaviors.raft_election.RaftElectionBehavior"
+  communication: "simul8.plugins.communication.latency.LatencyProtocol"
+  topology: "simul8.plugins.topologies.random_graph.ErdosRenyiTopology"
+  dynamics: "simul8.plugins.dynamics.scheduled.ScheduledChurn"
+  metrics:
+    - "simul8.plugins.metrics.raft_metrics.RaftElectionMetric"
+    - "simul8.plugins.metrics.churn_metrics.ChurnMetric"
+    - "simul8.plugins.metrics.message_count.MessageCountMetric"
+  persistence:
+    - "simul8.plugins.persistence.csv_exporter.CsvExporter"
+
+plugin_configs:
+  RaftElectionBehavior:
+    election_timeout_min: 150
+    election_timeout_max: 300
+    heartbeat_interval: 50
+  LatencyProtocol:
+    distribution: uniform
+    low: 5
+    high: 15
+  ErdosRenyiTopology:
+    edge_probability: 1.0
+  ScheduledChurn:
+    events:
+      - {at: 1000, fail: {where: {role: leader}}}
+      - {at: 2500, recover: all}

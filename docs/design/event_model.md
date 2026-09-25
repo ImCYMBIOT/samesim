@@ -1,6 +1,6 @@
 # Design: Latency, Asynchronous Activation, and Churn
 
-**Status:** Phases 0, 1 and 2 **done**. Phase 3 (churn) is a proposal.
+**Status:** All phases (0–3) **done**.
 **Scope:** the engine's time model. Three capabilities that the core cannot
 express today, delivered in four independently shippable phases.
 
@@ -401,6 +401,47 @@ behind the same interface.
 - **Join reproducibility**: an agent added at `t=50` has the same initial
   state as the same id present from `t=0`.
 - **Topology generators** stay covered by the existing complexity sweep.
+
+### As built
+
+Three changes from the design, each forced by a concrete case:
+
+1. **Liveness is separate from structure.** `TopologyChange` has `fail`,
+   `recover` and `join` alongside `add_edges`/`remove_edges`, not just
+   add/remove agents. A crash is silent: neighbors keep the failed agent,
+   and messages to it are lost, as in a real network. A graceful leave is
+   `fail` plus `remove_edges`. Raft's crash-recovery scenario needs a crashed
+   node to come back as *itself*, which remove-and-re-add can't express.
+2. **`recover` keeps state, and `on_recover()` lets behaviors drop what a
+   restart loses.** Raft's safety depends on it: a restarted node that
+   forgot its vote could vote twice in a term.
+3. **The port asks *when* and *what* separately** (`next_time()`, then
+   `change()` at that moment) rather than returning the next change in
+   advance. The first plugin written, "crash whoever is leader at
+   t=1000", can't be decided at t=0, before there is a leader. Plugins see
+   a read-only snapshot of agent state for exactly this.
+
+Also: changes apply before anything else at their instant (priority −1).
+The change is reported to metrics before its consequences (a recovering
+agent is seen to recover before it runs). Churn plugins draw from a
+dedicated RNG stream (`RandomnessManager.stream()`), so adding churn never
+shifts the protocol's draws. Every lost message is reported to metrics.
+
+**Verification.** 21 integration tests observe the semantics from inside
+behaviors, and mutation testing caught each of the five engine bugs tried.
+One of them (failure pausing timers instead of cancelling them) was caught
+only after adding a test with a timer due after recovery.
+`test_churn_contract.py` runs every behavior × mode × protocol under random
+churn (360 failures, 2,623 lost messages) and checks that failed agents
+never run or receive messages. It caught all three engine mutations tried.
+Golden traces: +28 churn cells, +1 example (Raft leader crash), additions
+only. `RandomChurn` reaches the stationary down-fraction λ/(λ+μ) within
+0.01.
+
+**Plugins:** `ScheduledChurn` (scripted, with `where` selectors),
+`RandomChurn` (Gillespie), `ChurnMetric`, and `RaftElectionBehavior`'s
+`on_recover` plus an `initial_leader` steady-state start for crash
+experiments.
 
 ## 7. How we'll know it worked
 

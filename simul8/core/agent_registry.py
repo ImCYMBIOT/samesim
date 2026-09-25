@@ -72,6 +72,20 @@ class AgentRegistry:
         )
         return agent_id
 
+    def add_agent(self, agent_id: AgentId, initial_state: AgentState) -> None:
+        """Register an agent under a caller-chosen, unused id (churn: joins).
+
+        Raises:
+            ValueError: If the id is negative or already exists.
+        """
+        if int(agent_id) < 0 or agent_id in self._agents:
+            raise ValueError(f"Cannot add agent {agent_id}: id is negative or already in use")
+        self._agents[agent_id] = Agent(agent_id=agent_id, state=initial_state, metadata={})
+        self._next_id = max(self._next_id, int(agent_id) + 1)
+
+    def __contains__(self, agent_id: AgentId) -> bool:
+        return agent_id in self._agents
+
     # ------------------------------------------------------------------
     # Retrieval
     # ------------------------------------------------------------------

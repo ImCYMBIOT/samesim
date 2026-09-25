@@ -96,6 +96,7 @@ will fail your PR if violated.
 | `TopologyGeneratorPort` | `simul8/plugins/topologies/` | experiment (called once) | `RingTopology`, `ErdosRenyiTopology`, `GridTopology`, `BarabasiAlbertTopology`, `WattsStrogatzTopology` |
 | `MetricCollectorPort` | `simul8/plugins/metrics/` | metric, per experiment | `MessageCountMetric`, `ConvergenceMetric`, `SirInfectedMetric`, `LeaderConsensusMetric`, `StateTraceMetric`, `TraceDigestMetric`, `RaftElectionMetric` |
 | `PersistencePort` | `simul8/plugins/persistence/` | experiment | `CsvExporter` |
+| `TopologyDynamicsPort` (optional) | `simul8/plugins/dynamics/` | experiment | `ScheduledChurn`, `RandomChurn` |
 
 Full method signatures and contracts are documented in each port file's
 docstring (`simul8/ports/*.py`) — read the port before implementing it, the
@@ -243,6 +244,37 @@ narrowest set that gives you what you need. `on_event` must not raise —
 log and continue instead of throwing, or you can silently stop the whole
 metrics pipeline mid-run.
 
+### TopologyDynamicsPort — churn: failures, recoveries, joins, rewiring
+
+```python
+initialize(topology, config, rng) -> None               # rng is a dedicated stream
+next_time(topology, time, failed) -> float | None        # when to act next (> 0), or never
+change(topology, time, states, failed) -> TopologyChange # decided at that moment
+```
+
+Optional. Set `plugins.dynamics` in the YAML file. A `TopologyChange`
+(`simul8.domain.topology_change`) keeps **liveness** and **structure** apart:
+
+- `fail`: a **silent** crash. The agent stops running and loses its inbox
+  and timers, and messages reaching it are lost (counted, and reported to
+  metrics as `MessageLostEvent`). Its neighbors are **not** told; they find
+  out the way real systems do, through timeouts. For a graceful leave, fail
+  the agent and remove its edges in the same change.
+- `recover`: the agent comes back **with the state it had when it failed**,
+  and `BehaviorPort.on_recover()` runs (event activation). Override it to
+  drop what a real restart loses. `RaftElectionBehavior` keeps its term and
+  vote, since forgetting a vote could elect two leaders in one term, and
+  comes back as a follower.
+- `join`: a new agent, initialized exactly as it would have been at t=0.
+- `add_edges` / `remove_edges`: undirected. Protocols are told through
+  `on_topology_changed()`.
+
+`change()` sees a read-only snapshot of every agent's state, so faults can
+be targeted: `ScheduledChurn` accepts `fail: {where: {role: leader}}`.
+Changes apply before anything else at their instant, so an agent failing at
+t doesn't receive messages arriving at t. Invalid changes (failing an agent
+twice, adding an existing edge, …) fail loudly, naming your plugin.
+
 ### PersistencePort — where results go after the run
 
 ```python
@@ -359,6 +391,11 @@ anywhere, but you do have to pass them:
       commit the JSON diff. An *existing* plugin failing it means your change
       altered someone's simulation; the failure names the first tick that
       diverged.
+- [ ] **Behaviors and protocols under churn:** `test_churn_contract.py` runs
+      every behavior (in each mode) × every protocol under random failures
+      and checks that failed agents never run and never receive messages.
+      If your behavior sets timers, check `on_recover()` does the right
+      thing for it (the default re-runs the bootstrap step).
 - [ ] **Core, plugins, domain:** `test_portable_math_usage.py` rejects
       platform-dependent math (`math.log`, `**`, `rng.expovariate`, …).
       Use `simul8.domain.portable_math`. Mark genuinely integer-only `**`

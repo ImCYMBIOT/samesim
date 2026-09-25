@@ -143,3 +143,25 @@ class BehaviorPort(ABC):
         raise NotImplementedError(
             f"{type(self).__name__} set timer {tag!r} but does not implement on_timer()"
         )
+
+    def on_recover(
+        self,
+        agent_id: AgentId,
+        current_state: AgentState,
+        neighbors: frozenset[AgentId],
+        virtual_time: VirtualTime,
+    ) -> BehaviorResult:
+        """A failed agent comes back (event activation only).
+
+        current_state is the state the agent had when it failed: recovery
+        models a restart with durable state. Its inbox and timers were lost
+        in the failure. Override this to reset whatever a real restart would
+        lose (a Raft node comes back as a follower, but must keep its term
+        and vote -- forgetting its vote could elect two leaders in one term).
+
+        The default is a bootstrap step: step() with an empty inbox, which is
+        what lets an event-driven behavior re-arm its timers. Under
+        synchronous activation this is not called; the agent simply resumes
+        at the next tick.
+        """
+        return self.step(agent_id, current_state, [], neighbors, virtual_time)

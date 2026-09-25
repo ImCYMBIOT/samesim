@@ -26,7 +26,12 @@ from simul8.domain.message import Message
 from simul8.domain.state import AgentState
 from simul8.domain.timer import Timer
 from simul8.ports.behavior import BehaviorPort, BehaviorResult
+from simul8.domain.event import (AgentStateChangedEvent, MessageDeliveredEvent,
+                                 MessageLostEvent, TopologyChangeEvent)
+from simul8.domain.ids import MetricName
+from simul8.domain.metric import MetricSeries
 from simul8.ports.communication import CommunicationProtocolPort
+from simul8.ports.metric_collector import MetricCollectorPort
 
 
 class ScriptedBehavior(BehaviorPort):
@@ -48,6 +53,7 @@ class ScriptedBehavior(BehaviorPort):
         ScriptedBehavior.log.append({
             "t": float(virtual_time), "agent": int(agent_id), "call": "step",
             "trigger": trigger, "inbox": [(int(m.sender_id), m.get("n")) for m in inbox],
+            "neighbors": sorted(int(n) for n in neighbors), "calls": calls,
         })
         return self._run(agent_id, current_state, trigger)
 
@@ -105,9 +111,46 @@ class TimerWithoutHandlerBehavior(TickOnlyBehavior):
 
 
 class PayloadDelayProtocol(CommunicationProtocolPort):
-    """Delivers each message after the delay its payload names."""
+    """Delivers each message after the delay its payload names; records
+    every on_topology_changed() call."""
+
+    topology_changes: list = []
 
     def initialize(self, topology, config, rng): ...
 
+    def on_topology_changed(self, topology):
+        PayloadDelayProtocol.topology_changes.append(
+            {a: sorted(int(n) for n in topology.neighbors(a)) for a in sorted(topology.agent_ids)})
+
     def route(self, message, sender_id, topology):
         return [Delivery(message.recipient_id, message, message.get("delay"))]
+
+
+class EventLogMetric(MetricCollectorPort):
+    """Records deliveries, losses, churn changes and state changes (which the
+    engine emits for every behavior call) -- enough to check churn
+    invariants for ANY behavior without instrumenting it."""
+
+    log: list[tuple] = []
+
+    def subscribed_events(self):
+        return frozenset({MessageDeliveredEvent, MessageLostEvent, TopologyChangeEvent,
+                          AgentStateChangedEvent})
+
+    def on_event(self, event, virtual_time):
+        t = float(virtual_time)
+        if isinstance(event, MessageDeliveredEvent):
+            EventLogMetric.log.append(("delivered", t, int(event.recipient_id)))
+        elif isinstance(event, MessageLostEvent):
+            EventLogMetric.log.append(("lost", t, int(event.recipient_id), event.reason))
+        elif isinstance(event, TopologyChangeEvent):
+            c = event.change
+            EventLogMetric.log.append(("change", t, sorted(map(int, c.fail)),
+                                       sorted(map(int, c.recover)), sorted(map(int, c.join))))
+        elif isinstance(event, AgentStateChangedEvent):
+            EventLogMetric.log.append(("ran", t, int(event.agent_id)))
+
+    def get_series(self):
+        return MetricSeries(name=MetricName("event_log"))
+
+    def reset(self): ...

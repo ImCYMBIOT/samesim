@@ -27,8 +27,9 @@ activation. Messages take 5–15 ms (uniform), so a request/response takes
 one third of the minimum timeout. Each configuration runs 500 trials (seeds
 0–499) with a 5,000 ms horizon, 5,500 trials in all.
 
-The paper timed recovery after a leader crash. Simul8 can't crash nodes yet
-(Phase 3), so this study times the first election from a cold start. Both
+The paper timed recovery after a leader crash. This first study times the
+first election from a cold start instead (the crash study below came later,
+with Phase 3). Both
 begin with every follower's timer armed at almost the same instant, which is
 the situation randomization has to resolve. The absolute numbers are not
 comparable to the paper's hardware measurements. The shape is.
@@ -95,10 +96,54 @@ All three claims reproduce.
    The fastest *first* election is at 25–50 ms. Going lower than that makes
    elections slower, not faster.
 
+## Leader crash (Phase 3): the paper's actual scenario
+
+The paper measured recovery after a *leader crash*. Once churn existed,
+`run_raft_crash_sweep.py` could do the same. Each trial starts the 5-node
+cluster in steady state (`initial_leader`: agent 0 leads term 1). At
+t = 1000 ms plus a random offset within one heartbeat interval,
+`ScheduledChurn` crashes **whoever is leader at that moment** (the
+`where: {role: leader}` selector), and the time until a new leader is
+elected is the downtime. The ranges, network and heartbeat rule are the same
+as above, with 500 trials per range. Raw output: `raft_crash_results.json`.
+
+| Timeout range (ms) | Recovered within 5 s | Median downtime | p95 | Max | Mean new term | Cold-start median (above) |
+|---|---:|---:|---:|---:|---:|---:|
+| 150–150 | 35 / 500 | 452 | 4,219 | 4,949 | 7.6 | never elects |
+| 150–151 | 53 / 500 | 1,189 | 4,808 | 4,839 | 12.2 | never elects |
+| 150–155 | 414 / 500 | 1,839 | 4,698 | 4,901 | 14.9 | 1,837 |
+| 150–175 | 500 / 500 | 299 | 670 | 1,594 | 3.03 | 177 |
+| 150–200 | 500 / 500 | 174 | 493 | 981 | 2.30 | 177 |
+| 150–300 | 500 / 500 | 186 | 325 | 631 | 2.06 | 187 |
+| 12–24 | 500 / 500 | 138 | 516 | 893 | 19.2 | 106 |
+| 25–50 | 500 / 500 | 78 | 195 | 311 | 2.96 | 52 |
+| 50–100 | 500 / 500 | 84 | 217 | 432 | 2.38 | 77 |
+| 100–200 | 500 / 500 | 136 | 281 | 454 | 2.14 | 132 |
+
+**Election Safety held in all 5,500 crash trials.**
+
+What the crash scenario adds:
+
+1. **Network jitter partly rescues the no-randomization configs, but only
+   partly.** From a cold start, 150–150 never elects. After a crash it
+   recovers in 7% of trials (35/500), because the followers' timers were
+   last reset by heartbeats arriving 5–15 ms apart and so start out
+   staggered. This is the paper's observation that real clusters do elect
+   at 150–150, rarely and slowly.
+2. **Narrow ranges recover worse after a crash than from a cold start.** At
+   150–175 ms the median downtime is 299 ms against 177, and p95 670 against
+   502. The likely reason is that Raft's majority is counted over the whole
+   configured cluster, crashed node included: a candidate still needs 3 of
+   5 votes but only 4 nodes can answer, so split votes are harder to
+   resolve. This hasn't been isolated experimentally. At 150–300 ms the
+   difference disappears (186 vs 187 ms): a wide range absorbs it.
+3. **Too-short timeouts are unstable before the crash as well as after it.**
+   At 12–24 ms the cluster had already held ~1.7 unnecessary elections
+   before the crash (despite starting in steady state), and the winning term
+   averages 19. From 25–50 ms up, there are no pre-crash elections.
+
 ## What this doesn't cover yet
 
-- **Leader crashes.** This is the paper's actual scenario, and it needs
-  nodes that can fail, which is Phase 3 (churn).
 - **Log replication**, and with it the election restriction on log
   freshness. Any node can win here.
 - **Message loss and partitions** in the timing study. The safety tests

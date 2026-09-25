@@ -8,6 +8,7 @@ Folds, in dispatch order, everything that defines a run's dynamics:
       message id and payload
     - every agent state change: time, agent, full state snapshot
     - every timer that fires (event activation): time, agent, tag
+    - every churn change and every lost message (with its reason)
     - every tick boundary
 
 and records the digest at each tick. Two runs with the same digest at tick
@@ -48,9 +49,11 @@ from ...domain.event import (
     AgentStateChangedEvent,
     Event,
     MessageDeliveredEvent,
+    MessageLostEvent,
     SimulationEndedEvent,
     TickEvent,
     TimerFiredEvent,
+    TopologyChangeEvent,
 )
 from ...domain.ids import AgentId, MetricName, VirtualTime
 from ...domain.metric import MetricSeries
@@ -106,6 +109,8 @@ class TraceDigestMetric(MetricCollectorPort):
             MessageDeliveredEvent,
             AgentStateChangedEvent,
             TimerFiredEvent,
+            TopologyChangeEvent,
+            MessageLostEvent,
             SimulationEndedEvent,
         })
 
@@ -118,6 +123,17 @@ class TraceDigestMetric(MetricCollectorPort):
                 int(m.message_id), int(m.sender_id), int(m.recipient_id),
                 m.broadcast, m.payload,
             ])
+        elif isinstance(event, TopologyChangeEvent):
+            c = event.change
+            self._fold(["change", t,
+                        sorted(int(a) for a in c.fail), sorted(int(a) for a in c.recover),
+                        sorted(int(a) for a in c.join),
+                        sorted([int(a), int(b)] for a, b in c.add_edges),
+                        sorted([int(a), int(b)] for a, b in c.remove_edges)])
+        elif isinstance(event, MessageLostEvent):
+            m = event.message
+            self._fold(["lost", t, int(event.recipient_id), int(m.message_id),
+                        int(m.sender_id), event.reason])
         elif isinstance(event, TimerFiredEvent):
             self._fold(["timer", t, int(event.agent_id), event.tag])
         elif isinstance(event, AgentStateChangedEvent):

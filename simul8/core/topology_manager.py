@@ -11,6 +11,7 @@ import random
 
 from ..domain.ids import AgentId
 from ..domain.topology import TopologyGraph
+from ..domain.topology_change import TopologyChange
 from ..ports.topology_generator import TopologyGeneratorPort
 
 
@@ -63,6 +64,46 @@ class TopologyManager:
             raise RuntimeError(
                 "TopologyManager: topology not built. Call build() first."
             )
+        return self._topology
+
+    def apply(self, change: TopologyChange) -> TopologyGraph:
+        """Apply joins and edge changes; return the new (immutable) graph.
+
+        Copy-on-write: the previous TopologyGraph is untouched (anyone holding
+        it keeps a consistent snapshot); only adjacency sets that change are
+        rebuilt. Liveness (fail / recover) is not part of the graph.
+
+        Raises:
+            ValueError: for edges between unknown agents, adding an existing
+                edge, or removing a missing one.
+        """
+        old = self.topology
+        agent_ids = old.agent_ids | change.join
+        adjacency = dict(old.adjacency)
+        for a in change.join:
+            adjacency.setdefault(a, frozenset())
+        touched: dict[AgentId, set[AgentId]] = {}
+
+        def nbrs(a: AgentId) -> set[AgentId]:
+            if a not in touched:
+                touched[a] = set(adjacency.get(a, frozenset()))
+            return touched[a]
+
+        for a, b in sorted(change.add_edges):
+            if a not in agent_ids or b not in agent_ids:
+                raise ValueError(f"add_edges: ({a}, {b}) names an unknown agent")
+            if b in nbrs(a):
+                raise ValueError(f"add_edges: ({a}, {b}) already exists")
+            nbrs(a).add(b)
+            nbrs(b).add(a)
+        for a, b in sorted(change.remove_edges):
+            if a not in agent_ids or b not in agent_ids or b not in nbrs(a):
+                raise ValueError(f"remove_edges: ({a}, {b}) does not exist")
+            nbrs(a).discard(b)
+            nbrs(b).discard(a)
+        for a, s in touched.items():
+            adjacency[a] = frozenset(s)
+        self._topology = TopologyGraph(agent_ids=agent_ids, adjacency=adjacency)
         return self._topology
 
     def neighbors(self, agent_id: AgentId) -> frozenset[AgentId]:

@@ -69,6 +69,18 @@ class RandomnessManager:
             )
         return self._global_rng
 
+    def stream(self, name: str) -> random.Random:
+        """A dedicated RNG stream for one experiment-level component.
+
+        Seeded from the string "<seed>/<name>" (hashed with SHA-512 by
+        random.Random, identically on every platform and Python version), so
+        it is independent of global_rng: adding a component that draws from
+        its own stream never shifts anyone else's draws.
+        """
+        if self._seed is None:
+            raise RuntimeError("RandomnessManager.initialize(seed) must be called before use.")
+        return random.Random(f"{self._seed}/{name}")
+
     def get_agent_rng(self, agent_id: AgentId) -> random.Random:
         """Return the seeded RNG for a specific agent.
 

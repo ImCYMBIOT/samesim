@@ -125,3 +125,26 @@ def test_metric_flags_two_leaders_in_one_term():
     assert m.violations == 1
     events = [dict(r.tags)["event"] for r in m.get_series().records]
     assert events == ["elected", "elected", "SAFETY_VIOLATION"]
+
+
+def test_initial_leader_starts_in_steady_state():
+    r = RaftElectionBehavior()
+    s = {a: r.initialize(a, {"initial_leader": 1}, random.Random(int(a))) for a in (A, B, C)}
+    assert (s[B].get("role"), s[B].get("term")) == ("leader", 1)
+    assert (s[A].get("role"), s[A].get("voted_for"), s[A].get("leader_id")) == ("follower", 1, 1)
+    boot = r.step(B, s[B], [], ALL - {B}, 0.0)
+    assert [m.get("kind") for m in boot.outbound_messages] == ["heartbeat"]
+    assert [t.tag for t in boot.set_timers] == ["heartbeat"]
+    assert [t.tag for t in r.step(A, s[A], [], ALL - {A}, 0.0).set_timers] == ["election"]
+
+
+def test_recovery_keeps_term_and_vote_but_not_leadership():
+    """Raft §5.1: currentTerm and votedFor are durable. A restarted node that
+    forgot its vote could vote twice in one term."""
+    r, s = _cluster()
+    cand = r.on_timer(A, s[A], "election", ALL - {A}, 200.0).next_state
+    leader = r.step(A, cand, [_msg(B, "vote", 1, to=A)], ALL - {A}, 210.0).next_state
+    back = r.on_recover(A, leader, ALL - {A}, 900.0)
+    st = back.next_state.data
+    assert (st["role"], st["term"], st["voted_for"], st["leader_id"]) == ("follower", 1, 0, None)
+    assert [t.tag for t in back.set_timers] == ["election"]

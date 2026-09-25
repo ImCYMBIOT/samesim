@@ -112,6 +112,7 @@ class ConfigLoader:
                 topology=str(plugins["topology"]),
                 metrics=tuple(metrics),
                 persistence=tuple(persistence),
+                dynamics=str(plugins["dynamics"]) if plugins.get("dynamics") else None,
             ),
             plugin_configs=plugin_configs,
         )
