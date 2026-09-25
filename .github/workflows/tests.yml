@@ -24,10 +24,10 @@ jobs:
       - run: python -m pytest -q
 
   # Required. Golden traces are recorded on Linux and must reproduce
-  # bit-for-bit on macOS and Windows. Two topology generators use math.log,
-  # whose last ulp can in principle differ between C libraries; a failure
-  # here is a real cross-platform reproducibility finding, not flakiness.
-  # (Informational until the first run, 2026-09-24, which passed.)
+  # bit-for-bit on macOS and Windows, and so must portable_math's
+  # known-answer bit patterns. A failure here is a real cross-platform
+  # reproducibility finding, not flakiness. (It caught one: event-driven runs
+  # used libm's log via random.expovariate, whose last bit differs by OS.)
   cross-os-determinism:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -40,4 +40,4 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -e ".[dev]"
-      - run: python -m pytest -q tests/regression/test_golden_traces.py
+      - run: python -m pytest -q tests/regression/test_golden_traces.py tests/unit/domain/test_portable_math.py

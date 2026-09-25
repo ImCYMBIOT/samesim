@@ -196,6 +196,10 @@
             |-- metric.cpython-311.pyc
             |-- metric.cpython-312.pyc
             |-- metric.cpython-313.pyc
+            |-- portable_math.cpython-310.pyc
+            |-- portable_math.cpython-311.pyc
+            |-- portable_math.cpython-312.pyc
+            |-- portable_math.cpython-313.pyc
             |-- state.cpython-310.pyc
             |-- state.cpython-311.pyc
             |-- state.cpython-312.pyc
@@ -215,6 +219,7 @@
         |-- ids.py
         |-- message.py
         |-- metric.py
+        |-- portable_math.py
         |-- state.py
         |-- timer.py
         |-- topology.py
@@ -520,6 +525,10 @@
             |-- test_metric_collector_setup.cpython-311-pytest-9.1.1.pyc
             |-- test_metric_collector_setup.cpython-312-pytest-9.1.1.pyc
             |-- test_metric_collector_setup.cpython-313-pytest-9.1.1.pyc
+            |-- test_portable_math_usage.cpython-310-pytest-9.1.1.pyc
+            |-- test_portable_math_usage.cpython-311-pytest-9.1.1.pyc
+            |-- test_portable_math_usage.cpython-312-pytest-9.1.1.pyc
+            |-- test_portable_math_usage.cpython-313-pytest-9.1.1.pyc
         |-- core
             |-- __init__.py
             |-- __pycache__
@@ -556,6 +565,18 @@
             |-- test_event_queue.py
             |-- test_randomness_manager.py
             |-- test_time_manager.py
+        |-- domain
+            |-- __init__.py
+            |-- __pycache__
+                |-- __init__.cpython-310.pyc
+                |-- __init__.cpython-311.pyc
+                |-- __init__.cpython-312.pyc
+                |-- __init__.cpython-313.pyc
+                |-- test_portable_math.cpython-310-pytest-9.1.1.pyc
+                |-- test_portable_math.cpython-311-pytest-9.1.1.pyc
+                |-- test_portable_math.cpython-312-pytest-9.1.1.pyc
+                |-- test_portable_math.cpython-313-pytest-9.1.1.pyc
+            |-- test_portable_math.py
         |-- plugins
             |-- __init__.py
             |-- __pycache__
@@ -623,3 +644,4 @@
         |-- test_architecture_boundaries.py
         |-- test_experiment_script_portability.py
         |-- test_metric_collector_setup.py
+        |-- test_portable_math_usage.py

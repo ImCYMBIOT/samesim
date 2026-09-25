@@ -93,7 +93,10 @@ Mean time to threshold (± std over 5 seeds):
 reproduced every earlier value exactly. One Erdős–Rényi graph (n = 800, seed 5)
 never reached 1e-4 under **either** protocol. Regenerating it shows agent
 799 has no edges, and an isolated agent keeps its value forever, which puts a
-floor under the variance. That point is averaged over the 4 connected seeds.
+floor under the variance. That point is averaged over the 4 connected seeds. After the switch to portable math (async clocks
+previously used libm's `log` via `random.expovariate`, whose last bit
+differs by OS), the full sweep was re-run: all 100 runs gave identical
+convergence times.
 
 ## What this doesn't cover yet
 

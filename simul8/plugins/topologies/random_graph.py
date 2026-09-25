@@ -31,10 +31,10 @@ random networks", 2005):
 """
 from __future__ import annotations
 
-import math
 import random
 from typing import Any
 
+from ...domain import portable_math
 from ...domain.ids import AgentId
 from ...domain.topology import TopologyGraph
 from ...ports.topology_generator import TopologyGeneratorPort
@@ -68,11 +68,11 @@ class ErdosRenyiTopology(TopologyGeneratorPort):
                     adjacency[agent_ids[i]].add(agent_ids[j])
                     adjacency[agent_ids[j]].add(agent_ids[i])
         else:
-            log_not_p = math.log(1.0 - edge_probability)
+            log_not_p = portable_math.log(1.0 - edge_probability)
             v = 1
             w = -1
             while v < n:
-                w = w + 1 + int(math.log(1.0 - rng.random()) / log_not_p)
+                w = w + 1 + int(portable_math.log(1.0 - rng.random()) / log_not_p)
                 while w >= v and v < n:
                     w -= v
                     v += 1

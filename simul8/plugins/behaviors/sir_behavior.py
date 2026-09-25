@@ -25,6 +25,7 @@ from __future__ import annotations
 import random
 from typing import Any
 
+from ...domain import portable_math
 from ...domain.ids import AgentId, MessageId, VirtualTime
 from ...domain.message import Message
 from ...domain.state import AgentState
@@ -75,7 +76,8 @@ class SirEpidemicBehavior(BehaviorPort):
             )
             if infected_contacts > 0:
                 # Infection probability: 1 - (1 - beta)^k
-                p_infection = 1.0 - ((1.0 - self._beta) ** infected_contacts)
+                # ipow, not **: float ** calls the platform's pow().
+                p_infection = 1.0 - portable_math.ipow(1.0 - self._beta, infected_contacts)
                 if rng.random() < p_infection:
                     next_status = "I"
 

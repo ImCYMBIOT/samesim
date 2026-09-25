@@ -60,6 +60,17 @@ will fail your PR if violated.
      order. This isn't hypothetical: every `GossipBehavior` run used to
      differ between 3.11 and 3.12 with the same seed. Integer sums (counts)
      are exact and fine with `sum()`.
+   - Use `simul8.domain.portable_math` for `log`, `exp`, integer powers and
+     random variates: `portable_math.expovariate(rng, rate)`, not
+     `rng.expovariate(rate)`. IEEE 754 guarantees identical results across
+     platforms only for + − × ÷ and √. `math.log`/`exp`/`pow`, float `**`, and
+     the variates built on them (`expovariate`, `gauss`, `normalvariate`,
+     `lognormvariate`, …) come from each OS's C library and differ in the
+     last bit. In an event-driven run those bits are event times, so the run
+     itself diverges. That's how golden traces recorded on Linux first failed
+     on macOS and Windows. `tests/unit/test_portable_math_usage.py` rejects
+     these calls. `rng.random()`, `uniform`, `choice`, `sample` and
+     `shuffle` are portable and fine.
 
 4. **Referenced by dotted path.** A plugin is wired into an experiment purely
    by its import path as a string, e.g.
@@ -348,6 +359,10 @@ anywhere, but you do have to pass them:
       commit the JSON diff. An *existing* plugin failing it means your change
       altered someone's simulation; the failure names the first tick that
       diverged.
+- [ ] **Core, plugins, domain:** `test_portable_math_usage.py` rejects
+      platform-dependent math (`math.log`, `**`, `rng.expovariate`, …).
+      Use `simul8.domain.portable_math`. Mark genuinely integer-only `**`
+      with `# portable: int`.
 - [ ] **Any committed `.py` file:** `test_experiment_script_portability.py`
       fails on a hardcoded absolute path (`/home/...`, `/tmp/...`, a Windows
       drive). Derive the repo root from `Path(__file__)`, write outputs next

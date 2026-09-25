@@ -70,4 +70,5 @@ class ConvergenceMetric(MetricCollectorPort):
         # fsum for version-independent, order-independent results (see
         # GossipBehavior.step for why builtin sum() is not enough).
         mean = math.fsum(values) / n
-        return math.fsum((v - mean) ** 2 for v in values) / n
+        # d * d, not d ** 2: float ** calls the platform's pow().
+        return math.fsum((v - mean) * (v - mean) for v in values) / n

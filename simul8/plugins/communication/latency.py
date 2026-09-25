@@ -24,7 +24,9 @@ the engine rounds each one UP to whole ticks (a 2.5-tick delay arrives at
 the third tick after sending), so the distribution is exact in the
 protocol and quantized in the run.
 
-Determinism: all randomness comes from the protocol's seeded RNG, drawn in
+Determinism: exponential and lognormal delays use simul8.domain.portable_math,
+not random.expovariate/lognormvariate, whose results depend on the
+platform's C math library. All randomness comes from the protocol's seeded RNG, drawn in
 delivery order -- recipients in sorted order for broadcasts; for each
 delivery, first the loss draw (only when loss_probability > 0), then the
 delay draw (only when the delay is random).
@@ -38,6 +40,7 @@ import math
 import random
 from typing import Any, Callable
 
+from ...domain import portable_math
 from ...domain.delivery import Delivery
 from ...domain.ids import AgentId, MessageId
 from ...domain.message import Message
@@ -137,10 +140,10 @@ def _delay_sampler(config: dict[str, Any]) -> Callable[[random.Random], float | 
         mean = _positive(config, "mean")
 
         def exponential(rng: random.Random) -> float:
-            # expovariate returns exactly 0.0 when random() does (p = 2^-53).
+            # Returns (negative) zero when random() gives 0.0 (p = 2^-53).
             # Zero is not a legal delay, so redraw -- still deterministic.
             while True:
-                d = rng.expovariate(1.0 / mean)
+                d = portable_math.expovariate(rng, 1.0 / mean)
                 if d > 0.0:
                     return d
         return exponential
@@ -152,4 +155,4 @@ def _delay_sampler(config: dict[str, Any]) -> Callable[[random.Random], float | 
     if not math.isfinite(mu):
         raise ValueError(f"LatencyProtocol: 'mu' must be finite, got {config['mu']!r}")
     sigma = _positive(config, "sigma", allow_zero=True)
-    return lambda rng: rng.lognormvariate(mu, sigma)
+    return lambda rng: portable_math.lognormvariate(rng, mu, sigma)

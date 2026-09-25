@@ -38,6 +38,7 @@ from __future__ import annotations
 import random
 from typing import Any
 
+from ...domain import portable_math
 from ...domain.ids import AgentId, MessageId, VirtualTime
 from ...domain.message import Message
 from ...domain.state import AgentState
@@ -102,8 +103,10 @@ class AsyncGossipBehavior(BehaviorPort):
 
     def _next_tick(self, agent_id: AgentId) -> Timer:
         rng = self._agent_rngs[agent_id]
-        while True:  # expovariate returns 0.0 only when random() does; not a legal delay
-            delay = rng.expovariate(self._rate)
+        # portable_math, not rng.expovariate: clock times are exact event
+        # times, and libm's log differs across platforms in the last bit.
+        while True:  # zero only when random() is 0.0 -- not a legal delay
+            delay = portable_math.expovariate(rng, self._rate)
             if delay > 0.0:
                 return Timer(CLOCK, delay)
 

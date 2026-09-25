@@ -324,6 +324,30 @@ flags any term with two leaders. Election Safety held across 100 adversarial
 runs (loss, heavy-tailed latency, split votes, 7-node reordering). Letting
 nodes vote twice per term broke it in all four scenarios.
 
+### Found after shipping: event time made libm visible
+
+The first CI run after Phase 2 failed the macOS and Windows jobs. The golden
+traces that differed were exactly the event-driven runs that draw
+exponential times (async gossip clocks and `LatencyProtocol` delays).
+`random.expovariate` calls the C library's `log`, which rounds differently
+on each OS (glibc's isn't even correctly rounded). Synchronous mode had
+hidden this, because rounding delays up to whole ticks absorbs a last-bit
+difference. Event mode keeps exact times, so the difference became event
+order.
+
+Fixed by class, not by instance. `simul8/domain/portable_math.py`
+implements `log`, `exp`, `ipow` and the exponential, normal and lognormal
+variates using only IEEE-exact operations. Accuracy is within 2 ulp,
+calls take about 0.7 µs, and RNG consumption is identical to CPython's.
+It also replaces CPython's `NV_MAGICCONST`, which CPython computes with
+libm `exp` at import. Every other use was switched too, including float
+`**` in SIR and the convergence metric and `math.log` in the Erdős–Rényi
+generator. None of those had failed yet.
+`tests/unit/test_portable_math_usage.py` rejects platform-dependent math
+anywhere in core, plugins or domain. Known-answer bit patterns now run in
+the cross-OS CI job. Re-recording changed exactly the 61 golden entries
+that draw exponential times in event mode, and nothing else.
+
 ## 6. Phase 3: churn
 
 ### Source of changes: a new optional port
