@@ -110,6 +110,27 @@ class AgentStateChangedEvent(Event):
     state_snapshot: dict[str, Any] = field(kw_only=True, hash=False, compare=False)
 
 
+@dataclass(frozen=True)
+class AgentWakeEvent(Event):
+    """Event activation: run an agent's step() on the messages that reached it.
+
+    Scheduled once per (agent, instant) when the first message for that
+    agent arrives at that instant; every message arriving at the same instant
+    is dispatched first (lower priority number), so the batch is complete.
+    Also used at t=0 to give every agent one bootstrap step.
+    """
+
+    agent_id: AgentId = field(kw_only=True)
+
+
+@dataclass(frozen=True)
+class TimerFiredEvent(Event):
+    """Event activation: a timer an agent set has expired -> on_timer(tag)."""
+
+    agent_id: AgentId = field(kw_only=True)
+    tag: str = field(kw_only=True)
+
+
 # Avoid circular import: Message is defined in domain/message.py which imports
 # from domain/ids.py only. We reference it via string annotation above.
 from .message import Message  # noqa: E402 — must be after class definitions

@@ -99,6 +99,11 @@ class CommunicationLayer:
         self._messages_delivered = 0
 
     @property
+    def protocol_name(self) -> str:
+        """Class name of the active protocol, for error messages."""
+        return type(self._protocol).__name__
+
+    @property
     def messages_sent(self) -> int:
         return self._messages_sent
 

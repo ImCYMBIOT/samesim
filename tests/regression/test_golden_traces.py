@@ -57,7 +57,7 @@ from simul8.app.experiment_runner import ExperimentRunner
 from simul8.ports.behavior import BehaviorPort
 from simul8.ports.communication import CommunicationProtocolPort
 from simul8.ports.topology_generator import TopologyGeneratorPort
-from tests.regression.probes import InboxProbeBehavior
+from tests.regression.probes import EventProbeBehavior, InboxProbeBehavior
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 GOLDEN_PATH = Path(__file__).resolve().parent / "golden" / "traces.json"
@@ -108,19 +108,25 @@ def _path(cls: type) -> str:
 
 # The probe rides along with the discovered behaviors so the guard's
 # sensitivity does not depend on which plugins happen to exist (see probes.py).
-BEHAVIORS = _discover(behaviors_pkg, BehaviorPort) + [InboxProbeBehavior]
+BEHAVIORS = _discover(behaviors_pkg, BehaviorPort) + [InboxProbeBehavior, EventProbeBehavior]
 PROTOCOLS = _discover(protocols_pkg, CommunicationProtocolPort)
 TOPOLOGIES = _discover(topologies_pkg, TopologyGeneratorPort)
 EXAMPLES = sorted((REPO_ROOT / "examples").glob("*.yaml"))
 
+# Every activation mode each behavior declares is its own set of cells.
 MATRIX = [
-    (b, p, t, dt)
-    for b in BEHAVIORS for p in PROTOCOLS for t in TOPOLOGIES for dt in TICK_INTERVALS
+    (b, p, t, dt, mode)
+    for b in BEHAVIORS
+    for mode in sorted(getattr(b, "activation_modes", {"synchronous"}))
+    for p in PROTOCOLS for t in TOPOLOGIES for dt in TICK_INTERVALS
 ]
 
 
-def _matrix_key(b, p, t, dt) -> str:
-    return f"{b.__name__}|{p.__name__}|{t.__name__}|dt={dt}"
+def _matrix_key(b, p, t, dt, mode="synchronous") -> str:
+    # Synchronous keys carry no suffix, so they stay identical to the keys
+    # recorded before activation modes existed.
+    suffix = "" if mode == "synchronous" else f"|{mode}"
+    return f"{b.__name__}|{p.__name__}|{t.__name__}|dt={dt}{suffix}"
 
 
 def _example_key(path: Path) -> str:
@@ -229,19 +235,20 @@ def _digest_record(out: Path, name: str) -> dict:
 
 def test_discovery_found_the_plugins():
     """Guard the guard -- an empty matrix would pass silently."""
-    assert len(BEHAVIORS) >= 4 and len(PROTOCOLS) >= 3 and len(TOPOLOGIES) >= 5, (
+    assert len(BEHAVIORS) >= 5 and len(PROTOCOLS) >= 3 and len(TOPOLOGIES) >= 5, (
         BEHAVIORS, PROTOCOLS, TOPOLOGIES)
     assert len(EXAMPLES) >= 5, EXAMPLES
 
 
-@pytest.mark.parametrize("behavior,protocol,topology,dt", MATRIX,
+@pytest.mark.parametrize("behavior,protocol,topology,dt,mode", MATRIX,
                          ids=[_matrix_key(*c) for c in MATRIX])
-def test_matrix_trace_is_unchanged(behavior, protocol, topology, dt, tmp_path, golden):
+def test_matrix_trace_is_unchanged(behavior, protocol, topology, dt, mode, tmp_path, golden):
     name = "golden"
     cfg = {
         "schema_version": "1.0",
         "experiment": {"name": name, "seed": SEED},
-        "simulation": {"num_agents": N_AGENTS, "max_virtual_time": MAX_TIME, "tick_interval": dt},
+        "simulation": {"num_agents": N_AGENTS, "max_virtual_time": MAX_TIME,
+                       "tick_interval": dt, "activation": mode},
         "plugins": {
             "behavior": _path(behavior),
             "communication": _path(protocol),
@@ -256,7 +263,8 @@ def test_matrix_trace_is_unchanged(behavior, protocol, topology, dt, tmp_path, g
         },
     }
     out = _run(cfg, tmp_path)
-    golden.check("matrix", _matrix_key(behavior, protocol, topology, dt), _digest_record(out, name))
+    golden.check("matrix", _matrix_key(behavior, protocol, topology, dt, mode),
+                 _digest_record(out, name))
 
 
 @pytest.mark.parametrize("example", EXAMPLES, ids=lambda p: p.stem)

@@ -7,6 +7,7 @@ Folds, in dispatch order, everything that defines a run's dynamics:
     - every delivered message: time, sender, recipient, addressing mode,
       message id and payload
     - every agent state change: time, agent, full state snapshot
+    - every timer that fires (event activation): time, agent, tag
     - every tick boundary
 
 and records the digest at each tick. Two runs with the same digest at tick
@@ -49,6 +50,7 @@ from ...domain.event import (
     MessageDeliveredEvent,
     SimulationEndedEvent,
     TickEvent,
+    TimerFiredEvent,
 )
 from ...domain.ids import AgentId, MetricName, VirtualTime
 from ...domain.metric import MetricSeries
@@ -103,6 +105,7 @@ class TraceDigestMetric(MetricCollectorPort):
             TickEvent,
             MessageDeliveredEvent,
             AgentStateChangedEvent,
+            TimerFiredEvent,
             SimulationEndedEvent,
         })
 
@@ -115,6 +118,8 @@ class TraceDigestMetric(MetricCollectorPort):
                 int(m.message_id), int(m.sender_id), int(m.recipient_id),
                 m.broadcast, m.payload,
             ])
+        elif isinstance(event, TimerFiredEvent):
+            self._fold(["timer", t, int(event.agent_id), event.tag])
         elif isinstance(event, AgentStateChangedEvent):
             self._fold(["state", t, int(event.agent_id), event.state_snapshot])
         elif isinstance(event, TickEvent):

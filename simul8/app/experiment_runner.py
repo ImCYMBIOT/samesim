@@ -40,10 +40,32 @@ from ..ports.communication import CommunicationProtocolPort
 from ..ports.metric_collector import MetricCollectorPort
 from ..ports.persistence import PersistencePort
 from ..ports.topology_generator import TopologyGeneratorPort
-from .config_loader import ConfigLoader
+from .config_loader import ConfigLoader, ConfigValidationError
 from .plugin_loader import PluginLoader
 
 logger = logging.getLogger(__name__)
+
+
+def check_activation_compatible(behavior: BehaviorPort, config: ExperimentConfig) -> None:
+    """Refuse to run a behavior under an activation mode it wasn't written for.
+
+    Shared by ExperimentRunner and the validation harness. The failure mode
+    it prevents is silent: a tick-driven behavior under event activation
+    runs once at t=0 and never again, and the experiment "completes" with
+    numbers that look like a protocol that never converged.
+
+    Raises:
+        ConfigValidationError: naming the behavior, the requested mode and
+            the modes it supports.
+    """
+    mode = config.simulation.activation
+    supported = getattr(behavior, "activation_modes", frozenset({"synchronous"}))
+    if mode not in supported:
+        raise ConfigValidationError(
+            f"{type(behavior).__name__} does not support simulation.activation="
+            f"'{mode}' (it supports: {sorted(supported)}). A behavior written for "
+            f"one mode would run incorrectly -- not fail -- under another."
+        )
 
 
 def register_metric_collectors(
@@ -134,6 +156,7 @@ class ExperimentRunner:
         comm_protocol: CommunicationProtocolPort = self._plugin_loader.load(
             config.plugins.communication, CommunicationProtocolPort
         )
+        check_activation_compatible(behavior, config)
         metric_collectors: list[MetricCollectorPort] = [
             self._plugin_loader.load(cp, MetricCollectorPort)
             for cp in config.plugins.metrics

@@ -14,13 +14,28 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
+ACTIVATION_MODES = ("synchronous", "event")
+
+
 @dataclass(frozen=True)
 class SimulationConfig:
-    """Parameters that control the simulation loop."""
+    """Parameters that control the simulation loop.
+
+    Attributes:
+        activation: When agents run.
+            "synchronous" (default) -- every agent steps on every tick, and
+                messages become visible at the first tick at or after
+                their arrival.
+            "event" -- an agent runs only when messages reach it (all
+                messages arriving at one instant form one batch) or when a
+                timer it set fires. Ticks still occur, but only as the
+                sampling clock for metrics.
+    """
 
     num_agents: int
     max_virtual_time: float
     tick_interval: float = 1.0
+    activation: str = "synchronous"
 
 
 @dataclass(frozen=True)

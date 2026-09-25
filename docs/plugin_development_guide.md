@@ -102,6 +102,52 @@ One shared instance handles every agent — per-agent state lives in the
 them in `step()`, should be stored in a `dict[AgentId, Random]` during
 `initialize()` (see `GossipBehavior._agent_rngs`).
 
+#### Activation modes and timers
+
+By default an experiment is **synchronous**: every agent's `step()` runs on
+every tick. Set `simulation.activation: event` and agents instead run only
+when something happens to them:
+
+- **bootstrap:** `step()` once per agent at t=0 with an empty inbox, in id order;
+- **messages:** `step()` with every message that reached the agent at that
+  instant, as one batch in delivery order;
+- **timers:** `on_timer(agent_id, state, tag, neighbors, time)` when a timer
+  the agent set expires.
+
+Ticks keep happening in event mode, but only to pace metric sampling.
+
+A behavior declares which modes it was written for:
+
+```python
+class MyBehavior(BehaviorPort):
+    activation_modes = frozenset({"event"})   # default: {"synchronous"}
+```
+
+An experiment that asks for any other mode is **rejected when it loads**. A
+tick-driven behavior run under event activation wouldn't crash. It would
+step once at t=0, never run again, and report a protocol that "never
+converged", so the loader refuses rather than letting that happen.
+
+Timers go in the `BehaviorResult`:
+
+```python
+return BehaviorResult(
+    next_state=state,
+    set_timers=[Timer("election", rng.uniform(150, 300))],  # simul8.domain.timer
+    cancel_timers=frozenset({"heartbeat"}),
+)
+```
+
+- **One pending timer per (agent, tag).** Setting a pending tag replaces it,
+  so "reset the election timeout" is just setting it again. Cancels are
+  applied before sets, so cancelling and setting a tag in one result
+  restarts it.
+- **Messages beat timers at the same instant.** A heartbeat arriving exactly
+  when an election timeout is due is processed first and can cancel it.
+- A timer delay must be finite and > 0, and large enough to actually
+  advance virtual time. Timers under synchronous activation are an error.
+- Timers and messages due after `max_virtual_time` are never delivered.
+
 ### CommunicationProtocolPort — how a sent message actually gets delivered
 
 ```python

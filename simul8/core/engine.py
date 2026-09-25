@@ -55,16 +55,19 @@ from typing import Optional
 
 from ..domain.event import (
     AgentStateChangedEvent,
+    AgentWakeEvent,
     Event,
     MessageDeliveredEvent,
     SimulationEndedEvent,
     SimulationStartedEvent,
     TickEvent,
+    TimerFiredEvent,
 )
 from ..domain.experiment import ExperimentConfig
 from ..domain.ids import AgentId, EventId, MessageId, VirtualTime
 from ..domain.message import Message
-from ..ports.behavior import BehaviorPort
+from ..domain.topology import TopologyGraph
+from ..ports.behavior import BehaviorPort, BehaviorResult
 from .agent_registry import AgentRegistry
 from .communication_layer import CommunicationLayer
 from .metrics_engine import MetricsEngine
@@ -74,10 +77,18 @@ from .topology_manager import TopologyManager
 
 logger = logging.getLogger(__name__)
 
-# Same-instant ordering: every delivery due at a tick is dispatched (and so
-# in the inbox) before the tick itself runs.
+# Same-instant ordering, lowest first:
+#   deliveries -- every message due at an instant is in its inbox ...
+#   wakes      -- ... before the recipient runs on the batch (event mode) ...
+#   timers     -- ... before timers due at that instant, so a message can
+#                 still cancel one (a heartbeat beats an election timeout) ...
+#   ticks      -- ... and metrics sample only after all of it.
+# Synchronous mode only uses deliveries and ticks; their relative order is
+# the same as it has always been.
 DELIVERY_PRIORITY = 0
-TICK_PRIORITY = 1
+WAKE_PRIORITY = 1
+TIMER_PRIORITY = 2
+TICK_PRIORITY = 3
 
 
 class SimulationEngine:
@@ -135,6 +146,11 @@ class SimulationEngine:
         self._tick_times: list[VirtualTime] = [VirtualTime(0.0)]
         self._tick_index: int = -1
 
+        # Event activation bookkeeping.
+        self._event_mode: bool = config.simulation.activation == "event"
+        self._wake_pending: dict[AgentId, VirtualTime] = {}
+        self._timers: dict[tuple[AgentId, str], EventId] = {}
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -162,6 +178,11 @@ class SimulationEngine:
             event_id=self._next_event_id(),
             virtual_time=VirtualTime(0.0),
         ))
+        if self._event_mode:
+            # One bootstrap step per agent, in creation order, so every
+            # behavior gets to set its first timers or send first messages.
+            for agent in self._agents.iter_agents():
+                self._schedule_wake(agent.agent_id, VirtualTime(0.0))
         self._scheduler.schedule(TickEvent(
             event_id=self._next_event_id(),
             virtual_time=self._tick_time(0),
@@ -214,38 +235,31 @@ class SimulationEngine:
     # ------------------------------------------------------------------
 
     def _dispatch(self, event: Event) -> None:
-        """Route an event to its handler(s).
+        """Route an event to its handler(s), then to metrics.
 
-        For TickEvent: process agents first, then notify metrics.
-        This ensures ConvergenceMetric (and similar) sees fresh state
-        values when it samples at the TickEvent boundary.
-
-        For all other events: notify metrics first (standard order).
+        Handlers run before metrics are notified, so a TickEvent sample (and
+        anything else) sees the state that event produced.
         """
         if isinstance(event, TickEvent):
             self._handle_tick(event)
-            # Metrics AFTER: converge metric samples here with up-to-date values
-            self._metrics.on_event(event, event.virtual_time)
         elif isinstance(event, MessageDeliveredEvent):
             self._handle_message_delivered(event)
-            self._metrics.on_event(event, event.virtual_time)
-        else:
-            # SimulationStartedEvent and future event types
-            self._metrics.on_event(event, event.virtual_time)
+        elif isinstance(event, AgentWakeEvent):
+            self._handle_wake(event)
+        elif isinstance(event, TimerFiredEvent):
+            if not self._handle_timer(event):
+                return  # superseded: it never happened, so metrics don't see it
+        self._metrics.on_event(event, event.virtual_time)
 
     def _handle_tick(self, event: TickEvent) -> None:
-        """Process one simulation tick for all agents.
+        """Advance the tick schedule; under synchronous activation, step agents.
 
-        For each agent (in creation order, for determinism):
-            1. Drain the pending inbox accumulated since the last tick
-            2. Call behavior.step() → BehaviorResult
-            3. Update agent state in the registry
-            4. Emit AgentStateChangedEvent to metrics (synchronous)
-            5. Route outbound messages → schedule MessageDeliveredEvents
+        Synchronous: for each agent in creation order, drain its inbox, call
+        step(), and apply the result. Event activation: agents do not run on
+        ticks -- the tick only paces metric sampling.
 
         Then schedule the next TickEvent.
         """
-        topology = self._topology.topology
         self._tick_index += 1
         if self._tick_time(self._tick_index) != event.virtual_time:
             raise RuntimeError(
@@ -253,45 +267,17 @@ class SimulationEngine:
                 f"t={event.virtual_time!r}, expected {self._tick_time(self._tick_index)!r}"
             )
 
-        for agent in self._agents.iter_agents():
-            inbox = self._pending_inbox.pop(agent.agent_id, [])
-            neighbors = topology.neighbors(agent.agent_id)
-
-            result = self._behavior.step(
-                agent_id=agent.agent_id,
-                current_state=agent.state,
-                inbox=inbox,
-                neighbors=neighbors,
-                virtual_time=event.virtual_time,
-            )
-
-            # Persist the new state
-            self._agents.update_state(agent.agent_id, result.next_state)
-
-            # Notify metrics of the state change (synchronous, not via queue)
-            state_event = AgentStateChangedEvent(
-                event_id=self._next_event_id(),
-                virtual_time=event.virtual_time,
-                source_id=agent.agent_id,
-                agent_id=agent.agent_id,
-                state_snapshot=result.next_state.to_dict(),
-            )
-            self._metrics.on_event(state_event, event.virtual_time)
-
-            # Route and schedule outbound messages
-            for msg in result.outbound_messages:
-                for delivery in self._comm.route(msg, agent.agent_id, topology):
-                    delivery_time = self._delivery_tick_time(delivery.delay)
-                    if delivery_time is None:
-                        continue  # lands after the run ends; never observable
-                    self._scheduler.schedule(MessageDeliveredEvent(
-                        event_id=self._next_event_id(),
-                        virtual_time=delivery_time,
-                        source_id=agent.agent_id,
-                        recipient_id=delivery.recipient_id,
-                        message=delivery.message,
-                        priority=DELIVERY_PRIORITY,
-                    ))
+        if not self._event_mode:
+            topology = self._topology.topology
+            for agent in self._agents.iter_agents():
+                result = self._behavior.step(
+                    agent_id=agent.agent_id,
+                    current_state=agent.state,
+                    inbox=self._pending_inbox.pop(agent.agent_id, []),
+                    neighbors=topology.neighbors(agent.agent_id),
+                    virtual_time=event.virtual_time,
+                )
+                self._apply(agent.agent_id, result, event.virtual_time, topology)
 
         # Schedule the next tick (self-sustaining)
         next_tick_time = self._tick_time(self._tick_index + 1)
@@ -303,12 +289,164 @@ class SimulationEngine:
             ))
 
     def _handle_message_delivered(self, event: MessageDeliveredEvent) -> None:
-        """Accumulate a delivered message into the recipient's pending inbox.
+        """Put a delivered message in the recipient's inbox.
 
-        The inbox is drained and delivered to the behavior on the next tick.
+        Synchronous: drained at the next tick. Event activation: drained by
+        the recipient's wake at this same instant, scheduled here if this is
+        the first message reaching it now.
         """
         self._pending_inbox.setdefault(event.recipient_id, []).append(event.message)
         self._comm.record_delivery()
+        if self._event_mode and self._wake_pending.get(event.recipient_id) != event.virtual_time:
+            self._schedule_wake(event.recipient_id, event.virtual_time)
+
+    def _handle_wake(self, event: AgentWakeEvent) -> None:
+        """Event activation: run step() on everything that reached the agent now."""
+        agent_id = event.agent_id
+        self._wake_pending.pop(agent_id, None)
+        topology = self._topology.topology
+        result = self._behavior.step(
+            agent_id=agent_id,
+            current_state=self._agents.get(agent_id).state,
+            inbox=self._pending_inbox.pop(agent_id, []),
+            neighbors=topology.neighbors(agent_id),
+            virtual_time=event.virtual_time,
+        )
+        self._apply(agent_id, result, event.virtual_time, topology)
+
+    def _handle_timer(self, event: TimerFiredEvent) -> bool:
+        """Event activation: an agent's timer expired -> on_timer(tag).
+
+        Returns False for a superseded timer (replaced or cancelled after it
+        was scheduled). Replacing or cancelling also removes the old event
+        from the queue, so this is a second, independent guarantee: either
+        mechanism alone keeps a superseded timer from firing.
+        """
+        key = (event.agent_id, event.tag)
+        if self._timers.get(key) != event.event_id:
+            return False
+        del self._timers[key]
+        topology = self._topology.topology
+        result = self._behavior.on_timer(
+            agent_id=event.agent_id,
+            current_state=self._agents.get(event.agent_id).state,
+            tag=event.tag,
+            neighbors=topology.neighbors(event.agent_id),
+            virtual_time=event.virtual_time,
+        )
+        self._apply(event.agent_id, result, event.virtual_time, topology)
+        return True
+
+    def _apply(
+        self,
+        agent_id: AgentId,
+        result: BehaviorResult,
+        now: VirtualTime,
+        topology: TopologyGraph,
+    ) -> None:
+        """Commit one behavior call: state, metrics, messages, timers."""
+        self._agents.update_state(agent_id, result.next_state)
+
+        # Notify metrics of the state change (synchronous, not via queue)
+        state_event = AgentStateChangedEvent(
+            event_id=self._next_event_id(),
+            virtual_time=now,
+            source_id=agent_id,
+            agent_id=agent_id,
+            state_snapshot=result.next_state.to_dict(),
+        )
+        self._metrics.on_event(state_event, now)
+
+        for msg in result.outbound_messages:
+            for delivery in self._comm.route(msg, agent_id, topology):
+                delivery_time = self._arrival_time(delivery.delay, now)
+                if delivery_time is None:
+                    continue  # lands after the run ends; never observable
+                self._scheduler.schedule(MessageDeliveredEvent(
+                    event_id=self._next_event_id(),
+                    virtual_time=delivery_time,
+                    source_id=agent_id,
+                    recipient_id=delivery.recipient_id,
+                    message=delivery.message,
+                    priority=DELIVERY_PRIORITY,
+                ))
+
+        if result.set_timers or result.cancel_timers:
+            self._apply_timers(agent_id, result, now)
+
+    def _apply_timers(self, agent_id: AgentId, result: BehaviorResult, now: VirtualTime) -> None:
+        behavior_name = type(self._behavior).__name__
+        if not self._event_mode:
+            raise ValueError(
+                f"{behavior_name} set or cancelled timers under synchronous activation. "
+                f"Timers exist only with simulation.activation='event'."
+            )
+        for tag in sorted(result.cancel_timers):
+            self._cancel_timer(agent_id, tag)
+        for timer in result.set_timers:
+            if not isinstance(timer.tag, str):
+                raise ValueError(f"{behavior_name} set a timer with non-string tag {timer.tag!r}")
+            fire_at = self._after(now, timer.delay, f"{behavior_name} timer {timer.tag!r}")
+            self._cancel_timer(agent_id, timer.tag)  # at most one per (agent, tag)
+            if fire_at > self._config.simulation.max_virtual_time:
+                continue  # would fire after the run ends
+            event_id = self._next_event_id()
+            self._scheduler.schedule(TimerFiredEvent(
+                event_id=event_id,
+                virtual_time=fire_at,
+                source_id=agent_id,
+                agent_id=agent_id,
+                tag=timer.tag,
+                priority=TIMER_PRIORITY,
+            ))
+            self._timers[(agent_id, timer.tag)] = event_id
+
+    def _cancel_timer(self, agent_id: AgentId, tag: str) -> None:
+        event_id = self._timers.pop((agent_id, tag), None)
+        if event_id is not None:
+            self._scheduler.cancel(event_id)
+
+    def _schedule_wake(self, agent_id: AgentId, at: VirtualTime) -> None:
+        self._wake_pending[agent_id] = at
+        self._scheduler.schedule(AgentWakeEvent(
+            event_id=self._next_event_id(),
+            virtual_time=at,
+            source_id=agent_id,
+            agent_id=agent_id,
+            priority=WAKE_PRIORITY,
+        ))
+
+    def _arrival_time(self, delay: float | None, now: VirtualTime) -> VirtualTime | None:
+        """When a message sent now is delivered, or None if after the run.
+
+        Synchronous: rounded up to the consuming tick. Event activation:
+        exact -- now + delay, with None meaning one tick_interval.
+        """
+        if not self._event_mode:
+            return self._delivery_tick_time(delay)
+        d = self._config.simulation.tick_interval if delay is None else delay
+        arrival = self._after(now, d, f"{self._comm.protocol_name} delivery")
+        return arrival if arrival <= self._config.simulation.max_virtual_time else None
+
+    @staticmethod
+    def _after(now: VirtualTime, delay: float, what: str) -> VirtualTime:
+        """now + delay, refusing delays that don't move time forward.
+
+        A delay can pass the > 0 check yet vanish in the addition (1e-20
+        added to 100.0 is 100.0). That would make an effect simultaneous
+        with its cause -- exactly what strictly positive delays exist to
+        prevent -- so it fails loudly instead.
+        """
+        if not (isinstance(delay, (int, float)) and not isinstance(delay, bool)
+                and math.isfinite(delay) and delay > 0):
+            raise ValueError(f"{what}: delay must be a finite number > 0, got {delay!r}")
+        later = VirtualTime(now + delay)
+        if later <= now:
+            raise ValueError(
+                f"{what}: delay {delay!r} is too small to advance virtual time "
+                f"at t={now!r} (float resolution); use a larger delay."
+            )
+        return later
 
     # ------------------------------------------------------------------
     # Tick arithmetic

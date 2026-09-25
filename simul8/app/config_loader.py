@@ -18,7 +18,12 @@ from typing import Any
 
 import yaml
 
-from ..domain.experiment import ExperimentConfig, PluginsConfig, SimulationConfig
+from ..domain.experiment import (
+    ACTIVATION_MODES,
+    ExperimentConfig,
+    PluginsConfig,
+    SimulationConfig,
+)
 
 SUPPORTED_SCHEMA_VERSIONS: frozenset[str] = frozenset({"1.0"})
 
@@ -80,6 +85,13 @@ class ConfigLoader:
         self._require(plugins, "communication", "plugins.communication")
         self._require(plugins, "topology", "plugins.topology")
 
+        activation = str(simulation.get("activation", "synchronous"))
+        if activation not in ACTIVATION_MODES:
+            raise ConfigValidationError(
+                f"simulation.activation must be one of {list(ACTIVATION_MODES)}, "
+                f"got '{activation}'"
+            )
+
         # Normalise list fields (YAML scalars vs lists)
         metrics = self._as_list(plugins.get("metrics", []))
         persistence = self._as_list(plugins.get("persistence", []))
@@ -92,6 +104,7 @@ class ConfigLoader:
                 num_agents=int(simulation["num_agents"]),
                 max_virtual_time=float(simulation["max_virtual_time"]),
                 tick_interval=float(simulation.get("tick_interval", 1.0)),
+                activation=activation,
             ),
             plugins=PluginsConfig(
                 behavior=str(plugins["behavior"]),
