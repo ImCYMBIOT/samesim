@@ -153,11 +153,27 @@ observed O(n) instead of O(n²):
    so a modest relative-threshold crossing can be dominated by faster,
    non-worst-case dynamics.
 
-This is worth stating plainly in any paper that cites this result: Simul8
+> **Correction (2026-09-25): explanation 2 is right, explanation 1 is not,
+> and the linear ring exponent is an artifact of the threshold.** Once
+> Simul8 could run Boyd et al.'s asynchronous pairwise model (Phase 2),
+> [async_gossip_validation/](../async_gossip_validation/) measured both
+> protocols on the same rings at two thresholds. At this study's 1%
+> threshold, both look linear (slopes 1.04 sync, 0.96 async). At 1e-4, both
+> are about quadratic (1.82 sync, 1.78 async), the classical regime. Synchrony
+> and full-neighbor push don't change the exponent. The 1% threshold is
+> simply crossed while fast modes still dominate, before the slowest mode's
+> O(n²) decay takes over.
+>
+> So the paragraph below was wrong in its central claim and is kept only
+> for the record: the linear exponent is **not** a property of this protocol.
+> Any paper citing this study should report convergence at a threshold
+> strict enough to be in the asymptotic regime, or report both.
+
+~~This is worth stating plainly in any paper that cites this result: Simul8
 reproduces the *qualitative* mixing-time prediction cleanly, and the specific
 linear ring exponent is itself a claim about *this* protocol (synchronous
 multi-neighbor push-gossip with random initialization), not a mismatch with
-the classical asynchronous-pairwise bound.
+the classical asynchronous-pairwise bound.~~
 
 ## What this doesn't cover yet (next steps)
 

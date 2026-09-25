@@ -1,0 +1,39 @@
+# Raft leader election (Ongaro & Ousterhout 2014, section 5.2) on a 5-node
+# cluster. Time unit: milliseconds. Event activation: nodes act only on
+# messages and timers. Raft assumes every node can reach every other, so the
+# topology is complete (Erdos-Renyi with edge_probability 1.0).
+schema_version: "1.0"
+
+experiment:
+  name: "raft_election"
+  seed: 7
+
+simulation:
+  num_agents: 5
+  max_virtual_time: 3000
+  tick_interval: 10          # metric sampling only; nodes don't run on ticks
+  activation: event
+
+plugins:
+  behavior: "simul8.plugins.behaviors.raft_election.RaftElectionBehavior"
+  communication: "simul8.plugins.communication.latency.LatencyProtocol"
+  topology: "simul8.plugins.topologies.random_graph.ErdosRenyiTopology"
+  metrics:
+    - "simul8.plugins.metrics.raft_metrics.RaftElectionMetric"
+    - "simul8.plugins.metrics.message_count.MessageCountMetric"
+    - "simul8.plugins.metrics.state_trace.StateTraceMetric"
+  persistence:
+    - "simul8.plugins.persistence.csv_exporter.CsvExporter"
+
+plugin_configs:
+  RaftElectionBehavior:
+    election_timeout_min: 150
+    election_timeout_max: 300
+    heartbeat_interval: 50
+  LatencyProtocol:
+    distribution: uniform
+    low: 5
+    high: 15
+    loss_probability: 0.05
+  ErdosRenyiTopology:
+    edge_probability: 1.0

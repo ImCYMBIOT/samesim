@@ -80,10 +80,10 @@ will fail your PR if violated.
 
 | Port | Directory | One instance per... | Existing examples |
 |---|---|---|---|
-| `BehaviorPort` | `simul8/plugins/behaviors/` | experiment (shared across all agents) | `GossipBehavior`, `LeaderElectionBehavior`, `SirEpidemicBehavior` |
-| `CommunicationProtocolPort` | `simul8/plugins/communication/` | experiment | `GossipProtocol`, `BroadcastProtocol`, `LossyProtocol` |
+| `BehaviorPort` | `simul8/plugins/behaviors/` | experiment (shared across all agents) | `GossipBehavior`, `LeaderElectionBehavior`, `SirEpidemicBehavior`; event-driven: `AsyncGossipBehavior`, `RaftElectionBehavior` |
+| `CommunicationProtocolPort` | `simul8/plugins/communication/` | experiment | `GossipProtocol`, `BroadcastProtocol`, `LossyProtocol`, `LatencyProtocol` |
 | `TopologyGeneratorPort` | `simul8/plugins/topologies/` | experiment (called once) | `RingTopology`, `ErdosRenyiTopology`, `GridTopology`, `BarabasiAlbertTopology`, `WattsStrogatzTopology` |
-| `MetricCollectorPort` | `simul8/plugins/metrics/` | metric, per experiment | `MessageCountMetric`, `ConvergenceMetric`, `SirInfectedMetric`, `LeaderConsensusMetric`, `StateTraceMetric` |
+| `MetricCollectorPort` | `simul8/plugins/metrics/` | metric, per experiment | `MessageCountMetric`, `ConvergenceMetric`, `SirInfectedMetric`, `LeaderConsensusMetric`, `StateTraceMetric`, `TraceDigestMetric`, `RaftElectionMetric` |
 | `PersistencePort` | `simul8/plugins/persistence/` | experiment | `CsvExporter` |
 
 Full method signatures and contracts are documented in each port file's
@@ -127,6 +127,10 @@ An experiment that asks for any other mode is **rejected when it loads**. A
 tick-driven behavior run under event activation wouldn't crash. It would
 step once at t=0, never run again, and report a protocol that "never
 converged", so the loader refuses rather than letting that happen.
+
+`AsyncGossipBehavior` (a Poisson clock driving pairwise exchanges) and
+`RaftElectionBehavior` (election timeouts and heartbeats) are complete
+examples of event-driven behaviors.
 
 Timers go in the `BehaviorResult`:
 

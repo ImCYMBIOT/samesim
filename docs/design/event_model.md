@@ -1,6 +1,6 @@
 # Design: Latency, Asynchronous Activation, and Churn
 
-**Status:** Phases 0 and 1 **done**. Phases 2–3 are proposals.
+**Status:** Phases 0, 1 and 2 **done**. Phase 3 (churn) is a proposal.
 **Scope:** the engine's time model. Three capabilities that the core cannot
 express today, delivered in four independently shippable phases.
 
@@ -285,6 +285,44 @@ failure mode principle 2 rules out.
   with the same seed, produces identical golden-style trace hashes.
 - **Batching**: N messages to one agent at one instant produce exactly one
   `step()` call with all N in the inbox.
+
+### As built
+
+Built as designed, with one change: **four** priority levels, not two.
+Deliveries (0) < wakes (1) < timers (2) < ticks (3). The design said
+"messages beat timers" but only specified the delivery/wake pair. Putting
+timers after wakes is what makes it true: a heartbeat and an election
+timeout due at the same instant are processed heartbeat-first, and the
+heartbeat cancels the timeout. Synchronous mode uses only deliveries and
+ticks, in their old relative order, so all 167 existing golden traces are
+bit-identical.
+
+- **Superseded timers** are removed from the queue on replace/cancel *and*
+  ignored if dispatched, and never reach metrics. Mutation testing showed
+  either guarantee alone suffices; the second one had been leaking stale
+  timer events to metrics, which is fixed.
+- **Delays that vanish in float addition** (5.0 + 1e-20 == 5.0) pass the
+  "> 0" check but would make an effect simultaneous with its cause. They
+  now fail loudly.
+- **The addressing contract test** used to skip behaviors that send nothing
+  on their first step, which is every event-driven behavior (they set a
+  timer first). It now follows the timers. It also assumed every behavior
+  wants to reach every neighbor; it now reads the intended recipients off
+  the messages and separately checks that addressed messages name real
+  neighbors. Re-verified against both historical addressing bugs.
+- **Golden traces** gained an activation dimension and an
+  `EventProbeBehavior`. It was checked to exercise timers (≈250 fired),
+  replacement (≈1,100), cancellation and bounded forwarding, not just to run.
+  Raft's matrix cells can't elect on the sparse matrix topologies (a
+  majority of 36 needs 19 votes), so `examples/raft_election.yaml` pins
+  elections and heartbeats on a complete graph.
+
+**Plugins:** `AsyncGossipBehavior` (Boyd et al.'s randomized pairwise
+averaging on Poisson clocks), `RaftElectionBehavior` (Raft §5.2) and
+`RaftElectionMetric`, which records each election at its exact time and
+flags any term with two leaders. Election Safety held across 100 adversarial
+runs (loss, heavy-tailed latency, split votes, 7-node reordering). Letting
+nodes vote twice per term broke it in all four scenarios.
 
 ## 6. Phase 3: churn
 

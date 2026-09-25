@@ -17,12 +17,18 @@
     |-- extended_documentation.md
     |-- plugin_development_guide.md
 |-- examples
+    |-- async_gossip_ring.yaml
     |-- gossip_1000_agents.yaml
     |-- gossip_random.yaml
     |-- gossip_ring.yaml
     |-- leader_random.yaml
+    |-- raft_election.yaml
     |-- sir_random.yaml
 |-- experiments
+    |-- async_gossip_validation
+        |-- README.md
+        |-- async_results.json
+        |-- run_async_sweep.py
     |-- external_validation
         |-- README.md
         |-- __pycache__
@@ -45,6 +51,10 @@
         |-- README.md
         |-- latency_results.json
         |-- run_latency_sweep.py
+    |-- raft_election_validation
+        |-- README.md
+        |-- raft_results.json
+        |-- run_raft_sweep.py
     |-- scaling_benchmark
         |-- README.md
         |-- naive_gossip.py
@@ -191,6 +201,7 @@
             |-- state.cpython-312.pyc
             |-- state.cpython-313.pyc
             |-- timer.cpython-310.pyc
+            |-- timer.cpython-311.pyc
             |-- timer.cpython-312.pyc
             |-- timer.cpython-313.pyc
             |-- topology.cpython-310.pyc
@@ -221,6 +232,10 @@
                 |-- __init__.cpython-311.pyc
                 |-- __init__.cpython-312.pyc
                 |-- __init__.cpython-313.pyc
+                |-- async_gossip.cpython-310.pyc
+                |-- async_gossip.cpython-311.pyc
+                |-- async_gossip.cpython-312.pyc
+                |-- async_gossip.cpython-313.pyc
                 |-- gossip_behavior.cpython-310.pyc
                 |-- gossip_behavior.cpython-311.pyc
                 |-- gossip_behavior.cpython-312.pyc
@@ -229,12 +244,18 @@
                 |-- leader_election.cpython-311.pyc
                 |-- leader_election.cpython-312.pyc
                 |-- leader_election.cpython-313.pyc
+                |-- raft_election.cpython-310.pyc
+                |-- raft_election.cpython-311.pyc
+                |-- raft_election.cpython-312.pyc
+                |-- raft_election.cpython-313.pyc
                 |-- sir_behavior.cpython-310.pyc
                 |-- sir_behavior.cpython-311.pyc
                 |-- sir_behavior.cpython-312.pyc
                 |-- sir_behavior.cpython-313.pyc
+            |-- async_gossip.py
             |-- gossip_behavior.py
             |-- leader_election.py
+            |-- raft_election.py
             |-- sir_behavior.py
         |-- communication
             |-- __init__.py
@@ -282,6 +303,10 @@
                 |-- message_count.cpython-311.pyc
                 |-- message_count.cpython-312.pyc
                 |-- message_count.cpython-313.pyc
+                |-- raft_metrics.cpython-310.pyc
+                |-- raft_metrics.cpython-311.pyc
+                |-- raft_metrics.cpython-312.pyc
+                |-- raft_metrics.cpython-313.pyc
                 |-- sir_metrics.cpython-310.pyc
                 |-- sir_metrics.cpython-311.pyc
                 |-- sir_metrics.cpython-312.pyc
@@ -297,6 +322,7 @@
             |-- convergence.py
             |-- leader_metrics.py
             |-- message_count.py
+            |-- raft_metrics.py
             |-- sir_metrics.py
             |-- state_trace.py
             |-- trace_digest.py
@@ -402,7 +428,10 @@
             |-- __init__.cpython-311.pyc
             |-- __init__.cpython-312.pyc
             |-- __init__.cpython-313.pyc
+            |-- event_probes.cpython-310.pyc
+            |-- event_probes.cpython-311.pyc
             |-- event_probes.cpython-312.pyc
+            |-- event_probes.cpython-313.pyc
             |-- latency_probes.cpython-310.pyc
             |-- latency_probes.cpython-311.pyc
             |-- latency_probes.cpython-312.pyc
@@ -411,7 +440,10 @@
             |-- test_engine_termination.cpython-311-pytest-9.1.1.pyc
             |-- test_engine_termination.cpython-312-pytest-9.1.1.pyc
             |-- test_engine_termination.cpython-313-pytest-9.1.1.pyc
+            |-- test_event_activation.cpython-310-pytest-9.1.1.pyc
+            |-- test_event_activation.cpython-311-pytest-9.1.1.pyc
             |-- test_event_activation.cpython-312-pytest-9.1.1.pyc
+            |-- test_event_activation.cpython-313-pytest-9.1.1.pyc
             |-- test_gossip_experiment.cpython-310-pytest-9.1.1.pyc
             |-- test_gossip_experiment.cpython-311-pytest-9.1.1.pyc
             |-- test_gossip_experiment.cpython-312-pytest-9.1.1.pyc
@@ -421,12 +453,18 @@
             |-- test_latency_timing.cpython-311-pytest-9.1.1.pyc
             |-- test_latency_timing.cpython-312-pytest-9.1.1.pyc
             |-- test_latency_timing.cpython-313-pytest-9.1.1.pyc
+            |-- test_raft_election.cpython-310-pytest-9.1.1.pyc
+            |-- test_raft_election.cpython-311-pytest-9.1.1.pyc
+            |-- test_raft_election.cpython-312-pytest-9.1.1.pyc
+            |-- test_raft_election.cpython-312.pyc
+            |-- test_raft_election.cpython-313-pytest-9.1.1.pyc
         |-- event_probes.py
         |-- latency_probes.py
         |-- test_engine_termination.py
         |-- test_event_activation.py
         |-- test_gossip_experiment.py
         |-- test_latency_timing.py
+        |-- test_raft_election.py
     |-- regression
         |-- __init__.py
         |-- __pycache__
@@ -529,6 +567,10 @@
                 |-- test_addressing_contract.cpython-311-pytest-9.1.1.pyc
                 |-- test_addressing_contract.cpython-312-pytest-9.1.1.pyc
                 |-- test_addressing_contract.cpython-313-pytest-9.1.1.pyc
+                |-- test_async_gossip.cpython-310-pytest-9.1.1.pyc
+                |-- test_async_gossip.cpython-311-pytest-9.1.1.pyc
+                |-- test_async_gossip.cpython-312-pytest-9.1.1.pyc
+                |-- test_async_gossip.cpython-313-pytest-9.1.1.pyc
                 |-- test_latency_protocol.cpython-310-pytest-9.1.1.pyc
                 |-- test_latency_protocol.cpython-311-pytest-9.1.1.pyc
                 |-- test_latency_protocol.cpython-312-pytest-9.1.1.pyc
@@ -541,6 +583,10 @@
                 |-- test_lossy_communication.cpython-311-pytest-9.1.1.pyc
                 |-- test_lossy_communication.cpython-312-pytest-9.1.1.pyc
                 |-- test_lossy_communication.cpython-313-pytest-9.1.1.pyc
+                |-- test_raft_election.cpython-310-pytest-9.1.1.pyc
+                |-- test_raft_election.cpython-311-pytest-9.1.1.pyc
+                |-- test_raft_election.cpython-312-pytest-9.1.1.pyc
+                |-- test_raft_election.cpython-313-pytest-9.1.1.pyc
                 |-- test_sir_behavior.cpython-310-pytest-9.1.1.pyc
                 |-- test_sir_behavior.cpython-311-pytest-9.1.1.pyc
                 |-- test_sir_behavior.cpython-312-pytest-9.1.1.pyc
@@ -564,9 +610,11 @@
                 |-- test_trace_digest.cpython-312-pytest-9.1.1.pyc
                 |-- test_trace_digest.cpython-313-pytest-9.1.1.pyc
             |-- test_addressing_contract.py
+            |-- test_async_gossip.py
             |-- test_latency_protocol.py
             |-- test_leader_election.py
             |-- test_lossy_communication.py
+            |-- test_raft_election.py
             |-- test_sir_behavior.py
             |-- test_sir_broadcast_fanout.py
             |-- test_topologies.py

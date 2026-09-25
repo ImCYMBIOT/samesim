@@ -75,6 +75,13 @@ TICK_PREFIX = 16       # hex chars stored per tick; the final digest is kept in 
 BEHAVIOR_CONFIGS = {
     "SirEpidemicBehavior": {"transmission_rate": 0.3, "recovery_rate": 0.1, "initial_infected": 3},
     "GossipBehavior": {"fan_out": 2, "initial_value_range": [0.0, 1.0]},
+    # Defaults (150-300) would never fire within MAX_TIME=20, pinning nothing
+    # but the bootstrap. Scaled so candidacy, voting and term escalation
+    # happen inside the window. No matrix topology is complete, so no cell
+    # reaches a majority (19 of 36) -- leadership and heartbeats are pinned
+    # by examples/raft_election.yaml instead.
+    "RaftElectionBehavior": {"election_timeout_min": 3.0, "election_timeout_max": 6.0,
+                             "heartbeat_interval": 1.0},
 }
 PROTOCOL_CONFIGS = {
     "LossyProtocol": {"loss_probability": 0.2},

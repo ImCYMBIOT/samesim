@@ -19,8 +19,11 @@ simul8/ports/communication.py:
     broadcast=False  ->  recipients subset of {recipient_id}
     broadcast=True   ->  recipients subset of neighbors(sender_id)
 
-plus the practical invariant that a lossless protocol delivers to each
-intended neighbor exactly once -- never zero times, never d times.
+plus the practical invariant that a lossless protocol delivers each
+intended copy exactly once -- never zero times, never d times. "Intended" is
+read off the messages (addressed -> its recipient; broadcast -> every
+neighbor), and the behavior side is checked too: an addressed message must
+name an actual neighbor.
 
 It also enforces the latency contract: every delay a protocol returns is
 None or a finite number > 0. The engine rejects anything else at run time;
@@ -114,14 +117,44 @@ def test_every_behavior_protocol_pair_delivers_once_per_neighbor(behavior_cls, p
         state = AgentState(data={**state.data, "status": "I"})
 
     result = behavior.step(sender, state, [], neighbors, 0.0)
-    if not result.outbound_messages:
-        pytest.skip(f"{behavior_cls.__name__} sends nothing on its first step")
+    outbound = list(result.outbound_messages)
+    # Event-driven behaviors typically only set timers on their first step
+    # and send from on_timer(). Follow those timers, or such behaviors would
+    # be skipped -- silently leaving them outside this contract.
+    for timer in result.set_timers:
+        fired = behavior.on_timer(sender, result.next_state, timer.tag, neighbors, timer.delay)
+        outbound.extend(fired.outbound_messages)
+    if not outbound:
+        pytest.skip(f"{behavior_cls.__name__} sends nothing on its first step or first timers")
 
     protocol = protocol_cls()
     protocol.initialize(topology, PROTOCOL_CONFIG, random.Random(1))
 
+    # Behavior side of the contract: an addressed message must name an actual
+    # neighbor. Addressing yourself is how a broadcast intent once went wrong
+    # (SIR + GossipProtocol delivered only to the sender), and an expectation
+    # derived from the messages alone would take that at face value.
+    for message in outbound:
+        if not message.broadcast:
+            assert message.recipient_id in neighbors, (
+                f"{behavior_cls.__name__} addressed a message to {message.recipient_id}, "
+                f"which is not a neighbor of the sender {sender}. To reach the whole "
+                f"neighborhood, send ONE message with broadcast=True."
+            )
+
+    # Intended recipients, read off the messages: an addressed message means
+    # its recipient; a broadcast means every neighbor. Not every behavior
+    # wants to reach every neighbor (AsyncGossip contacts one per clock tick).
+    expected = {AgentId(i): 0 for i in range(STAR_SIZE)}
+    for message in outbound:
+        if message.broadcast:
+            for n in neighbors:
+                expected[n] += 1
+        else:
+            expected[message.recipient_id] += 1
+
     counts = {AgentId(i): 0 for i in range(STAR_SIZE)}
-    for message in result.outbound_messages:
+    for message in outbound:
         for item in protocol.route(message, sender, topology):
             delivery = as_delivery(item)
             recipient_id = delivery.recipient_id
@@ -134,7 +167,7 @@ def test_every_behavior_protocol_pair_delivers_once_per_neighbor(behavior_cls, p
                 f"{protocol_cls.__name__} returned delay={delivery.delay!r}; a delay "
                 f"must be None or a finite number > 0"
             )
-            # Contract: recipients must be authorised by the addressing mode.
+            # Protocol side: recipients must be authorised by the addressing mode.
             if message.broadcast:
                 assert recipient_id in topology.neighbors(sender), (
                     f"{protocol_cls.__name__} delivered a broadcast message to "
@@ -148,15 +181,13 @@ def test_every_behavior_protocol_pair_delivers_once_per_neighbor(behavior_cls, p
                 )
             counts[recipient_id] += 1
 
-    assert counts[sender] == 0, (
-        f"{behavior_cls.__name__} + {protocol_cls.__name__} delivered to the sender "
-        f"itself -- a broadcast-intent message must not be treated as addressed."
-    )
-    per_neighbor = [counts[n] for n in sorted(neighbors)]
-    assert all(c == 1 for c in per_neighbor), (
-        f"{behavior_cls.__name__} + {protocol_cls.__name__} delivered "
-        f"{per_neighbor} per neighbor; expected exactly 1 each under a lossless "
-        f"protocol. More than 1 means the behavior enumerated neighbors AND the "
-        f"protocol fanned out (deliveries multiplied by degree); 0 means the "
-        f"message never reached the neighborhood at all."
+    got = [counts[a] for a in sorted(counts)]
+    want = [expected[a] for a in sorted(expected)]
+    assert got == want, (
+        f"{behavior_cls.__name__} + {protocol_cls.__name__} delivered {got} copies "
+        f"per agent (agent 0 is the sender); the messages asked for {want}. Under a "
+        f"lossless protocol each intended copy must arrive exactly once. A multiple "
+        f"of the intended count means the behavior enumerated neighbors AND the "
+        f"protocol fanned out (deliveries multiplied by degree); fewer means "
+        f"messages never reached their recipients."
     )

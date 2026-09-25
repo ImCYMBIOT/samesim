@@ -28,6 +28,13 @@ simul8/
 For a deep dive into the architecture, component design, and simulation loop lifecycle, see the [Extended Documentation & Developer Guide](docs/extended_documentation.md). For step-by-step instructions on writing your own plugins (behaviors, topologies, protocols, metrics, exporters), see the [Plugin Development Guide](docs/plugin_development_guide.md).
 
 
+## Two ways to run agents
+
+- **Synchronous** (default): every agent steps on every tick, like a round-based simulator. Message delays round up to whole ticks.
+- **Event-driven** (`simulation.activation: event`): agents act only when a message reaches them or a timer they set fires. Delays are exact. This is how you model timeouts, heartbeats and Poisson clocks.
+
+A behavior declares which modes it supports, and a config asking for any other mode is rejected when it loads, before it can run and produce misleading numbers.
+
 ## What a run produces
 
 Each experiment writes self-describing CSV time series (a comment header carries the experiment name, seed, and schema version) plus a `summary.json` / `summary.md` with the config and wall-clock runtime:
@@ -45,10 +52,10 @@ virtual_time,value
 
 | Plugin type | Included |
 |---|---|
-| Behaviors | Gossip averaging, leader election (max-id flooding), SIR epidemic |
+| Behaviors | Gossip averaging, leader election (max-id flooding), SIR epidemic, asynchronous pairwise gossip (Boyd et al.), Raft leader election |
 | Protocols | Gossip (point-to-point), broadcast, lossy (configurable drop rate), latency (constant, uniform, exponential or lognormal per-message delay, plus loss) |
 | Topologies | Ring, 2-D grid (optional wrap), Erdős–Rényi, Watts–Strogatz, Barabási–Albert |
-| Metrics | Convergence variance, message count, S/I/R counts, leader-consensus fraction, full per-agent state trace, topology edge list, run fingerprint (SHA-256 per tick) |
+| Metrics | Convergence variance, message count, S/I/R counts, leader-consensus fraction, full per-agent state trace, topology edge list, run fingerprint (SHA-256 per tick), Raft elections and election-safety violations |
 | Exporters | CSV |
 
 All five example configs in `examples/` finish in under 0.4 s each.
@@ -97,18 +104,22 @@ Gossip convergence time vs. network size (5 seeds per point, average degree 8), 
 
 | Topology | Slope | Meaning |
 |---|---:|---|
-| Ring | 0.99 | Grows linearly with n |
+| Ring | 0.99 | Grows linearly with n *at this threshold* (see below) |
 | Watts–Strogatz | 0.16 | Nearly flat |
 | Barabási–Albert | 0.11 | Nearly flat |
 | Erdős–Rényi | 0.05 | Flat |
 
 This matches mixing-time theory qualitatively: well-connected graphs converge in roughly constant time, and a cycle doesn't. The study was re-run end to end on the current engine, and every slope reproduced. Details: [`experiments/gossip_topology_validation/`](experiments/gossip_topology_validation/).
 
+The ring's linear slope is an artifact of the 1% convergence threshold. At a 1e-4 threshold the ring is about quadratic (fitted slope 1.82 for synchronous push gossip, 1.78 for Boyd et al.'s asynchronous pairwise gossip), which matches the classical O(n²) result. Details: [`experiments/async_gossip_validation/`](experiments/async_gossip_validation/).
+
+Raft leader election reproduces the qualitative findings of the Raft paper (Ongaro & Ousterhout 2014, Fig. 16). Without timeout randomization no leader is ever elected. A 150–300 ms range elects in the first term every time. Timeouts near the network delay cause about 26 unnecessary re-elections per 5 seconds. Election Safety (at most one leader per term) held in all 5,500 trials. Details: [`experiments/raft_election_validation/`](experiments/raft_election_validation/).
+
 With per-message latency, gossip convergence time grows linearly with mean delay (R² ≥ 0.997). At equal mean, exponential delays converge 23% faster than constant ones at mean 16 but slower at mean 1, so the shape of the delay distribution matters, not just its average. Details: [`experiments/latency_validation/`](experiments/latency_validation/).
 
 ### Tests
 
-**484 passing on each of Python 3.10, 3.11, 3.12 and 3.13** (unit, integration, regression). Five of the suites are *contract tests that discover their targets automatically*, so they also cover plugins and files that don't exist yet:
+**678 passing on each of Python 3.10, 3.11, 3.12 and 3.13** (unit, integration, regression). Five of the suites are *contract tests that discover their targets automatically*, so they also cover plugins and files that don't exist yet:
 - every behavior × protocol pairing delivers exactly once per intended recipient
 - no topology generator scales quadratically
 - every module respects the layering (`plugins` → `domain`, `ports` only), with relative imports resolved
@@ -117,7 +128,7 @@ With per-message latency, gossip convergence time grows linearly with mean delay
 
 ## What it can't do yet
 
-Agents still run on a synchronous global tick, so message delays are rounded up to whole ticks, and the network is fixed for the whole run. Timer-driven protocols (Raft, heartbeats), asynchronous gossip, and churn aren't expressible yet. Per-message latency landed in Phase 1. The design for the rest is in [docs/design/event_model.md](docs/design/event_model.md).
+The network is fixed for the whole run: nodes can't join, leave or fail, and links can't break. That rules out churn, fault-tolerance and crash-recovery studies (including Raft's leader-crash scenario) until Phase 3. Per-message latency (Phase 1) and event-driven agents with timers (Phase 2) have landed. The design is in [docs/design/event_model.md](docs/design/event_model.md).
 
 ## Getting Started
 
