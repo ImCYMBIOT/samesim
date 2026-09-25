@@ -46,7 +46,7 @@ virtual_time,value
 | Plugin type | Included |
 |---|---|
 | Behaviors | Gossip averaging, leader election (max-id flooding), SIR epidemic |
-| Protocols | Gossip (point-to-point), broadcast, lossy (configurable drop rate) |
+| Protocols | Gossip (point-to-point), broadcast, lossy (configurable drop rate), latency (constant, uniform, exponential or lognormal per-message delay, plus loss) |
 | Topologies | Ring, 2-D grid (optional wrap), Erdős–Rényi, Watts–Strogatz, Barabási–Albert |
 | Metrics | Convergence variance, message count, S/I/R counts, leader-consensus fraction, full per-agent state trace, topology edge list, run fingerprint (SHA-256 per tick) |
 | Exporters | CSV |
@@ -104,9 +104,11 @@ Gossip convergence time vs. network size (5 seeds per point, average degree 8), 
 
 This matches mixing-time theory qualitatively: well-connected graphs converge in roughly constant time, and a cycle doesn't. The study was re-run end to end on the current engine, and every slope reproduced. Details: [`experiments/gossip_topology_validation/`](experiments/gossip_topology_validation/).
 
+With per-message latency, gossip convergence time grows linearly with mean delay (R² ≥ 0.997). At equal mean, exponential delays converge 23% faster than constant ones at mean 16 but slower at mean 1, so the shape of the delay distribution matters, not just its average. Details: [`experiments/latency_validation/`](experiments/latency_validation/).
+
 ### Tests
 
-**389 passing on each of Python 3.10, 3.11, 3.12 and 3.13** (unit, integration, regression). Five of the suites are *contract tests that discover their targets automatically*, so they also cover plugins and files that don't exist yet:
+**484 passing on each of Python 3.10, 3.11, 3.12 and 3.13** (unit, integration, regression). Five of the suites are *contract tests that discover their targets automatically*, so they also cover plugins and files that don't exist yet:
 - every behavior × protocol pairing delivers exactly once per intended recipient
 - no topology generator scales quadratically
 - every module respects the layering (`plugins` → `domain`, `ports` only), with relative imports resolved
@@ -115,7 +117,7 @@ This matches mixing-time theory qualitatively: well-connected graphs converge in
 
 ## What it can't do yet
 
-Agents currently run on a synchronous global tick, every message takes exactly one tick, and the network is fixed for the whole run. Latency distributions, timer-driven protocols (Raft, heartbeats), asynchronous gossip, and churn aren't expressible yet. The design for adding them is in [docs/design/event_model.md](docs/design/event_model.md).
+Agents still run on a synchronous global tick, so message delays are rounded up to whole ticks, and the network is fixed for the whole run. Timer-driven protocols (Raft, heartbeats), asynchronous gossip, and churn aren't expressible yet. Per-message latency landed in Phase 1. The design for the rest is in [docs/design/event_model.md](docs/design/event_model.md).
 
 ## Getting Started
 

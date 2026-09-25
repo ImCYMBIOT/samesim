@@ -27,17 +27,30 @@ Event dispatch ordering within a TickEvent:
     MessageDeliveredEvent: accumulated into pending inbox; NOT immediately dispatched
     to the behavior. Inbox is drained at the next TickEvent.
 
-Delivery latency: exactly one tick. Messages sent during the tick at T
-arrive at T + tick_interval, i.e. they are waiting in the inbox at the
-very next tick, whatever the tick_interval is. (This used to be hardcoded
-as T + 1.0, which only coincided with one tick when tick_interval was 1.0
--- at tick_interval=0.25 it silently meant four ticks of latency.)
-This avoids within-tick ordering issues and is configurable in future.
+Delivery latency: chosen per delivery by the protocol (Delivery.delay),
+defaulting to one tick. Under synchronous activation a message is consumed
+at the first tick at or after its arrival, so the engine rounds each delay
+UP to a whole number of ticks k >= 1 and stamps the MessageDeliveredEvent
+with that tick's time. The default (delay=None) is k=1: waiting in the
+inbox at the very next tick, whatever the tick_interval is.
+
+Tick times are produced by repeated addition (t + dt, then + dt, ...), not
+by t0 + k*dt, and the two differ in the last bits for intervals like 0.1.
+The engine therefore derives a delivery's tick time from the SAME sequence
+of additions as the tick schedule (_tick_time). Computing it independently
+would let a message land one ulp after its tick and silently wait an extra
+tick -- the same class of bug as the old hardcoded T + 1.0, which meant four
+ticks of latency at tick_interval=0.25.
+
+Ordering at a shared instant is explicit, not incidental: deliveries have
+priority 0 and TickEvents priority 1, so every message due at a tick is in
+the inbox before that tick runs.
 """
 from __future__ import annotations
 
 import itertools
 import logging
+import math
 from typing import Optional
 
 from ..domain.event import (
@@ -60,6 +73,11 @@ from .time_manager import TimeManager
 from .topology_manager import TopologyManager
 
 logger = logging.getLogger(__name__)
+
+# Same-instant ordering: every delivery due at a tick is dispatched (and so
+# in the inbox) before the tick itself runs.
+DELIVERY_PRIORITY = 0
+TICK_PRIORITY = 1
 
 
 class SimulationEngine:
@@ -112,6 +130,11 @@ class SimulationEngine:
         # Pending message inboxes: accumulated between ticks, drained each tick
         self._pending_inbox: dict[AgentId, list[Message]] = {}
 
+        # Tick schedule, by index. _tick_times[i] is the virtual time of the
+        # i-th tick, built by the same repeated addition the schedule uses.
+        self._tick_times: list[VirtualTime] = [VirtualTime(0.0)]
+        self._tick_index: int = -1
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -141,7 +164,8 @@ class SimulationEngine:
         ))
         self._scheduler.schedule(TickEvent(
             event_id=self._next_event_id(),
-            virtual_time=VirtualTime(0.0),
+            virtual_time=self._tick_time(0),
+            priority=TICK_PRIORITY,
         ))
 
         events_processed = 0
@@ -222,6 +246,12 @@ class SimulationEngine:
         Then schedule the next TickEvent.
         """
         topology = self._topology.topology
+        self._tick_index += 1
+        if self._tick_time(self._tick_index) != event.virtual_time:
+            raise RuntimeError(
+                f"Tick bookkeeping out of step: tick #{self._tick_index} is at "
+                f"t={event.virtual_time!r}, expected {self._tick_time(self._tick_index)!r}"
+            )
 
         for agent in self._agents.iter_agents():
             inbox = self._pending_inbox.pop(agent.agent_id, [])
@@ -249,26 +279,27 @@ class SimulationEngine:
             self._metrics.on_event(state_event, event.virtual_time)
 
             # Route and schedule outbound messages
-            delivery_time = VirtualTime(
-                event.virtual_time + self._config.simulation.tick_interval
-            )
             for msg in result.outbound_messages:
-                deliveries = self._comm.route(msg, agent.agent_id, topology)
-                for recipient_id, delivered_msg in deliveries:
+                for delivery in self._comm.route(msg, agent.agent_id, topology):
+                    delivery_time = self._delivery_tick_time(delivery.delay)
+                    if delivery_time is None:
+                        continue  # lands after the run ends; never observable
                     self._scheduler.schedule(MessageDeliveredEvent(
                         event_id=self._next_event_id(),
                         virtual_time=delivery_time,
                         source_id=agent.agent_id,
-                        recipient_id=recipient_id,
-                        message=delivered_msg,
+                        recipient_id=delivery.recipient_id,
+                        message=delivery.message,
+                        priority=DELIVERY_PRIORITY,
                     ))
 
         # Schedule the next tick (self-sustaining)
-        next_tick_time = VirtualTime(event.virtual_time + self._config.simulation.tick_interval)
+        next_tick_time = self._tick_time(self._tick_index + 1)
         if next_tick_time <= self._config.simulation.max_virtual_time:
             self._scheduler.schedule(TickEvent(
                 event_id=self._next_event_id(),
                 virtual_time=next_tick_time,
+                priority=TICK_PRIORITY,
             ))
 
     def _handle_message_delivered(self, event: MessageDeliveredEvent) -> None:
@@ -278,6 +309,38 @@ class SimulationEngine:
         """
         self._pending_inbox.setdefault(event.recipient_id, []).append(event.message)
         self._comm.record_delivery()
+
+    # ------------------------------------------------------------------
+    # Tick arithmetic
+    # ------------------------------------------------------------------
+
+    def _tick_time(self, index: int) -> VirtualTime:
+        """Virtual time of the index-th tick, by the schedule's own additions."""
+        dt = self._config.simulation.tick_interval
+        while len(self._tick_times) <= index:
+            self._tick_times.append(VirtualTime(self._tick_times[-1] + dt))
+        return self._tick_times[index]
+
+    def _delivery_tick_time(self, delay: float | None) -> VirtualTime | None:
+        """The tick at which a message sent now with this delay is consumed.
+
+        Returns None when that tick falls after max_virtual_time: such a
+        message could never be observed, so it is not scheduled at all.
+        """
+        dt = self._config.simulation.tick_interval
+        if delay is None:
+            ticks = 1
+        else:
+            # Round up to whole ticks. The tolerance absorbs float noise in
+            # delays meant to be exact multiples (3 * 0.1 / 0.1 is
+            # 3.0000000000000004, which must mean 3 ticks, not 4).
+            ticks = max(1, math.ceil(delay / dt - 1e-9))
+
+        remaining = (self._config.simulation.max_virtual_time - self._tick_time(self._tick_index)) / dt
+        if ticks > remaining + 1:
+            return None  # also keeps _tick_time() from extending without bound
+        time = self._tick_time(self._tick_index + ticks)
+        return time if time <= self._config.simulation.max_virtual_time else None
 
     # ------------------------------------------------------------------
     # ID generation (engine-private, no global state)

@@ -135,6 +135,15 @@ Pick the mode that matches your algorithm:
 > NDlib caught it. `tests/unit/plugins/test_addressing_contract.py` now sweeps
 > every behavior × protocol pair and will fail if it returns.
 
+**Latency.** Return `Delivery(recipient_id, message, delay)` instead of a
+bare `(recipient_id, message)` tuple to choose each copy's delay, in
+virtual-time units. `None` means the default of one tick. A delay must be
+finite and strictly greater than zero; the engine rejects anything else with
+an error naming your protocol. Under synchronous activation delays round
+**up** to whole ticks, so 2.5 arrives at the third tick after sending.
+`LatencyProtocol` covers the common distributions, so check it before
+writing your own.
+
 ### TopologyGeneratorPort — the agent network graph
 
 ```python

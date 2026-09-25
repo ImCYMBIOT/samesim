@@ -41,6 +41,10 @@
         |-- postaudit_full_results.json
         |-- postaudit_full_ws_ba_results.json
         |-- run_sweep.py
+    |-- latency_validation
+        |-- README.md
+        |-- latency_results.json
+        |-- run_latency_sweep.py
     |-- scaling_benchmark
         |-- README.md
         |-- naive_gossip.py
@@ -158,6 +162,10 @@
             |-- agent.cpython-311.pyc
             |-- agent.cpython-312.pyc
             |-- agent.cpython-313.pyc
+            |-- delivery.cpython-310.pyc
+            |-- delivery.cpython-311.pyc
+            |-- delivery.cpython-312.pyc
+            |-- delivery.cpython-313.pyc
             |-- event.cpython-310.pyc
             |-- event.cpython-311.pyc
             |-- event.cpython-312.pyc
@@ -187,6 +195,7 @@
             |-- topology.cpython-312.pyc
             |-- topology.cpython-313.pyc
         |-- agent.py
+        |-- delivery.py
         |-- event.py
         |-- experiment.py
         |-- ids.py
@@ -238,12 +247,17 @@
                 |-- gossip.cpython-311.pyc
                 |-- gossip.cpython-312.pyc
                 |-- gossip.cpython-313.pyc
+                |-- latency.cpython-310.pyc
+                |-- latency.cpython-311.pyc
+                |-- latency.cpython-312.pyc
+                |-- latency.cpython-313.pyc
                 |-- lossy.cpython-310.pyc
                 |-- lossy.cpython-311.pyc
                 |-- lossy.cpython-312.pyc
                 |-- lossy.cpython-313.pyc
             |-- broadcast.py
             |-- gossip.py
+            |-- latency.py
             |-- lossy.py
         |-- metrics
             |-- __init__.py
@@ -384,6 +398,10 @@
             |-- __init__.cpython-311.pyc
             |-- __init__.cpython-312.pyc
             |-- __init__.cpython-313.pyc
+            |-- latency_probes.cpython-310.pyc
+            |-- latency_probes.cpython-311.pyc
+            |-- latency_probes.cpython-312.pyc
+            |-- latency_probes.cpython-313.pyc
             |-- test_engine_termination.cpython-310-pytest-9.1.1.pyc
             |-- test_engine_termination.cpython-311-pytest-9.1.1.pyc
             |-- test_engine_termination.cpython-312-pytest-9.1.1.pyc
@@ -393,8 +411,14 @@
             |-- test_gossip_experiment.cpython-312-pytest-9.1.1.pyc
             |-- test_gossip_experiment.cpython-313-pytest-8.3.3.pyc
             |-- test_gossip_experiment.cpython-313-pytest-9.1.1.pyc
+            |-- test_latency_timing.cpython-310-pytest-9.1.1.pyc
+            |-- test_latency_timing.cpython-311-pytest-9.1.1.pyc
+            |-- test_latency_timing.cpython-312-pytest-9.1.1.pyc
+            |-- test_latency_timing.cpython-313-pytest-9.1.1.pyc
+        |-- latency_probes.py
         |-- test_engine_termination.py
         |-- test_gossip_experiment.py
+        |-- test_latency_timing.py
     |-- regression
         |-- __init__.py
         |-- __pycache__
@@ -462,6 +486,10 @@
                 |-- test_agent_registry.cpython-312-pytest-9.1.1.pyc
                 |-- test_agent_registry.cpython-313-pytest-8.3.3.pyc
                 |-- test_agent_registry.cpython-313-pytest-9.1.1.pyc
+                |-- test_communication_layer_latency.cpython-310-pytest-9.1.1.pyc
+                |-- test_communication_layer_latency.cpython-311-pytest-9.1.1.pyc
+                |-- test_communication_layer_latency.cpython-312-pytest-9.1.1.pyc
+                |-- test_communication_layer_latency.cpython-313-pytest-9.1.1.pyc
                 |-- test_event_queue.cpython-310-pytest-9.1.1.pyc
                 |-- test_event_queue.cpython-311-pytest-9.1.1.pyc
                 |-- test_event_queue.cpython-312-pytest-9.1.1.pyc
@@ -478,6 +506,7 @@
                 |-- test_time_manager.cpython-313-pytest-8.3.3.pyc
                 |-- test_time_manager.cpython-313-pytest-9.1.1.pyc
             |-- test_agent_registry.py
+            |-- test_communication_layer_latency.py
             |-- test_event_queue.py
             |-- test_randomness_manager.py
             |-- test_time_manager.py
@@ -492,6 +521,10 @@
                 |-- test_addressing_contract.cpython-311-pytest-9.1.1.pyc
                 |-- test_addressing_contract.cpython-312-pytest-9.1.1.pyc
                 |-- test_addressing_contract.cpython-313-pytest-9.1.1.pyc
+                |-- test_latency_protocol.cpython-310-pytest-9.1.1.pyc
+                |-- test_latency_protocol.cpython-311-pytest-9.1.1.pyc
+                |-- test_latency_protocol.cpython-312-pytest-9.1.1.pyc
+                |-- test_latency_protocol.cpython-313-pytest-9.1.1.pyc
                 |-- test_leader_election.cpython-310-pytest-9.1.1.pyc
                 |-- test_leader_election.cpython-311-pytest-9.1.1.pyc
                 |-- test_leader_election.cpython-312-pytest-9.1.1.pyc
@@ -523,6 +556,7 @@
                 |-- test_trace_digest.cpython-312-pytest-9.1.1.pyc
                 |-- test_trace_digest.cpython-313-pytest-9.1.1.pyc
             |-- test_addressing_contract.py
+            |-- test_latency_protocol.py
             |-- test_leader_election.py
             |-- test_lossy_communication.py
             |-- test_sir_behavior.py

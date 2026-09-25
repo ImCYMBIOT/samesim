@@ -1,7 +1,6 @@
 # Design: Latency, Asynchronous Activation, and Churn
 
-**Status:** Phase 0 **done**. Phases 1–3 are proposals; nothing in
-`simul8/core` has changed for them yet.
+**Status:** Phases 0 and 1 **done**. Phases 2–3 are proposals.
 **Scope:** the engine's time model. Three capabilities that the core cannot
 express today, delivered in four independently shippable phases.
 
@@ -151,6 +150,38 @@ seeded RNG in delivery order, which is deterministic.
 asserts every returned delay is `None` or finite and > 0, and that the
 addressing contract still holds for the recipient set. It extends the
 existing addressing sweep rather than duplicating it.
+
+### As built
+
+- `Delivery(recipient_id, message, delay=None)` in `simul8/domain/delivery.py`;
+  bare tuples still work. `CommunicationLayer` normalizes and validates, so
+  an illegal delay raises `ValueError` naming the protocol.
+- **Delivery tick from the schedule's own arithmetic.** The engine keeps the
+  tick times it has generated (`t + dt`, repeatedly) and stamps a delivery
+  with the time of tick `now + k`, never with `now + k*dt`. At dt=0.1 the
+  two differ by an ulp after enough ticks, and a message landing one ulp
+  late silently waits an extra tick. Mutation-tested: switching to
+  `now + k*dt` makes a message sent at step 7 wait 4 ticks instead of 3.
+- **Same-instant ordering is explicit:** deliveries priority 0, ticks
+  priority 1. It already held incidentally, because deliveries are always
+  scheduled before the tick they land on; now it can't depend on that.
+- **Undeliverable messages** (due after `max_virtual_time`) are not
+  scheduled at all. Also bounds the tick-time cache against huge delays.
+- `LatencyProtocol`: constant, uniform, exponential or lognormal, plus loss.
+  Invalid parameters fail at setup. Constant delay without loss consumes no
+  RNG draws.
+- **Golden traces:** all 127 existing traces unchanged; the JSON diff was
+  checked to be additions only (40 new `LatencyProtocol` cells).
+- **Validation:** protocol delays match their exact CDFs (KS test, 20,000
+  draws, α=0.001). End to end, the tick lag of 20,000 messages through the
+  real engine matches the rounded-up exponential distribution (χ², 10 dof).
+
+### What Phase 1 found
+
+Gossip convergence is linear in mean latency (R² ≥ 0.997), confirming the
+prediction. But **delay shape matters at equal mean**: exponential delays
+converge slower than constant at small means and 23% faster at mean 16.
+See [experiments/latency_validation/](../../experiments/latency_validation/).
 
 ## 5. Phase 2: asynchronous activation and timers
 

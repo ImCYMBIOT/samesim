@@ -4,11 +4,17 @@ CommunicationLayer — routes outbound agent messages through the active protoco
 Acts as the bridge between the engine's message dispatch and the pluggable
 CommunicationProtocolPort. Tracks send/deliver counters for metrics.
 
-The behavior decides WHAT to send and to WHOM (addressing Message.recipient_id).
-The protocol decides HOW delivery happens (fanout, latency, loss — future).
+The behavior decides WHAT to send and to WHOM (Message.recipient_id and
+Message.broadcast). The protocol decides whether and when each copy arrives
+(loss, latency). This layer normalizes the protocol's output to Delivery
+objects and enforces the latency contract, so a bad delay fails loudly here,
+naming the protocol, instead of corrupting the schedule.
 """
 from __future__ import annotations
 
+import math
+
+from ..domain.delivery import Delivery, as_delivery
 from ..domain.ids import AgentId
 from ..domain.message import Message
 from ..domain.topology import TopologyGraph
@@ -40,7 +46,7 @@ class CommunicationLayer:
         message: Message,
         sender_id: AgentId,
         topology: TopologyGraph,
-    ) -> list[tuple[AgentId, Message]]:
+    ) -> list[Delivery]:
         """Route a message through the protocol.
 
         Args:
@@ -49,12 +55,36 @@ class CommunicationLayer:
             topology:  The current topology (passed to the protocol for neighbor queries).
 
         Returns:
-            List of (recipient_id, message) pairs. The engine schedules
-            one MessageDeliveredEvent per pair.
+            One Delivery per routed copy. The engine schedules one
+            MessageDeliveredEvent per Delivery.
+
+        Raises:
+            ValueError: If the protocol returned a delay that is not None
+                and not a finite number > 0.
         """
-        deliveries = self._protocol.route(message, sender_id, topology)
+        deliveries = [
+            as_delivery(item)
+            for item in self._protocol.route(message, sender_id, topology)
+        ]
+        for delivery in deliveries:
+            if delivery.delay is not None:
+                self._check_delay(delivery.delay)
         self._messages_sent += 1
         return deliveries
+
+    def _check_delay(self, delay: object) -> None:
+        valid = (
+            isinstance(delay, (int, float))
+            and not isinstance(delay, bool)
+            and math.isfinite(delay)
+            and delay > 0
+        )
+        if not valid:
+            raise ValueError(
+                f"{type(self._protocol).__name__}.route() returned delay={delay!r}. "
+                f"A delay must be None (one tick) or a finite number > 0: a message "
+                f"cannot arrive at the instant it was sent."
+            )
 
     def record_delivery(self) -> None:
         """Increment the delivered message counter.

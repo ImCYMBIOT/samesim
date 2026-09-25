@@ -76,7 +76,13 @@ BEHAVIOR_CONFIGS = {
     "SirEpidemicBehavior": {"transmission_rate": 0.3, "recovery_rate": 0.1, "initial_infected": 3},
     "GossipBehavior": {"fan_out": 2, "initial_value_range": [0.0, 1.0]},
 }
-PROTOCOL_CONFIGS = {"LossyProtocol": {"loss_probability": 0.2}}
+PROTOCOL_CONFIGS = {
+    "LossyProtocol": {"loss_probability": 0.2},
+    # Mean 1.5 time units: at dt=1.0 most delays round up to 1-3 ticks and a
+    # tail reaches further; at dt=0.5 the same draws span more ticks. Both
+    # exercise out-of-order arrival and the tick-rounding path.
+    "LatencyProtocol": {"distribution": "exponential", "mean": 1.5, "loss_probability": 0.1},
+}
 TOPOLOGY_CONFIGS = {
     "ErdosRenyiTopology": {"edge_probability": 0.15},
     "WattsStrogatzTopology": {"k": 4, "rewire_probability": 0.2},

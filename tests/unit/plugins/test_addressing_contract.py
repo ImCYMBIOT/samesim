@@ -21,11 +21,17 @@ simul8/ports/communication.py:
 
 plus the practical invariant that a lossless protocol delivers to each
 intended neighbor exactly once -- never zero times, never d times.
+
+It also enforces the latency contract: every delay a protocol returns is
+None or a finite number > 0. The engine rejects anything else at run time;
+checking here catches it at the plugin, for every protocol, before any
+experiment runs.
 """
 from __future__ import annotations
 
 import importlib
 import inspect
+import math
 import pkgutil
 import random
 
@@ -33,6 +39,7 @@ import pytest
 
 import simul8.plugins.behaviors as behaviors_pkg
 import simul8.plugins.communication as communication_pkg
+from simul8.domain.delivery import as_delivery
 from simul8.domain.ids import AgentId
 from simul8.domain.state import AgentState
 from simul8.domain.topology import TopologyGraph
@@ -115,7 +122,18 @@ def test_every_behavior_protocol_pair_delivers_once_per_neighbor(behavior_cls, p
 
     counts = {AgentId(i): 0 for i in range(STAR_SIZE)}
     for message in result.outbound_messages:
-        for recipient_id, _delivered in protocol.route(message, sender, topology):
+        for item in protocol.route(message, sender, topology):
+            delivery = as_delivery(item)
+            recipient_id = delivery.recipient_id
+            assert delivery.delay is None or (
+                isinstance(delivery.delay, (int, float))
+                and not isinstance(delivery.delay, bool)
+                and math.isfinite(delivery.delay)
+                and delivery.delay > 0
+            ), (
+                f"{protocol_cls.__name__} returned delay={delivery.delay!r}; a delay "
+                f"must be None or a finite number > 0"
+            )
             # Contract: recipients must be authorised by the addressing mode.
             if message.broadcast:
                 assert recipient_id in topology.neighbors(sender), (

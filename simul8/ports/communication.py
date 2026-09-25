@@ -15,8 +15,9 @@ protocol -- see Message.broadcast):
 
     A protocol decides whether and when a message arrives. It MUST NOT
     invent recipients the addressing mode did not authorise. Concretely: a
-    protocol may drop a message, delay it, or deliver it -- it may not turn
-    one addressed message into a copy for every neighbor. Violating this
+    protocol may drop a message, delay it (Delivery.delay), or deliver it
+    -- it may not turn one addressed message into a copy for every
+    neighbor. Violating this
     multiplies deliveries by the sender's degree whenever it is paired with
     a behavior that already enumerates its own neighbors, which is a silent
     correctness bug rather than a crash (it inflates effective rates).
@@ -24,11 +25,27 @@ protocol -- see Message.broadcast):
     tests/unit/plugins/test_addressing_contract.py sweeps every
     behavior x protocol pair and enforces exactly this.
 
+Latency contract:
+
+        Delivery.delay is None (the default: one tick_interval), or a
+        finite number strictly greater than zero.
+
+    The engine rejects anything else with a ValueError naming the protocol.
+    Zero is excluded deliberately: a message cannot arrive at the instant it
+    was sent, which rules out zero-time livelock (two agents replying to
+    each other forever without virtual time advancing).
+
+    Under synchronous activation a message becomes visible at the first
+    tick at or after its arrival, so delays round UP to whole ticks.
+
+    tests/unit/plugins/test_addressing_contract.py checks both contracts for
+    every protocol.
+
 Contracts:
     - MUST NOT import from simul8.core or simul8.app
     - MUST NOT access agent state directly
     - route() MUST be deterministic given the same inputs and RNG state
-    - route() MUST honour the addressing contract above
+    - route() MUST honour the addressing and latency contracts above
 
 Extension:
     Implement to add new communication mechanisms:
@@ -41,6 +58,7 @@ from abc import ABC, abstractmethod
 from random import Random
 from typing import Any
 
+from ..domain.delivery import RouteResult
 from ..domain.ids import AgentId
 from ..domain.message import Message
 from ..domain.topology import TopologyGraph
@@ -50,8 +68,9 @@ class CommunicationProtocolPort(ABC):
     """Abstract contract for message delivery between agents.
 
     The engine calls route() for every outbound message produced by a behavior.
-    The return value is a list of (recipient_id, message) pairs that the engine
-    will schedule as MessageDeliveredEvents.
+    The return value is a list of Delivery objects (or bare (recipient_id,
+    message) pairs, meaning default latency) that the engine schedules as
+    MessageDeliveredEvents.
 
     One instance per experiment. Initialized once after topology is built.
     """
@@ -80,10 +99,12 @@ class CommunicationProtocolPort(ABC):
         message: Message,
         sender_id: AgentId,
         topology: TopologyGraph,
-    ) -> list[tuple[AgentId, Message]]:
-        """Given an outbound message, return (recipient_id, message) pairs.
+    ) -> list[RouteResult]:
+        """Given an outbound message, return its deliveries.
 
-        The engine schedules one MessageDeliveredEvent per returned pair.
+        Each item is a Delivery(recipient_id, message, delay), or a bare
+        (recipient_id, message) pair meaning default latency. The engine
+        schedules one MessageDeliveredEvent per item.
 
         Examples:
             - addressed message (broadcast=False): return
@@ -97,6 +118,6 @@ class CommunicationProtocolPort(ABC):
             topology:  Current topology (may be queried for neighbor info).
 
         Returns:
-            List of (recipient_id, message) delivery pairs.
+            List of Delivery objects and/or (recipient_id, message) pairs.
         """
         ...
