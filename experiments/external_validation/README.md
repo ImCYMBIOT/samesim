@@ -106,7 +106,7 @@ comparisons: `tests/unit/plugins/test_addressing_contract.py` sweeps every
 behavior × protocol pair, and `test_topology_complexity.py` sweeps every
 topology generator. Both discover plugins by walking the package, so they
 cover plugins that don't exist yet. See the root-cause writeup in
-[docs/plugin_development_guide.md](../../docs/plugin_development_guide.md)
+[docs/developer_guide.md](../../docs/developer_guide.md)
 for the addressing contract those tests enforce.
 
 ## What this doesn't cover yet

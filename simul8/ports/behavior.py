@@ -107,13 +107,15 @@ class BehaviorPort(ABC):
     ) -> BehaviorResult:
         """Compute the agent's next state and outbound messages.
 
-        Called once per agent per tick. Inbox contains all messages
-        delivered to this agent since the last tick.
+        Synchronous activation: called once per agent per tick, with every
+        message delivered since the last tick. Event activation: called once
+        per agent at t=0 with an empty inbox (bootstrap), then whenever
+        messages reach it, with all messages arriving at that instant.
 
         Args:
             agent_id:     The agent being stepped.
-            current_state: The agent's state at the start of this tick.
-            inbox:        Messages received since the last tick (may be empty).
+            current_state: The agent's current state.
+            inbox:        Messages received, in delivery order (may be empty).
             neighbors:    The agent's current neighbor set from the topology.
             virtual_time: Current simulation time.
 

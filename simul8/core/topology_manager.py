@@ -1,7 +1,8 @@
 """
 TopologyManager — builds and provides access to the agent network graph.
 
-Owns the single TopologyGraph instance for the simulation.
+Owns the current TopologyGraph. Churn replaces it with a new graph via
+apply() (copy-on-write); graphs themselves are never mutated.
 All neighbor queries go through this module; no other module holds
 a direct reference to the adjacency dict.
 """

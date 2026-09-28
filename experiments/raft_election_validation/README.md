@@ -1,7 +1,7 @@
 # Raft Election Time vs. Election-Timeout Range
 
 **Status:** first result that needs Phase 2 (event-driven agents with
-timers) of [docs/design/event_model.md](../../docs/design/event_model.md).
+timers) of [docs/design.md](../../docs/design.md).
 Modeled on Figure 16 of Ongaro & Ousterhout, *In Search of an
 Understandable Consensus Algorithm* (USENIX ATC 2014).
 

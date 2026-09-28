@@ -11,21 +11,30 @@ The core engine is domain-agnostic and manages only agents, virtual time, event 
 - **Pluggable Architecture**: Swap behaviors, communication protocols, network topologies, metrics, and exporters from YAML. No core changes needed.
 - **Lean**: Pure Python with a single runtime dependency (PyYAML). Built with a future Rust port in mind. See [By the numbers](#by-the-numbers) for what that costs in speed.
 
+## Documentation
+
+| Document | For |
+|---|---|
+| [User Guide](docs/user_guide.md) | Running experiments: the config file, activation modes, latency, churn, every plugin's options, output files |
+| [Developer Guide](docs/developer_guide.md) | Writing plugins: architecture, the event loop, determinism rules, the ports, contract tests |
+| [Design](docs/design.md) | Why it's built this way: principles, the time model, lessons learned, validation status, roadmap |
+
+Each study under [`experiments/`](experiments/) has its own README next to its scripts and raw data.
+
 ## Directory Structure
 
 ```
 simul8/
-├── domain/        # Opaque data models (Agent, Event, Message, State)
-├── ports/         # Abstract port contracts (Behavior, Communication, Topology, Metrics, Persistence)
-├── core/          # Simulation engine internals (Scheduler, EventQueue, Registry)
-├── app/           # Application orchestration (ConfigLoader, PluginLoader, ExperimentRunner)
-├── plugins/       # Concrete plugins (Gossip, Ring, Random Graph, CSV Exporter)
-└── cli/           # CLI command line interface
+├── domain/        # Data: Agent, Message, Event, State, Topology, Delivery, Timer, TopologyChange, portable_math
+├── ports/         # Contracts: Behavior, Communication, TopologyGenerator, MetricCollector, Persistence, TopologyDynamics
+├── core/          # Engine: SimulationEngine, Scheduler, EventQueue, AgentRegistry, TopologyManager, ...
+├── app/           # Orchestration: ConfigLoader, PluginLoader, ExperimentRunner
+├── plugins/       # behaviors/ communication/ topologies/ metrics/ persistence/ dynamics/
+└── cli/           # simul8 run, simul8 visualize
+examples/          # Ready-to-run YAML configs
+experiments/       # Validation studies: scripts, raw results, write-ups
+tests/             # unit/ integration/ regression/
 ```
-
-## Documentation
-
-For a deep dive into the architecture, component design, and simulation loop lifecycle, see the [Extended Documentation & Developer Guide](docs/extended_documentation.md). For step-by-step instructions on writing your own plugins (behaviors, topologies, protocols, metrics, exporters), see the [Plugin Development Guide](docs/plugin_development_guide.md).
 
 
 ## Two ways to run agents
@@ -59,7 +68,7 @@ virtual_time,value
 | Exporters | CSV |
 | Churn (optional) | Scheduled faults with state-based targeting ("crash whoever is leader at t=1000"), random Poisson failure/recovery |
 
-All five example configs in `examples/` finish in under 0.4 s each.
+All eight example configs in `examples/` finish in under a second each, including interpreter startup.
 
 ## By the numbers
 
@@ -130,7 +139,7 @@ With per-message latency, gossip convergence time grows linearly with mean delay
 
 ## What it can't do yet
 
-All three phases of the time-model design are in: per-message latency, event-driven agents with timers, and churn (nodes that fail, recover and join, and links that change). See [docs/design/event_model.md](docs/design/event_model.md). Still missing:
+All three phases of the time-model design are in: per-message latency, event-driven agents with timers, and churn (nodes that fail, recover and join, and links that change). See [Design](docs/design.md). Still missing:
 
 - **Network partitions and asymmetric links.** Churn fails nodes, not links in one direction. A partition can be modeled with `remove_edges`, but the messages already in flight across it still arrive.
 - **Log replication.** `RaftElectionBehavior` is Raft's leader election only.
@@ -148,18 +157,16 @@ pip install -e ".[dev]"
 
 ### Running an Experiment
 
-To run the default 1,000-agent gossip convergence experiment:
-
 ```bash
-simul8 run examples/gossip_1000_agents.yaml --output ./results
+simul8 run examples/raft_leader_crash.yaml --output ./results
+simul8 visualize ./results        # interactive dashboard.html
 ```
 
-This will run the simulation and export results (convergence variance and message count) to the `./results` directory.
+This crashes a Raft cluster's leader at t=1000 ms and restarts it at 2500 ms, and writes the elections, running-agent counts and message counts as CSV to `./results`. The [User Guide](docs/user_guide.md) covers writing your own configs.
 
 ### Running Tests
 
-Execute the test suite (unit, integration, and regression tests) using pytest:
-
 ```bash
-pytest
+pytest                  # ~70 s
+pytest -m "not slow"    # skip the scale tests
 ```

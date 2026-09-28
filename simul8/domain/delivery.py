@@ -31,10 +31,11 @@ class Delivery:
                       out zero-time livelock between agents replying to
                       each other.
 
-    Synchronous activation (the only mode today) makes a message visible at
-    the first tick at or after its arrival, so delays are effectively
-    rounded UP to whole ticks: 2.5 ticks arrives at the third tick after
-    sending; anything at or below one tick arrives at the next.
+    Under synchronous activation a message becomes visible at the first
+    tick at or after its arrival, so delays are effectively rounded UP to
+    whole ticks: 2.5 ticks arrives at the third tick after sending; anything
+    at or below one tick arrives at the next. Under event activation it
+    arrives at exactly send time + delay.
     """
 
     recipient_id: AgentId

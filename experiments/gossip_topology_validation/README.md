@@ -25,7 +25,7 @@
 **Status:** preliminary validation pass across four topologies (single fixed
 graph density, 5 seeds per point). This is the first of the three research
 directions proposed in
-[docs/Simul8_Research_Brief.docx](../../docs/Simul8_Research_Brief.docx) —
+the original research brief (now [docs/design.md](../../docs/design.md#8-roadmap)) —
 picked first because it's also the cheapest way to sanity-check that Simul8's
 gossip pipeline produces results consistent with known graph-mixing theory,
 before trusting it for a real study.

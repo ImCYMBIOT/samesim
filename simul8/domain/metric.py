@@ -4,8 +4,7 @@ Metric data model.
 MetricRecord is a single timestamped observation.
 MetricSeries is the accumulation of records for one named metric.
 
-The StatisticsEngine (future) consumes MetricSeries objects.
-PersistencePort adapters write them to CSV, JSON, etc.
+MetricCollectorPort plugins produce them; PersistencePort adapters write them to CSV, JSON, etc.
 """
 from __future__ import annotations
 

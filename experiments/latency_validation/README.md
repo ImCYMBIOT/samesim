@@ -1,7 +1,7 @@
 # Gossip Convergence vs. Message Latency
 
 **Status:** first result that needs Phase 1 of
-[docs/design/event_model.md](../../docs/design/event_model.md). Before
+[docs/design.md](../../docs/design.md). Before
 per-message latency existed, every message took exactly one tick, so this
 question could not be asked.
 

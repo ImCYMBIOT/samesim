@@ -2,7 +2,7 @@
 Golden traces: every simulation Simul8 can currently express must keep
 producing exactly the same run.
 
-Phase 0 of docs/design/event_model.md. The engine's time model is about to be
+Phase 0 of docs/design.md. The engine's time model is about to be
 refactored (latency, asynchronous activation, churn), and every phase of that
 work promises to leave existing behavior bit-identical. This file is what
 makes that promise checkable instead of just stated.

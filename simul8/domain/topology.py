@@ -1,9 +1,10 @@
 """
 TopologyGraph — the immutable adjacency-list graph of agent connections.
 
-The graph is generated once at simulation start by a TopologyGeneratorPort plugin
-and never modified during the simulation. The TopologyManager owns the single
-graph instance; all other modules receive a reference and must not replace it.
+The graph is generated at simulation start by a TopologyGeneratorPort plugin.
+A graph is never modified in place: when churn changes the edges
+(TopologyDynamicsPort), TopologyManager builds a new graph (copy-on-write),
+so a reference a plugin holds stays a consistent snapshot.
 
 The engine never knows what the topology *means* — that is the domain plugin's concern.
 """

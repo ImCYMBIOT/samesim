@@ -1,7 +1,7 @@
 # Synchronous vs. Asynchronous Gossip on a Ring
 
 **Status:** first result that needs Phase 2 (event-driven agents) of
-[docs/design/event_model.md](../../docs/design/event_model.md). It
+[docs/design.md](../../docs/design.md). It
 **corrects** an interpretation in
 [gossip_topology_validation/](../gossip_topology_validation/).
 

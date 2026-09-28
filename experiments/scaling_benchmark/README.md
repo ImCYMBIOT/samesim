@@ -79,7 +79,7 @@ seed now produces a different (but equally valid) Erdős–Rényi graph than it
 did before**. Bit-for-bit reproducibility of already-committed results
 (`results/`, both prior `experiments/` studies) is broken by this change,
 even though the statistical conclusions in those studies remain valid.
-`design_manifesto.txt` states reproducibility matters more than raw
+The design principles ([docs/design.md](../../docs/design.md)) put reproducibility ahead of raw
 performance — this change was made anyway, deliberately, because it fixes
 an asymptotic complexity bug rather than trading away determinism itself
 (same seed still always produces the same graph, going forward).
