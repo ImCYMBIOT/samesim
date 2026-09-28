@@ -186,7 +186,8 @@ Each phase was to ship with a result the old engine couldn't produce.
 | 2 | Raft election time vs. timeout range | Done: reproduces Ongaro & Ousterhout Fig. 16, with zero safety violations in 11,000 trials |
 | 3 | Leader crash recovery | Done: 150–300 ms restores a leader in a median of 186 ms (p95 325 ms) |
 | 3 | `RandomChurn` down fraction matches λ/(λ+μ) | Done: within 0.01 |
-| 3 | Gossip convergence degrades gracefully as the churn rate rises | **Not yet run** |
+| 3 | Gossip convergence degrades gracefully as the churn rate rises | Done: among running agents, t ∝ (1 − f)^−1.5 (short outages) to (1 − f)^−1.0 (long), no cliff up to half the agents down. Agreement across *all* agents is set by downtime, and a stale-value model predicts it within 10% up to f = 0.2 |
+| 3 | Lost messages match the churn rate | Done: f(1 − f)·n·k·T within 4% |
 
 ## 6. Non-goals
 
@@ -229,7 +230,6 @@ Each phase was to ship with a result the old engine couldn't produce.
 - Network partitions and one-way links: messages in flight across a cut
   link should be droppable.
 - Raft log replication.
-- The Phase 3 churn-convergence study.
 
 **Publishing.** Publish rather than patent. Ports-and-adapters design and
 per-agent seeding are sound engineering but not novel claims. The plan:

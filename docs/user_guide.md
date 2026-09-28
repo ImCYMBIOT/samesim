@@ -26,7 +26,7 @@ Python 3.10–3.13. One runtime dependency (PyYAML).
 git clone https://github.com/ImCYMBIOT/Simul8.git
 cd Simul8
 pip install -e ".[dev]"      # editable, with pytest
-pytest                        # optional: ~70 s, 889 tests
+pytest                        # optional: ~70 s, 898 tests
 ```
 
 ## 2. Run an experiment
@@ -202,7 +202,8 @@ independent Poisson processes. In the long run a fraction
 `failure_rate / (failure_rate + recovery_rate)` is down.
 
 Add `ChurnMetric` to record how many agents are running and how many
-messages were lost. Churn draws from its own random stream, so adding it
+messages were lost, and `ConsensusMetric` to tell "the running agents
+agree" apart from "every agent agrees" for averaging behaviors. Churn draws from its own random stream, so adding it
 never changes the protocol's random draws.
 
 Churn does **not** yet model network partitions or one-way links:
@@ -254,6 +255,7 @@ None take options. The series name is the file suffix in the output.
 |---|---|---|
 | `message_count.MessageCountMetric` | `message_count` | Cumulative messages delivered |
 | `convergence.ConvergenceMetric` | `convergence_variance` | Variance of agents' `value` at each tick |
+| `consensus.ConsensusMetric` | `consensus` | Under churn: variance of `value` among running agents, tagged with the variance among all agents (crashed ones at their frozen value), the running mean, and its drift from the true initial mean |
 | `sir_metrics.SirSusceptibleMetric` / `SirInfectedMetric` / `SirRecoveredMetric` | `sir_susceptible` / `sir_infected` / `sir_recovered` | Count per state at each tick |
 | `leader_metrics.LeaderConsensusMetric` | `leader_consensus_fraction` | Fraction of agents that know the true maximum id |
 | `raft_metrics.RaftElectionMetric` | `raft_elections` | One row per election at its exact time (value = term); an extra `SAFETY_VIOLATION` row if a term ever gets two leaders |

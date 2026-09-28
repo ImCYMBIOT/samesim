@@ -64,7 +64,7 @@ virtual_time,value
 | Behaviors | Gossip averaging, leader election (max-id flooding), SIR epidemic, asynchronous pairwise gossip (Boyd et al.), Raft leader election |
 | Protocols | Gossip (point-to-point), broadcast, lossy (configurable drop rate), latency (constant, uniform, exponential or lognormal per-message delay, plus loss) |
 | Topologies | Ring, 2-D grid (optional wrap), Erdős–Rényi, Watts–Strogatz, Barabási–Albert |
-| Metrics | Convergence variance, message count, S/I/R counts, leader-consensus fraction, full per-agent state trace, topology edge list, run fingerprint (SHA-256 per tick), Raft elections and election-safety violations, running agents and lost messages under churn |
+| Metrics | Convergence variance, message count, S/I/R counts, leader-consensus fraction, full per-agent state trace, topology edge list, run fingerprint (SHA-256 per tick), Raft elections and election-safety violations, running agents and lost messages under churn, consensus among running vs. all agents |
 | Exporters | CSV |
 | Churn (optional) | Scheduled faults with state-based targeting ("crash whoever is leader at t=1000"), random Poisson failure/recovery |
 
@@ -127,9 +127,11 @@ Raft leader election reproduces the qualitative findings of the Raft paper (Onga
 
 With per-message latency, gossip convergence time grows linearly with mean delay (R² ≥ 0.997). At equal mean, exponential delays converge 23% faster than constant ones at mean 16 but slower at mean 1, so the shape of the delay distribution matters, not just its average. Details: [`experiments/latency_validation/`](experiments/latency_validation/).
 
+Under churn, gossip degrades gracefully: with half the agents down at any moment, the running agents still converge, 2–3× slower, with no cliff anywhere in between (t ∝ (1 − f)^−1 to (1 − f)^−1.5). Agreement across *every* agent, crashed ones included, is a different matter: with long outages it waits for the last agent that crashed before consensus formed to come back, and a simple model of that predicts the time within 10% (up to 20% of agents down). Lost messages match f(1 − f)·n·k·T within 4%. Details: [`experiments/churn_convergence_validation/`](experiments/churn_convergence_validation/).
+
 ### Tests
 
-**889 passing on each of Python 3.10, 3.11, 3.12 and 3.13** (unit, integration, regression). Seven of the suites are *contract tests that discover their targets automatically*, so they also cover plugins and files that don't exist yet:
+**898 passing on each of Python 3.10, 3.11, 3.12 and 3.13** (unit, integration, regression). Seven of the suites are *contract tests that discover their targets automatically*, so they also cover plugins and files that don't exist yet:
 - every behavior × protocol pairing delivers exactly once per intended recipient
 - no topology generator scales quadratically
 - every module respects the layering (`plugins` → `domain`, `ports` only), with relative imports resolved
