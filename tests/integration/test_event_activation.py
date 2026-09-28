@@ -31,7 +31,10 @@ def _run(tmp_path: Path, script=None, *, n=4, max_time=10.0, dt=1.0, activation=
                        "tick_interval": dt, "activation": activation},
         "plugins": {"behavior": behavior, "communication": protocol, "topology": RING,
                     "metrics": list(metrics), "persistence": list(persistence)},
-        "plugin_configs": {behavior.rsplit(".", 1)[-1]: {"script": script or {}}},
+        # Only the scripted probe takes a script; handing one to any other
+        # behavior would be an unread option, which the runner rejects.
+        "plugin_configs": ({"ScriptedBehavior": {"script": script or {}}}
+                           if behavior.endswith(".ScriptedBehavior") else {}),
     }
     path = tmp_path / "cfg.yaml"
     path.write_text(yaml.safe_dump(cfg))

@@ -5,8 +5,9 @@ experiment:
   seed: 421
 
 simulation:
-  num_agents: 100
-  max_virtual_time: 200
+  num_agents: 1000
+  # Converges (variance ~1e-6) in well under 60 ticks at this size.
+  max_virtual_time: 60
   tick_interval: 1
 
 plugins:
@@ -23,10 +24,7 @@ plugin_configs:
   GossipBehavior:
     initial_value_range: [0.0, 1.0]
     fan_out: 3
-  GossipProtocol: {}
   ErdosRenyiTopology:
     # p=0.01 gives ~10 expected neighbors for N=1000.
     # Above the connectivity threshold ln(1000)/1000 ≈ 0.0069.
     edge_probability: 0.01
-  CsvExporter:
-    output_dir: "./results"

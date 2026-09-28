@@ -68,7 +68,7 @@ virtual_time,value
 | Exporters | CSV |
 | Churn (optional) | Scheduled faults with state-based targeting ("crash whoever is leader at t=1000"), random Poisson failure/recovery |
 
-All eight example configs in `examples/` finish in under a second each, including interpreter startup.
+All eight example configs in `examples/` finish in under 3 seconds each (seven of them in under a second), including interpreter startup.
 
 ## By the numbers
 
@@ -129,12 +129,13 @@ With per-message latency, gossip convergence time grows linearly with mean delay
 
 ### Tests
 
-**872 passing on each of Python 3.10, 3.11, 3.12 and 3.13** (unit, integration, regression). Six of the suites are *contract tests that discover their targets automatically*, so they also cover plugins and files that don't exist yet:
+**889 passing on each of Python 3.10, 3.11, 3.12 and 3.13** (unit, integration, regression). Seven of the suites are *contract tests that discover their targets automatically*, so they also cover plugins and files that don't exist yet:
 - every behavior × protocol pairing delivers exactly once per intended recipient
 - no topology generator scales quadratically
 - every module respects the layering (`plugins` → `domain`, `ports` only), with relative imports resolved
 - no committed script hardcodes a machine-specific path
 - under random churn, no failed agent ever runs or receives a message, for every behavior × activation mode × protocol
+- no `plugin_configs` option can be silently ignored, for every configurable plugin role: a misspelled or inapplicable option is rejected before the run
 - **golden traces**: every behavior × protocol × topology is fingerprinted, so any change that alters a single delivered message fails the build and names the first tick that diverged
 
 ## What it can't do yet

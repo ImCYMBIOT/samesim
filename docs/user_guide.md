@@ -26,7 +26,7 @@ Python 3.10–3.13. One runtime dependency (PyYAML).
 git clone https://github.com/ImCYMBIOT/Simul8.git
 cd Simul8
 pip install -e ".[dev]"      # editable, with pytest
-pytest                        # optional: ~70 s, 872 tests
+pytest                        # optional: ~70 s, 889 tests
 ```
 
 ## 2. Run an experiment
@@ -89,13 +89,28 @@ plugin_configs:                  # options per plugin, keyed by CLASS name
     edge_probability: 0.02
 ```
 
-The loader checks the required fields and `activation`, and rejects a
-behavior that doesn't support the requested activation mode (section 4).
-It does **not** validate keys inside `plugin_configs`: a misspelled key is
-ignored and the plugin uses its default. Check spellings against
-[section 7](#7-plugin-reference). Plugins with numeric constraints
-(`LatencyProtocol`, `RandomChurn`, `ScheduledChurn`) reject bad values when
-the experiment is set up, before anything runs.
+Before the first event, a config is rejected if:
+
+- a required field is missing, or `activation` isn't a known mode;
+- the behavior doesn't support the requested activation mode (section 4);
+- a `plugin_configs` section names a class that isn't in the experiment
+  (e.g. `GossipBehaviour`), or gives options to a metric or exporter,
+  which never receive any;
+- **an option had no effect**, because the plugin never read it. That
+  covers a misspelling (`fanout` for `fan_out`) and an option that doesn't
+  apply to the chosen mode (`mean` with `distribution: constant`). The
+  error names the plugin and the option it most likely meant:
+
+  ```
+  plugin_configs.GossipBehavior: option(s) ['fanout'] had no effect --
+  GossipBehavior never read them, so it ran on its defaults instead.
+  Did you mean 'fan_out'?
+  ```
+
+- a value is invalid for its plugin (a negative delay, an unknown
+  distribution, a churn event in the past).
+
+An empty section (`GossipProtocol: {}`) is fine.
 
 Time is in abstract **virtual-time units**. Pick a meaning and use it
 consistently: the Raft examples use milliseconds, the gossip examples use
@@ -215,7 +230,7 @@ All paths start with `simul8.plugins.`. Options go under
 |---|---|---|
 | `gossip.GossipProtocol` | Lossless, one tick. | none |
 | `broadcast.BroadcastProtocol` | Identical to `GossipProtocol`; kept so older configs load. | none |
-| `lossy.LossyProtocol` | One tick, each delivery dropped independently. | `loss_probability` (0.1) |
+| `lossy.LossyProtocol` | One tick, each delivery dropped independently. | `loss_probability` (0.1). The old `mode` option is rejected: recipients come from the message. |
 | `latency.LatencyProtocol` | Per-delivery random delay, plus loss (section 5). | `distribution` (`constant`); `delay` for constant (one tick); `low`, `high` for uniform; `mean` for exponential; `mu`, `sigma` for lognormal (median = e^mu); `loss_probability` (0.0) |
 
 Protocols never decide *who* receives a message, only whether and when. So
@@ -278,13 +293,10 @@ Into the output directory:
   1.0,5.0
   ```
 
-- **`summary.json`** and **`summary.md`**: name, seed, agent count, time
-  settings, the behavior, protocol and topology classes, wall-clock
-  runtime and the list of files written.
-
-Keep the YAML file next to your results. The summary doesn't yet record
-`activation`, `dynamics`, the metric list or `plugin_configs`, so the YAML
-is the complete record of a run.
+- **`summary.json`** and **`summary.md`**: the complete resolved config
+  (every simulation setting with defaults filled in, every plugin, every
+  plugin option), plus wall-clock runtime and the list of files written.
+  The summary alone is enough to re-run the experiment.
 
 ## 9. Reproducibility
 
@@ -299,11 +311,11 @@ they diverged.
 
 ## 10. Examples
 
-All in `examples/`. Each finishes in under a second.
+All in `examples/`. Each finishes in a few seconds at most.
 
 | File | What it shows |
 |---|---|
-| `gossip_1000_agents.yaml` | Gossip averaging on Erdős–Rényi. (Runs 100 agents despite the name.) |
+| `gossip_1000_agents.yaml` | Gossip averaging, 1,000 agents on Erdős–Rényi |
 | `gossip_random.yaml`, `gossip_ring.yaml` | Gossip on a random graph vs. a ring |
 | `async_gossip_ring.yaml` | Boyd et al.'s asynchronous gossip, event mode, with latency |
 | `leader_random.yaml` | Max-id flooding election |

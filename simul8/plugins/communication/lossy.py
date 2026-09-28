@@ -13,8 +13,9 @@ Configuration:
 Note: a "mode" key used to select recipients here (gossip vs broadcast).
 That duplicated the addressing decision the message already carries and
 could multiply deliveries by the sender's degree; recipient selection now
-comes solely from the message. The key is accepted and ignored so existing
-configs keep loading.
+comes solely from the message. A config that still sets it is rejected
+with an explanation: silently ignoring it would run a different experiment
+from the one its author meant (mode: broadcast used to fan out).
 """
 from __future__ import annotations
 
@@ -41,6 +42,12 @@ class LossyProtocol(CommunicationProtocolPort):
         config: dict[str, Any],
         rng: random.Random,
     ) -> None:
+        if "mode" in config:
+            raise ValueError(
+                "LossyProtocol: the 'mode' option was removed. Who receives a "
+                "message is set by the behavior (Message.broadcast), not the "
+                "protocol; delete 'mode' from plugin_configs.LossyProtocol."
+            )
         self._loss_prob = float(config.get("loss_probability", 0.1))
         self._rng = rng
 

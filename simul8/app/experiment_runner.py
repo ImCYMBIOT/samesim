@@ -19,9 +19,14 @@ Assembly order (strict — each step depends on previous):
 """
 from __future__ import annotations
 
+import dataclasses
+import difflib
+import json
 import logging
+import time
 from pathlib import Path
 from types import MappingProxyType
+from typing import Any
 
 from ..core.agent_registry import AgentRegistry
 from ..core.communication_layer import CommunicationLayer
@@ -66,6 +71,134 @@ def check_activation_compatible(behavior: BehaviorPort, config: ExperimentConfig
             f"{type(behavior).__name__} does not support simulation.activation="
             f"'{mode}' (it supports: {sorted(supported)}). A behavior written for "
             f"one mode would run incorrectly -- not fail -- under another."
+        )
+
+
+class TrackedConfig(dict):
+    """One plugin's plugin_configs section, recording which keys it looked at.
+
+    Behaves exactly like the plain dict it wraps. Any access that looks a key
+    up (``[]``, get, ``in``) marks that key read; any access that walks the
+    whole mapping (iteration, keys/items/values, copy, ``**`` unpacking)
+    marks every key read, since the plugin could have used any of them.
+    """
+
+    def __init__(self, data: dict[str, Any]) -> None:
+        super().__init__(data)
+        self.read: set[str] = set()
+
+    def _all(self) -> None:
+        self.read.update(dict.keys(self))
+
+    def __getitem__(self, key):
+        self.read.add(key)
+        return super().__getitem__(key)
+
+    def get(self, key, default=None):
+        self.read.add(key)
+        return super().get(key, default)
+
+    def __contains__(self, key) -> bool:
+        self.read.add(key)
+        return super().__contains__(key)
+
+    def __iter__(self):
+        self._all()
+        return super().__iter__()
+
+    def keys(self):
+        self._all()
+        return super().keys()
+
+    def items(self):
+        self._all()
+        return super().items()
+
+    def values(self):
+        self._all()
+        return super().values()
+
+    def copy(self) -> dict[str, Any]:
+        self._all()
+        return dict(super().items())
+
+    def unread(self) -> list[str]:
+        return sorted(k for k in dict.keys(self) if k not in self.read)
+
+
+def _class_name(class_path: str) -> str:
+    return class_path.rsplit(".", 1)[-1]
+
+
+def _did_you_mean(name: str, candidates) -> str:
+    close = difflib.get_close_matches(name, sorted(candidates), n=1)
+    return f" Did you mean '{close[0]}'?" if close else ""
+
+
+def plugin_config_sections(config: ExperimentConfig) -> dict[str, TrackedConfig]:
+    """Check plugin_configs' section names; return a tracked section per configurable plugin.
+
+    A plugin_configs section that nothing reads would be silently ignored,
+    and the plugin would quietly run on its defaults -- a run that looks
+    fine and isn't the experiment that was asked for. So a section must
+    name a behavior, protocol, topology or dynamics plugin in this
+    experiment. Metrics and exporters receive no configuration at all, so a
+    non-empty section for one of them is an error too.
+
+    Raises:
+        ConfigValidationError: naming the section, and the closest plugin
+            name when there is one.
+    """
+    plugins = config.plugins
+    configurable = {_class_name(p) for p in
+                    (plugins.behavior, plugins.communication, plugins.topology, plugins.dynamics) if p}
+    unconfigurable = {_class_name(p) for p in (*plugins.metrics, *plugins.persistence)}
+    for name, section in config.plugin_configs.items():
+        if section is not None and not isinstance(section, dict):
+            raise ConfigValidationError(
+                f"plugin_configs.{name} must be a mapping of option: value, got {section!r}"
+            )
+        if name in configurable:
+            continue
+        if name in unconfigurable:
+            if section:
+                raise ConfigValidationError(
+                    f"plugin_configs.{name} has options {sorted(section)}, but {name} "
+                    f"takes no configuration: metrics and exporters are never passed "
+                    f"plugin_configs, so these would be silently ignored."
+                )
+            continue
+        raise ConfigValidationError(
+            f"plugin_configs.{name} does not match any plugin in this experiment, "
+            f"so it would be silently ignored.{_did_you_mean(name, configurable)} "
+            f"Configurable plugins here: {sorted(configurable)}."
+        )
+    return {name: TrackedConfig(config.plugin_configs.get(name) or {}) for name in configurable}
+
+
+def check_plugin_configs_read(sections: dict[str, TrackedConfig]) -> None:
+    """After setup, reject any option its plugin never looked at.
+
+    An unread option had no effect: a misspelled key (the plugin used its
+    default instead), or one that doesn't apply to the mode chosen (a
+    'mean' with distribution: constant). Plugins read all their options
+    during setup (initialize/generate), so by then every option that will
+    ever matter has been read.
+
+    Raises:
+        ConfigValidationError: naming the plugin, each unused option, and
+            the option the plugin did ask for that it most resembles.
+    """
+    for name, section in sections.items():
+        unread = section.unread()
+        if not unread:
+            continue
+        asked_for = section.read - set(dict.keys(section))
+        hints = "".join(_did_you_mean(k, asked_for) for k in unread)
+        raise ConfigValidationError(
+            f"plugin_configs.{name}: option(s) {unread} had no effect -- {name} never "
+            f"read them, so it ran on its defaults instead.{hints} Options {name} "
+            f"read in this configuration: {sorted(section.read)}."
         )
 
 
@@ -171,10 +304,12 @@ class ExperimentRunner:
             for cp in config.plugins.persistence
         ]
 
+        sections = plugin_config_sections(config)
+
         # --- 4. Create agents + initialize behavior ---
         agent_registry = AgentRegistry()
-        behavior_class_name = config.plugins.behavior.rsplit(".", 1)[-1]
-        behavior_config = config.plugin_configs.get(behavior_class_name, {})
+        behavior_class_name = _class_name(config.plugins.behavior)
+        behavior_config = sections[behavior_class_name]
 
         logger.info("Initializing %d agents...", config.simulation.num_agents)
         agent_ids: list[AgentId] = []
@@ -187,26 +322,30 @@ class ExperimentRunner:
 
         # --- 5. Build topology ---
         topology_manager = TopologyManager()
-        topology_class_name = config.plugins.topology.rsplit(".", 1)[-1]
-        topology_config = config.plugin_configs.get(topology_class_name, {})
+        topology_class_name = _class_name(config.plugins.topology)
         logger.info("Building topology (%s)...", topology_class_name)
         topology_manager.build(
-            topology_generator, agent_ids, topology_config, rng_manager.global_rng
+            topology_generator, agent_ids, sections[topology_class_name], rng_manager.global_rng
         )
 
         # --- 6. Initialize communication protocol ---
-        comm_class_name = config.plugins.communication.rsplit(".", 1)[-1]
-        comm_config = config.plugin_configs.get(comm_class_name, {})
-        comm_protocol.initialize(topology_manager.topology, comm_config, rng_manager.global_rng)
+        comm_protocol.initialize(topology_manager.topology,
+                                 sections[_class_name(config.plugins.communication)],
+                                 rng_manager.global_rng)
 
         # --- 6b. Churn (optional) ---
         # Its own RNG stream, so adding churn never shifts the protocol's or
         # the topology generator's draws.
         if dynamics is not None:
-            dyn_name = config.plugins.dynamics.rsplit(".", 1)[-1]
             dynamics.initialize(topology_manager.topology,
-                                config.plugin_configs.get(dyn_name, {}),
+                                sections[_class_name(config.plugins.dynamics)],
                                 rng_manager.stream("dynamics"))
+
+        # Every plugin has now done its setup, so every option that will ever
+        # matter has been read. (With no agents, the behavior never ran.)
+        if not agent_ids:
+            sections.pop(behavior_class_name)
+        check_plugin_configs_read(sections)
 
         def join_agent(agent_id: AgentId):
             # A joining agent is initialized exactly as it would have been
@@ -238,7 +377,6 @@ class ExperimentRunner:
         )
 
         # --- 9. Run with wall-clock timing ---
-        import time
         start_wall_time = time.perf_counter()
         engine.run()
         elapsed_wall_time = time.perf_counter() - start_wall_time
@@ -262,9 +400,14 @@ class ExperimentRunner:
         written_paths: list[str],
         output_dir: Path,
     ) -> None:
-        import json
-        
+        # The complete resolved config (defaults filled in), so the summary
+        # alone is enough to re-run the experiment. Built from the dataclass
+        # fields rather than listed by hand: a hand-written list silently
+        # misses every field added after it was written, which is how
+        # activation, dynamics, metrics and plugin_configs went unrecorded.
+        resolved = dataclasses.asdict(config)
         summary_data = {
+            # Flat keys: read by `simul8 visualize`, kept stable.
             "experiment_name": config.name,
             "seed": config.seed,
             "num_agents": config.simulation.num_agents,
@@ -273,28 +416,32 @@ class ExperimentRunner:
             "behavior_plugin": config.plugins.behavior,
             "communication_plugin": config.plugins.communication,
             "topology_plugin": config.plugins.topology,
+            "schema_version": config.schema_version,
             "wall_clock_runtime_seconds": elapsed_wall_time,
             "output_files": written_paths,
-            "schema_version": config.schema_version,
+            "config": resolved,
         }
 
-        # Write summary.json
         json_path = output_dir / "summary.json"
         with open(json_path, "w", encoding="utf-8") as f:
-            json.dump(summary_data, f, indent=2)
+            json.dump(summary_data, f, indent=2, default=str)
         logger.info("Wrote summary: %s", json_path)
 
-        # Write summary.md
         md_path = output_dir / "summary.md"
         with open(md_path, "w", encoding="utf-8") as f:
             f.write(f"# Experiment Summary: {config.name}\n\n")
             f.write(f"- **Seed**: {config.seed}\n")
-            f.write(f"- **Agents**: {config.simulation.num_agents}\n")
-            f.write(f"- **Max Virtual Time**: {config.simulation.max_virtual_time}\n")
-            f.write(f"- **Behavior**: `{config.plugins.behavior}`\n")
-            f.write(f"- **Communication**: `{config.plugins.communication}`\n")
-            f.write(f"- **Topology**: `{config.plugins.topology}`\n")
+            for section in ("simulation", "plugins"):
+                for key, value in resolved[section].items():
+                    if value in (None, [], ()):
+                        continue
+                    shown = ", ".join(f"`{v}`" for v in value) if isinstance(value, (list, tuple)) else f"`{value}`"
+                    f.write(f"- **{section}.{key}**: {shown}\n")
             f.write(f"- **Wall-clock Runtime**: {elapsed_wall_time:.4f} seconds\n\n")
+            if config.plugin_configs:
+                f.write("## Plugin configs\n\n```json\n")
+                f.write(json.dumps(config.plugin_configs, indent=2, default=str))
+                f.write("\n```\n\n")
             f.write("## Output Files\n")
             for path in written_paths:
                 f.write(f"- `{path}`\n")

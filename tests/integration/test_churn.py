@@ -31,9 +31,14 @@ def _run(tmp_path, script=None, events=(), *, n=4, max_time=10.0, activation="ev
         "plugins": {"behavior": behavior, "communication": f"{PROBES}.PayloadDelayProtocol",
                     "topology": topology, "dynamics": SCHEDULED,
                     "metrics": [f"{PROBES}.EventLogMetric", *metrics], "persistence": list(persistence)},
-        "plugin_configs": {behavior.rsplit(".", 1)[-1]: behavior_config or {"script": script or {}},
-                           "ScheduledChurn": {"events": list(events)}, **(extra_configs or {})},
+        "plugin_configs": {"ScheduledChurn": {"events": list(events)}, **(extra_configs or {})},
     }
+    # Only the scripted probe takes a script; any other behavior gets exactly
+    # the options given (an unread option is rejected by the runner).
+    if behavior_config is not None:
+        cfg["plugin_configs"][behavior.rsplit(".", 1)[-1]] = behavior_config
+    elif behavior.endswith(".ScriptedBehavior"):
+        cfg["plugin_configs"]["ScriptedBehavior"] = {"script": script or {}}
     path = tmp_path / "cfg.yaml"
     path.write_text(yaml.safe_dump(cfg))
     ExperimentRunner().run(path, output_dir=tmp_path / "out")

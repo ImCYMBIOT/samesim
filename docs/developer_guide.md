@@ -78,6 +78,9 @@ simul8/
 5. The topology is generated, the protocol is initialized with it and
    metrics get `on_setup(topology, initial_states)`.
 6. The dynamics plugin, if any, is initialized with its own RNG stream.
+   Each plugin gets its `plugin_configs` section as a `TrackedConfig`.
+   After setup, an option no plugin read is an error, as is a section that
+   names no plugin in the run.
 7. The engine runs until the queue is empty or `max_virtual_time` is passed.
 8. Metric series go to the persistence plugins, then `summary.json` and
    `summary.md` are written.
@@ -167,8 +170,13 @@ port. A config references it by dotted path. There is nothing to register.
 2. **Zero-argument `__init__`.** Configuration arrives later as
    `config: dict` in `initialize()` or `generate()`, from
    `plugin_configs.<ClassName>`. Missing keys fall back to defaults in code.
-   Reject invalid values in `initialize()` with a `ValueError` that names
-   your plugin. A run should never fail partway through.
+   **Read every option during that call**, not later: the runner records
+   which options each plugin reads during setup and rejects any it never
+   read (a typo, or an option for another mode). Only read the options
+   that apply, too. A plugin that did `config.get("mean")` even with
+   `distribution: constant` would stop that mistake being caught. Reject
+   invalid values with a `ValueError` that names your plugin, so a run
+   never fails partway through.
 3. **Follow the determinism rules** in section 3.
 4. **Document the plugin in its module docstring:** what it models, which
    activation modes it supports, and each `plugin_configs` key with its
@@ -356,6 +364,7 @@ They discover plugins by walking the package.
 | `tests/unit/test_architecture_boundaries.py` | The import table in section 1. | Importing `core` from a plugin. |
 | `tests/unit/test_portable_math_usage.py` | No `math.log`, `exp`, `pow`, float `**`, `rng.expovariate` or similar in core, domain or plugins. | Use `portable_math`. |
 | `tests/unit/test_experiment_script_portability.py` | No committed `.py` file hardcodes an absolute path. | Build paths from `Path(__file__)`. |
+| `tests/integration/test_plugin_configs.py` | For every configurable plugin role in `PluginsConfig`, a misspelled option is rejected; `summary.json` records every `ExperimentConfig` field. | Reading config outside setup; adding a config field the summary doesn't serialize. |
 
 **Every guard is mutation-tested.** When you add a guard, break the code on
 purpose and check that the guard fails. Several gaps were found this way:

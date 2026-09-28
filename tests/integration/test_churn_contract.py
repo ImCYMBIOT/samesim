@@ -78,9 +78,10 @@ def test_churn_invariants(behavior, mode, protocol, tmp_path):
             behavior.__name__: BEHAVIOR_CONFIGS.get(behavior.__name__, {}),
             "ErdosRenyiTopology": {"edge_probability": 0.4},
             "RandomChurn": {"failure_rate": 0.05, "recovery_rate": 0.4},
-            "LatencyProtocol": {"distribution": "exponential", "mean": 0.7},
         },
     }
+    if protocol.__name__ == "LatencyProtocol":
+        cfg["plugin_configs"]["LatencyProtocol"] = {"distribution": "exponential", "mean": 0.7}
     path = tmp_path / "cfg.yaml"
     path.write_text(yaml.safe_dump(cfg))
     ExperimentRunner().run(path, output_dir=tmp_path / "out")

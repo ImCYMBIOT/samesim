@@ -165,6 +165,9 @@ the argument for principle 5.
 | The addressing test skipped every event-driven behavior | Phase 2 | The test follows timers and reads the intended recipients off the messages |
 | Event-mode runs differed on macOS and Windows | First cross-OS CI run | `portable_math`, a lint test and known-answer bit patterns |
 | Failing an agent paused its timers instead of cancelling them | Mutation testing | A test with a timer due after recovery |
+| Unused `plugin_configs` options were silently ignored: an example's `CsvExporter: output_dir` never did anything, and `LossyProtocol` swallowed a removed `mode` option | Documentation audit | Each plugin's section is tracked during setup, and any option never read is rejected, with a suggestion. This works for any plugin without it declaring its keys, and it also catches options for a mode that wasn't chosen. |
+| `summary.json` listed config fields by hand and missed every field added later | Documentation audit | The summary serializes the whole `ExperimentConfig`; a test walks its dataclass fields |
+| `gossip_1000_agents.yaml` ran 100 agents | Documentation audit | Now 1,000 agents |
 
 Scientific findings are in the README's "By the numbers" section and in
 each study under `experiments/`. The one that matters most for how the
@@ -206,14 +209,10 @@ Each phase was to ship with a result the old engine couldn't produce.
 4. **Why a run ended.** An event-mode run whose agents all go silent ends
    when the queue empties. `SimulationEndedEvent` should say which
    condition ended it.
-5. **Complete run record.** `summary.json` omits `activation`, `dynamics`,
-   the metric list and `plugin_configs`. It should embed the full resolved
-   config.
-6. **Config validation.** `plugin_configs` keys aren't checked, so a typo
-   silently becomes a default. Plugins could declare their keys and the
-   loader could reject unknown ones. The same declaration would enable a
-   `simul8 validate` command.
-7. **Config migration.** `schema_version` is checked but only `"1.0"`
+5. **`simul8 validate`.** Setup already rejects every bad option before
+   the first event. A command that runs setup alone would let a sweep
+   check all its configs before committing hours of compute.
+6. **Config migration.** `schema_version` is checked but only `"1.0"`
    exists. The first schema change needs a migration path so old configs
    still reproduce.
 
@@ -224,7 +223,7 @@ Each phase was to ship with a result the old engine couldn't produce.
 - a versioned release on PyPI
 - a Python API that builds and runs an experiment without YAML and returns
   results in memory
-- open questions 5 and 6
+- a `simul8 validate` command (open question 5)
 
 **Capability gaps.**
 - Network partitions and one-way links: messages in flight across a cut
