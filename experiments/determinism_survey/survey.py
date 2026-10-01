@@ -19,6 +19,12 @@ Scenarios, each written the way the tool's documentation writes models:
     ndlib/sir             NDlib SIRModel on a NetworkX G(n, p) graph
     python/gossip         the same averaging in plain Python, no framework:
                           isolates what the interpreter itself changes
+    libm/<function>       the platform C math library directly: math.log,
+                          exp, pow, sin and random.expovariate, gauss,
+                          lognormvariate, each over 200,000 inputs
+    portable/<function>   simul8.domain.portable_math's log, exp,
+                          expovariate, normalvariate, lognormvariate on the
+                          same inputs
 
 The Mesa and plain-Python gossip models average with the builtin sum(),
 as idiomatic Python does. CPython 3.12 changed sum() of floats to a
@@ -221,6 +227,36 @@ def python_gossip() -> str:
     return digest(trace)
 
 
+LIBM_N = 200_000
+
+
+def _inputs():
+    rng = random.Random(SEED)
+    return [rng.uniform(1e-6, 50.0) for _ in range(LIBM_N)]
+
+
+def _libm(fn) -> str:
+    import math
+    xs = _inputs()
+    return digest(fn(math, x) for x in xs)
+
+
+def _variates(draw) -> str:
+    rng = random.Random(SEED)
+    return digest(draw(rng) for _ in range(LIBM_N))
+
+
+def _portable(fn) -> str:
+    from simul8.domain import portable_math
+    return digest(fn(portable_math, x) for x in _inputs())
+
+
+def _portable_variates(draw) -> str:
+    from simul8.domain import portable_math
+    rng = random.Random(SEED)
+    return digest(draw(portable_math, rng) for _ in range(LIBM_N))
+
+
 SCENARIOS = {
     "simul8/async_gossip": ("simul8", lambda: _simul8("async_gossip_ring.yaml")),
     "simul8/sir": ("simul8", lambda: _simul8("sir_random.yaml")),
@@ -230,6 +266,18 @@ SCENARIOS = {
     "mesa/gossip": ("mesa", mesa_gossip),
     "ndlib/sir": ("ndlib", ndlib_sir),
     "python/gossip": (None, python_gossip),
+    "libm/log": (None, lambda: _libm(lambda m, x: m.log(x))),
+    "libm/exp": (None, lambda: _libm(lambda m, x: m.exp(x / 2))),
+    "libm/pow": (None, lambda: _libm(lambda m, x: m.pow(x, 1.37))),
+    "libm/sin": (None, lambda: _libm(lambda m, x: m.sin(x))),
+    "libm/expovariate": (None, lambda: _variates(lambda r: r.expovariate(0.9))),
+    "libm/gauss": (None, lambda: _variates(lambda r: r.gauss(0.0, 1.0))),
+    "libm/lognormvariate": (None, lambda: _variates(lambda r: r.lognormvariate(0.0, 1.0))),
+    "portable/log": (None, lambda: _portable(lambda p, x: p.log(x))),
+    "portable/exp": (None, lambda: _portable(lambda p, x: p.exp(x / 2))),
+    "portable/expovariate": (None, lambda: _portable_variates(lambda p, r: p.expovariate(r, 0.9))),
+    "portable/normalvariate": (None, lambda: _portable_variates(lambda p, r: p.normalvariate(r, 0.0, 1.0))),
+    "portable/lognormvariate": (None, lambda: _portable_variates(lambda p, r: p.lognormvariate(r, 0.0, 1.0))),
 }
 
 
