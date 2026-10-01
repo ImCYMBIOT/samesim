@@ -126,3 +126,11 @@ def test_cli_lists_examples_and_plugins(capsys):
     assert main(["plugins", "LatencyProtocol"]) == 0
     assert "distribution" in capsys.readouterr().out
     assert main(["plugins", "NoSuchPlugin"]) == 2
+
+
+def test_package_version_has_one_value():
+    import re
+    from pathlib import Path
+    text = (Path(__file__).resolve().parents[2] / "pyproject.toml").read_text()
+    version = re.search(r'^version = "([^"]+)"', text, re.M).group(1)  # no tomllib on 3.10
+    assert version == samesim.__version__, "pyproject.toml and samesim.__version__ disagree"
