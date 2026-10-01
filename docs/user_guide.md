@@ -138,7 +138,7 @@ other mode is rejected at load:
 
 | Behavior | synchronous | event |
 |---|:-:|:-:|
-| `GossipBehavior`, `LeaderElectionBehavior`, `SirEpidemicBehavior` | ✓ | |
+| `GossipBehavior`, `LeaderElectionBehavior`, `SirEpidemicBehavior`, `VoterBehavior` | ✓ | |
 | `AsyncGossipBehavior`, `RaftElectionBehavior`, `QueueBehavior` | | ✓ |
 
 At a single instant the order is always: churn changes → message
@@ -223,6 +223,7 @@ All paths start with `simul8.plugins.`. Options go under
 | `async_gossip.AsyncGossipBehavior` | Boyd et al. (2006) randomized pairwise averaging on Poisson clocks. Event mode. State: `value`. | `clock_rate` (1.0), `initial_value_range` ([0, 1]) |
 | `leader_election.LeaderElectionBehavior` | Max-id flooding: adopt and rebroadcast the largest candidate id seen. | none |
 | `raft_election.RaftElectionBehavior` | Raft leader election (§5.2): terms, randomized timeouts, votes, heartbeats. No log replication. Event mode. Needs a complete graph (`ErdosRenyiTopology` with `edge_probability: 1.0`). State: `role`, `term`, `voted_for`, `votes`, `leader_id`. | `election_timeout_min` (150), `election_timeout_max` (300), `heartbeat_interval` (50), `initial_leader` (none: cold start) |
+| `voter.VoterBehavior` | Synchronous voter model: each tick every agent adopts a random neighbor's previous opinion (0 or 1). Opinion 1 wins with probability equal to its degree-weighted initial fraction. State: `opinion`. | `initial_ones` (agents 0..k−1 start with 1) or `initial_fraction` (0.5) |
 | `queue.QueueBehavior` | Single-server FIFO queue: agent `server` serves customers for exponential times; each of its neighbors sends customers as a Poisson process. With constant latency this is the M/M/1 queue. Event mode. | `arrival_rate` per source (0.8), `service_rate` (1.0), `server` (0) |
 | `sir_behavior.SirEpidemicBehavior` | SIR epidemic. S→I with probability 1−(1−β)^k for k infected neighbors; I→R with probability γ per tick. State: `status`. | `transmission_rate` β (0.2), `recovery_rate` γ (0.1), `initial_infected` (1) |
 
@@ -263,6 +264,7 @@ None take options. The series name is the file suffix in the output.
 | `churn_metrics.ChurnMetric` | `churn` | Agents running at each tick, tagged with messages lost and agents down |
 | `state_trace.StateTraceMetric` | `state_trace` | Every agent's state at every change (large; used by `visualize`) |
 | `state_trace.TopologyMetric` | `topology` | The edge list (used by `visualize`) |
+| `voter_metrics.VoterMetric` | `voter` | Fraction holding opinion 1 per tick, tagged with the degree-weighted fraction (the martingale whose start value is the win probability) |
 | `queue_metrics.QueueMetric` | `queue` | For `QueueBehavior`: each customer's wait in queue (with time in system), and per tick the integral of the number in system, so any window's time-average can be computed |
 | `trace_digest.TraceDigestMetric` | `trace_digest` | SHA-256 fingerprint of the whole run so far, per tick (section 9) |
 
