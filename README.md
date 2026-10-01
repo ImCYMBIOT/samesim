@@ -173,3 +173,7 @@ This crashes a Raft cluster's leader at t=1000 ms and restarts it at 2500 ms, an
 pytest                  # ~70 s
 pytest -m "not slow"    # skip the scale tests
 ```
+
+## License
+
+MIT. See [LICENSE](LICENSE).
