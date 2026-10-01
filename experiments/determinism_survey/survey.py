@@ -235,15 +235,26 @@ def _inputs():
     return [rng.uniform(1e-6, 50.0) for _ in range(LIBM_N)]
 
 
-def _libm(fn) -> str:
+BLOCK = 100  # libm scenarios also hash each block of 100 outputs
+
+
+def _blocks(values) -> dict:
+    """Whole-output hash, plus one short hash per block of BLOCK outputs, so
+    comparing two platforms shows how many blocks -- roughly, how many
+    values, when differences are rare -- disagree."""
+    values = list(values)
+    blocks = [digest(values[i:i + BLOCK])[:12] for i in range(0, len(values), BLOCK)]
+    return {"hash": digest(values), "blocks": blocks}
+
+
+def _libm(fn) -> dict:
     import math
-    xs = _inputs()
-    return digest(fn(math, x) for x in xs)
+    return _blocks(fn(math, x) for x in _inputs())
 
 
-def _variates(draw) -> str:
+def _variates(draw) -> dict:
     rng = random.Random(SEED)
-    return digest(draw(rng) for _ in range(LIBM_N))
+    return _blocks(draw(rng) for _ in range(LIBM_N))
 
 
 def _portable(fn) -> str:
@@ -298,7 +309,11 @@ def main() -> None:
             continue
         try:
             a, b = fn(), fn()
-            results[name] = {"status": "ok", "hash": a, "repeatable": a == b}
+            if isinstance(a, dict):  # libm scenario: hash plus block hashes
+                results[name] = {"status": "ok", "hash": a["hash"], "repeatable": a == b,
+                                 "blocks": a["blocks"]}
+            else:
+                results[name] = {"status": "ok", "hash": a, "repeatable": a == b}
         except Exception as exc:  # report, don't hide
             results[name] = {"status": "error", "error": f"{type(exc).__name__}: {exc}"}
     report = {
