@@ -35,6 +35,24 @@ def test_every_example_describes_itself_and_validates(example):
     samesim.validate(example.name)
 
 
+@pytest.mark.parametrize("example", EXAMPLES, ids=lambda e: e.name)
+def test_every_example_records_its_fingerprint(example):
+    """`samesim run` prints the digest and `samesim digest` reads it back:
+    the shipped examples are how a new user sees same seed, same run."""
+    metrics = api.load_raw(example.name)["plugins"].get("metrics", [])
+    assert "samesim.plugins.metrics.trace_digest.TraceDigestMetric" in metrics, (
+        f"{example.path.name}: add TraceDigestMetric to plugins.metrics")
+
+
+def test_every_behavior_has_an_example_to_try():
+    """A behavior listed by `samesim plugins` should be runnable in one
+    command: `samesim run <example>`."""
+    used = {api.load_raw(e.name)["plugins"]["behavior"].rsplit(".", 1)[1] for e in EXAMPLES}
+    missing = sorted(p.name for p in PLUGINS if p.kind == "behavior")
+    missing = [b for b in missing if b not in used]
+    assert not missing, f"no shipped example uses {missing}; add one to samesim/examples/"
+
+
 # ---------------------------------------------------------------- the API
 
 def test_api_runs_in_memory_and_writes_only_when_asked(tmp_path, monkeypatch):

@@ -22,6 +22,7 @@ plugins:
     - "samesim.plugins.metrics.sir_metrics.SirRecoveredMetric"
     - "samesim.plugins.metrics.state_trace.TopologyMetric"
     - "samesim.plugins.metrics.state_trace.StateTraceMetric"
+    - "samesim.plugins.metrics.trace_digest.TraceDigestMetric"
   persistence:
     - "samesim.plugins.persistence.csv_exporter.CsvExporter"
 

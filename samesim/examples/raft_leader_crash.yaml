@@ -24,6 +24,7 @@ plugins:
     - "samesim.plugins.metrics.raft_metrics.RaftElectionMetric"
     - "samesim.plugins.metrics.churn_metrics.ChurnMetric"
     - "samesim.plugins.metrics.message_count.MessageCountMetric"
+    - "samesim.plugins.metrics.trace_digest.TraceDigestMetric"
   persistence:
     - "samesim.plugins.persistence.csv_exporter.CsvExporter"
 

@@ -325,7 +325,8 @@ def test_churn_trace_is_unchanged(behavior, protocol, mode, tmp_path, golden):
 @pytest.mark.parametrize("example", EXAMPLES, ids=lambda p: p.stem)
 def test_example_outputs_are_unchanged(example, tmp_path, golden):
     cfg = yaml.safe_load(example.read_text())
-    cfg["plugins"]["metrics"] = list(cfg["plugins"].get("metrics", [])) + [DIGEST_METRIC]
+    metrics = list(cfg["plugins"].get("metrics", []))
+    cfg["plugins"]["metrics"] = metrics if DIGEST_METRIC in metrics else metrics + [DIGEST_METRIC]
     out = _run(cfg, tmp_path)
     name = cfg["experiment"]["name"]
 

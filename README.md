@@ -143,7 +143,7 @@ The same fixed-seed scenarios in SameSim, SimPy, Mesa, NDlib and plain Python, o
 
 ### Tests
 
-**1122 passing on each of Python 3.10, 3.11, 3.12 and 3.13** (unit, integration, regression). Seven of the suites are *contract tests that discover their targets automatically*, so they also cover plugins and files that don't exist yet:
+**1137 passing on each of Python 3.10, 3.11, 3.12 and 3.13** (unit, integration, regression). Seven of the suites are *contract tests that discover their targets automatically*, so they also cover plugins and files that don't exist yet:
 - every behavior × protocol pairing delivers exactly once per intended recipient
 - no topology generator scales quadratically
 - every module respects the layering (`plugins` → `domain`, `ports` only), with relative imports resolved
@@ -167,6 +167,17 @@ pip install samesim
 ```
 
 Python 3.10–3.13; the only runtime dependency is PyYAML.
+
+### Try it: same seed, same simulation
+
+```bash
+samesim run raft_leader_crash -o a        # prints a digest: a SHA-256 of every message and state change
+samesim run raft_leader_crash -o b        # same seed: the same digest, on any OS and Python 3.10–3.13
+samesim run raft_leader_crash --seed 2    # another seed: a different run, a different digest
+samesim visualize a                       # dashboard.html: interactive charts of every metric
+```
+
+Every shipped example records this fingerprint. `samesim examples` lists them: gossip averaging, leader election, Raft, an SIR epidemic, an M/M/1 queue and the voter model.
 
 ### From the command line
 

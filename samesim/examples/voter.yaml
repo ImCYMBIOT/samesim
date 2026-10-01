@@ -1,0 +1,27 @@
+# Voter model on a Barabasi-Albert graph (50 agents): agents 0-4, the best-connected, start with opinion 1. Opinion 1 wins with probability equal to its degree-weighted share (about 0.27), not its plain share (0.10).
+schema_version: "1.0"
+
+experiment:
+  name: "voter"
+  seed: 42
+
+simulation:
+  num_agents: 50
+  max_virtual_time: 400
+  tick_interval: 1
+
+plugins:
+  behavior: "samesim.plugins.behaviors.voter.VoterBehavior"
+  communication: "samesim.plugins.communication.gossip.GossipProtocol"
+  topology: "samesim.plugins.topologies.barabasi_albert.BarabasiAlbertTopology"
+  metrics:
+    - "samesim.plugins.metrics.voter_metrics.VoterMetric"
+    - "samesim.plugins.metrics.trace_digest.TraceDigestMetric"
+  persistence:
+    - "samesim.plugins.persistence.csv_exporter.CsvExporter"
+
+plugin_configs:
+  VoterBehavior:
+    initial_ones: 5
+  BarabasiAlbertTopology:
+    m: 2

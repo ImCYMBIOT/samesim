@@ -21,6 +21,7 @@ plugins:
   metrics:
     - "samesim.plugins.metrics.convergence.ConvergenceMetric"
     - "samesim.plugins.metrics.message_count.MessageCountMetric"
+    - "samesim.plugins.metrics.trace_digest.TraceDigestMetric"
   persistence:
     - "samesim.plugins.persistence.csv_exporter.CsvExporter"
 

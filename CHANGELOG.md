@@ -5,6 +5,9 @@
 ### Added
 - `AsyncGossipBehavior` option `schedule: cycle`: one exchange per agent per
   unit time, at a random point in it, as in PeerSim's cycle-driven engine.
+- Examples `mm1_queue` and `voter`. Every example now records its
+  fingerprint, so `samesim run` prints a digest and `samesim digest` works on
+  its results.
 - Validation study: push-pull averaging vs. PeerSim 1.0.5 and Jelasity et
   al.'s closed form 1/(2√e), on identical graphs, with a speed comparison.
 

@@ -349,7 +349,8 @@ they diverged.
 
 Shipped with the package; list them with `samesim examples`, run one by
 name (`samesim run gossip_ring`) or copy one with `samesim new`. Each
-finishes in a few seconds at most.
+finishes in a few seconds at most, and records its fingerprint (`TraceDigestMetric`),
+so `samesim run` prints a digest that is the same on every re-run with the same seed.
 
 | Name | What it shows |
 |---|---|
@@ -360,6 +361,8 @@ finishes in a few seconds at most.
 | `sir_random` | SIR epidemic on a Watts–Strogatz small-world graph |
 | `raft_election` | Raft election on a 5-node cluster |
 | `raft_leader_crash` | Raft Fig. 16 scenario: crash the leader at t=1000, restart it at t=2500 |
+| `mm1_queue` | M/M/1 queue at load 0.8, about 16,000 customers; mean wait near the closed form, 4 |
+| `voter` | Voter model on Barabási–Albert: opinion 1 starts on the 5 best-connected agents |
 
 For studies built from these, with their data and scripts, see
 [`experiments/`](../experiments/) and the "By the numbers" section of the

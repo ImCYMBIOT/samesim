@@ -1,0 +1,30 @@
+# M/M/1 queue: one server (agent 0) fed by one Poisson source at load rho = 0.8, about 16,000 customers. Closed form: mean wait in queue rho / (mu - lambda) = 4; a single run lands within about 1 of it.
+schema_version: "1.0"
+
+experiment:
+  name: "mm1_queue"
+  seed: 42
+
+simulation:
+  num_agents: 2
+  max_virtual_time: 20000
+  tick_interval: 1000
+  activation: "event"
+
+plugins:
+  behavior: "samesim.plugins.behaviors.queue.QueueBehavior"
+  communication: "samesim.plugins.communication.latency.LatencyProtocol"
+  topology: "samesim.plugins.topologies.ring.RingTopology"
+  metrics:
+    - "samesim.plugins.metrics.queue_metrics.QueueMetric"
+    - "samesim.plugins.metrics.trace_digest.TraceDigestMetric"
+  persistence:
+    - "samesim.plugins.persistence.csv_exporter.CsvExporter"
+
+plugin_configs:
+  QueueBehavior:
+    arrival_rate: 0.8
+    service_rate: 1.0
+  LatencyProtocol:
+    distribution: "constant"
+    delay: 0.000001
