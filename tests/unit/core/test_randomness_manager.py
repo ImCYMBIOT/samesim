@@ -1,7 +1,7 @@
 """Unit tests for RandomnessManager."""
 import pytest
-from simul8.core.randomness_manager import RandomnessManager
-from simul8.domain.ids import AgentId
+from samesim.core.randomness_manager import RandomnessManager
+from samesim.domain.ids import AgentId
 
 
 class TestRandomnessManagerInit:

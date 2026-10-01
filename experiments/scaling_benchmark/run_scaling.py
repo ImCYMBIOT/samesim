@@ -25,7 +25,7 @@ import yaml
 
 # Repo root, derived from this file so the script runs from any checkout.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from simul8.app.experiment_runner import ExperimentRunner  # noqa: E402
+from samesim.app.experiment_runner import ExperimentRunner  # noqa: E402
 
 
 class _EventsCapture(logging.Handler):
@@ -36,14 +36,14 @@ class _EventsCapture(logging.Handler):
         self.events_processed: int | None = None
 
     def emit(self, record: logging.LogRecord) -> None:
-        if record.name == "simul8.core.engine" and "events_processed" in record.msg:
+        if record.name == "samesim.core.engine" and "events_processed" in record.msg:
             # record.args = (name, events_processed, final_time)
             self.events_processed = record.args[1]
 
 HERE = Path(__file__).resolve().parent
 # Intermediate configs and per-run CSVs. Kept out of the repo by default
-# (see .gitignore); override with SIMUL8_EXPERIMENT_WORK to relocate.
-SCRATCH = Path(os.environ.get("SIMUL8_EXPERIMENT_WORK", HERE / "_work"))
+# (see .gitignore); override with SAMESIM_EXPERIMENT_WORK to relocate.
+SCRATCH = Path(os.environ.get("SAMESIM_EXPERIMENT_WORK", HERE / "_work"))
 CONFIG_DIR = SCRATCH / "configs"
 RESULTS_DIR = SCRATCH / "results"
 CONFIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -66,14 +66,14 @@ def make_config(n: int, seed: int) -> tuple[str, Path]:
         "experiment": {"name": name, "seed": seed},
         "simulation": {"num_agents": n, "max_virtual_time": MAX_VIRTUAL_TIME, "tick_interval": 1},
         "plugins": {
-            "behavior": "simul8.plugins.behaviors.gossip_behavior.GossipBehavior",
-            "communication": "simul8.plugins.communication.gossip.GossipProtocol",
-            "topology": "simul8.plugins.topologies.random_graph.ErdosRenyiTopology",
+            "behavior": "samesim.plugins.behaviors.gossip_behavior.GossipBehavior",
+            "communication": "samesim.plugins.communication.gossip.GossipProtocol",
+            "topology": "samesim.plugins.topologies.random_graph.ErdosRenyiTopology",
             "metrics": [
-                "simul8.plugins.metrics.message_count.MessageCountMetric",
-                "simul8.plugins.metrics.convergence.ConvergenceMetric",
+                "samesim.plugins.metrics.message_count.MessageCountMetric",
+                "samesim.plugins.metrics.convergence.ConvergenceMetric",
             ],
-            "persistence": ["simul8.plugins.persistence.csv_exporter.CsvExporter"],
+            "persistence": ["samesim.plugins.persistence.csv_exporter.CsvExporter"],
         },
         "plugin_configs": {
             "GossipBehavior": {"initial_value_range": [0.0, 1.0], "fan_out": FAN_OUT},
@@ -93,7 +93,7 @@ def run_one(n: int, seed: int) -> dict:
     mem_before = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss  # KB on Linux
 
     capture = _EventsCapture()
-    engine_logger = logging.getLogger("simul8.core.engine")
+    engine_logger = logging.getLogger("samesim.core.engine")
     engine_logger.addHandler(capture)
     previous_level = engine_logger.level
     engine_logger.setLevel(logging.INFO)

@@ -17,7 +17,7 @@ three qualitative claims about this:
 3. Timeouts too close to the network delay break Raft's timing requirement
    (broadcast time ≪ election timeout), and the cluster becomes unstable.
 
-Does `RaftElectionBehavior` in Simul8 reproduce all three?
+Does `RaftElectionBehavior` in SameSim reproduce all three?
 
 ## Method
 

@@ -1,9 +1,9 @@
 """Unit tests for LossyProtocol."""
 import random
-from simul8.domain.ids import AgentId, MessageId
-from simul8.domain.message import Message
-from simul8.domain.topology import TopologyGraph
-from simul8.plugins.communication.lossy import LossyProtocol
+from samesim.domain.ids import AgentId, MessageId
+from samesim.domain.message import Message
+from samesim.domain.topology import TopologyGraph
+from samesim.plugins.communication.lossy import LossyProtocol
 
 
 def test_lossy_protocol_drop_all():

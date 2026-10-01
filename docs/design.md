@@ -1,4 +1,4 @@
-# Simul8 Design
+# SameSim Design
 
 Why the engine is built the way it is, what was learned while building it,
 and what comes next. How-to material is in the [User Guide](user_guide.md)
@@ -198,9 +198,9 @@ Each phase was to ship with a result the old engine couldn't produce.
 
 - **Parallel or distributed execution.** A single ordered queue and
   determinism are worth more here than wall-clock speedups.
-- **Packet-level network emulation.** That's ns-3's job. Simul8 models
+- **Packet-level network emulation.** That's ns-3's job. SameSim models
   latency at the message level, not TCP.
-- **Continuous state dynamics (ODE integration).** Simul8 is event-driven
+- **Continuous state dynamics (ODE integration).** SameSim is event-driven
   only.
 
 ## 7. Open questions
@@ -215,7 +215,7 @@ Each phase was to ship with a result the old engine couldn't produce.
 4. **Why a run ended.** An event-mode run whose agents all go silent ends
    when the queue empties. `SimulationEndedEvent` should say which
    condition ended it.
-5. **`simul8 validate`.** Setup already rejects every bad option before
+5. **`samesim validate`.** Setup already rejects every bad option before
    the first event. A command that runs setup alone would let a sweep
    check all its configs before committing hours of compute.
 6. **Config migration.** `schema_version` is checked but only `"1.0"`
@@ -229,7 +229,7 @@ Each phase was to ship with a result the old engine couldn't produce.
 - a versioned release on PyPI
 - a Python API that builds and runs an experiment without YAML and returns
   results in memory
-- a `simul8 validate` command (open question 5)
+- a `samesim validate` command (open question 5)
 
 **Capability gaps.**
 - Network partitions and one-way links: messages in flight across a cut
@@ -238,11 +238,11 @@ Each phase was to ship with a result the old engine couldn't produce.
 
 **Publishing.** Publish rather than patent. Ports-and-adapters design and
 per-agent seeding are sound engineering but not novel claims. The plan:
-1. A tools paper on Simul8 itself (for example in JOSS), built on the
+1. A tools paper on SameSim itself (for example in JOSS), built on the
    validation studies: cross-platform determinism, the contract-test
    method, the Raft Fig. 16 reproduction and the ring-threshold
    correction.
-2. Results papers that use Simul8 for the studies it already supports:
+2. Results papers that use SameSim for the studies it already supports:
    - topology vs. convergence
    - failures vs. consensus
    - network structure vs. epidemic spread

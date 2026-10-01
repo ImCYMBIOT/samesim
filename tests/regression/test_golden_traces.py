@@ -1,5 +1,5 @@
 """
-Golden traces: every simulation Simul8 can currently express must keep
+Golden traces: every simulation SameSim can currently express must keep
 producing exactly the same run.
 
 Phase 0 of docs/design.md. The engine's time model is about to be
@@ -55,19 +55,19 @@ from pathlib import Path
 import pytest
 import yaml
 
-import simul8.plugins.behaviors as behaviors_pkg
-import simul8.plugins.communication as protocols_pkg
-import simul8.plugins.topologies as topologies_pkg
-from simul8.app.experiment_runner import ExperimentRunner
-from simul8.ports.behavior import BehaviorPort
-from simul8.ports.communication import CommunicationProtocolPort
-from simul8.ports.topology_generator import TopologyGeneratorPort
+import samesim.plugins.behaviors as behaviors_pkg
+import samesim.plugins.communication as protocols_pkg
+import samesim.plugins.topologies as topologies_pkg
+from samesim.app.experiment_runner import ExperimentRunner
+from samesim.ports.behavior import BehaviorPort
+from samesim.ports.communication import CommunicationProtocolPort
+from samesim.ports.topology_generator import TopologyGeneratorPort
 from tests.regression.probes import EventProbeBehavior, InboxProbeBehavior
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 GOLDEN_PATH = Path(__file__).resolve().parent / "golden" / "traces.json"
-DIGEST_METRIC = "simul8.plugins.metrics.trace_digest.TraceDigestMetric"
-CSV_EXPORTER = "simul8.plugins.persistence.csv_exporter.CsvExporter"
+DIGEST_METRIC = "samesim.plugins.metrics.trace_digest.TraceDigestMetric"
+CSV_EXPORTER = "samesim.plugins.persistence.csv_exporter.CsvExporter"
 
 N_AGENTS = 36          # a perfect square, so GridTopology is a full grid
 MAX_TIME = 20.0
@@ -307,7 +307,7 @@ def test_churn_trace_is_unchanged(behavior, protocol, mode, tmp_path, golden):
             "behavior": _path(behavior),
             "communication": _path(protocol),
             "topology": _path(topology),
-            "dynamics": "simul8.plugins.dynamics.random_churn.RandomChurn",
+            "dynamics": "samesim.plugins.dynamics.random_churn.RandomChurn",
             "metrics": [DIGEST_METRIC],
             "persistence": [CSV_EXPORTER],
         },

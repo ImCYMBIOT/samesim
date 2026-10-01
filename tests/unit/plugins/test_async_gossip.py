@@ -5,8 +5,8 @@ import random
 
 import pytest
 
-from simul8.domain.ids import AgentId
-from simul8.plugins.behaviors.async_gossip import AsyncGossipBehavior
+from samesim.domain.ids import AgentId
+from samesim.plugins.behaviors.async_gossip import AsyncGossipBehavior
 
 A, B, C = AgentId(0), AgentId(1), AgentId(2)
 

@@ -1,9 +1,9 @@
 """Unit tests for topology plugins: RingTopology and ErdosRenyiTopology."""
 import random
 import pytest
-from simul8.domain.ids import AgentId
-from simul8.plugins.topologies.ring import RingTopology
-from simul8.plugins.topologies.random_graph import ErdosRenyiTopology
+from samesim.domain.ids import AgentId
+from samesim.plugins.topologies.ring import RingTopology
+from samesim.plugins.topologies.random_graph import ErdosRenyiTopology
 
 
 def make_ids(n: int) -> list[AgentId]:

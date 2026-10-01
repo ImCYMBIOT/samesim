@@ -16,16 +16,16 @@ simulation:
   activation: event
 
 plugins:
-  behavior: "simul8.plugins.behaviors.raft_election.RaftElectionBehavior"
-  communication: "simul8.plugins.communication.latency.LatencyProtocol"
-  topology: "simul8.plugins.topologies.random_graph.ErdosRenyiTopology"
-  dynamics: "simul8.plugins.dynamics.scheduled.ScheduledChurn"
+  behavior: "samesim.plugins.behaviors.raft_election.RaftElectionBehavior"
+  communication: "samesim.plugins.communication.latency.LatencyProtocol"
+  topology: "samesim.plugins.topologies.random_graph.ErdosRenyiTopology"
+  dynamics: "samesim.plugins.dynamics.scheduled.ScheduledChurn"
   metrics:
-    - "simul8.plugins.metrics.raft_metrics.RaftElectionMetric"
-    - "simul8.plugins.metrics.churn_metrics.ChurnMetric"
-    - "simul8.plugins.metrics.message_count.MessageCountMetric"
+    - "samesim.plugins.metrics.raft_metrics.RaftElectionMetric"
+    - "samesim.plugins.metrics.churn_metrics.ChurnMetric"
+    - "samesim.plugins.metrics.message_count.MessageCountMetric"
   persistence:
-    - "simul8.plugins.persistence.csv_exporter.CsvExporter"
+    - "samesim.plugins.persistence.csv_exporter.CsvExporter"
 
 plugin_configs:
   RaftElectionBehavior:

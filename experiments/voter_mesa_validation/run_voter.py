@@ -1,5 +1,5 @@
 """
-Voter model: Simul8 vs. Mesa vs. the exact martingale result.
+Voter model: SameSim vs. Mesa vs. the exact martingale result.
 
 The synchronous voter model (every agent copies the previous-tick opinion
 of a uniformly random neighbor) on a Barabasi-Albert graph, n = 50, m = 2.
@@ -11,11 +11,11 @@ degree-weighted initial fraction M(0) = sum_i d_i x_i / sum_i d_i (a
 martingale), here about 0.26 -- not the plain initial fraction 0.10. Each
 seed gives a different graph, so M(0) is computed per run.
 
-Both tools run on the IDENTICAL graph for each seed: Simul8's
+Both tools run on the IDENTICAL graph for each seed: SameSim's
 BarabasiAlbertTopology with random.Random(seed), exactly as the experiment
 runner builds it, handed to Mesa as a NetworkX graph.
 
-    simul8  VoterBehavior + VoterMetric, synchronous activation
+    samesim  VoterBehavior + VoterMetric, synchronous activation
     mesa    the same rule in Mesa 3 (choose-then-apply each step)
 
 Per run: M(0), the winning opinion, the consensus tick, and agent-updates
@@ -42,18 +42,18 @@ import yaml
 
 # Repo root, derived from this file so the script runs from any checkout.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from simul8.app.experiment_runner import ExperimentRunner  # noqa: E402
-from simul8.domain.ids import AgentId  # noqa: E402
-from simul8.plugins.topologies.barabasi_albert import BarabasiAlbertTopology  # noqa: E402
+from samesim.app.experiment_runner import ExperimentRunner  # noqa: E402
+from samesim.domain.ids import AgentId  # noqa: E402
+from samesim.plugins.topologies.barabasi_albert import BarabasiAlbertTopology  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
-SCRATCH = Path(os.environ.get("SIMUL8_EXPERIMENT_WORK", HERE / "_work"))
+SCRATCH = Path(os.environ.get("SAMESIM_EXPERIMENT_WORK", HERE / "_work"))
 
 N, M_EDGES, ONES, HORIZON = 50, 2, 5, 400
 
 
 def graph_for(seed: int) -> dict[int, list[int]]:
-    """The graph Simul8's runner builds for this seed (topology is the first
+    """The graph SameSim's runner builds for this seed (topology is the first
     consumer of random.Random(seed))."""
     g = BarabasiAlbertTopology().generate([AgentId(i) for i in range(N)], {"m": M_EDGES},
                                           random.Random(seed))
@@ -65,18 +65,18 @@ def predicted(adj: dict[int, list[int]]) -> float:
     return sum(len(adj[a]) for a in adj if a < ONES) / total
 
 
-def run_simul8(seed: int) -> dict:
+def run_samesim(seed: int) -> dict:
     name = f"voter_s{seed}"
     cfg = {
         "schema_version": "1.0",
         "experiment": {"name": name, "seed": seed},
         "simulation": {"num_agents": N, "max_virtual_time": HORIZON},
         "plugins": {
-            "behavior": "simul8.plugins.behaviors.voter.VoterBehavior",
-            "communication": "simul8.plugins.communication.gossip.GossipProtocol",
-            "topology": "simul8.plugins.topologies.barabasi_albert.BarabasiAlbertTopology",
-            "metrics": ["simul8.plugins.metrics.voter_metrics.VoterMetric"],
-            "persistence": ["simul8.plugins.persistence.csv_exporter.CsvExporter"],
+            "behavior": "samesim.plugins.behaviors.voter.VoterBehavior",
+            "communication": "samesim.plugins.communication.gossip.GossipProtocol",
+            "topology": "samesim.plugins.topologies.barabasi_albert.BarabasiAlbertTopology",
+            "metrics": ["samesim.plugins.metrics.voter_metrics.VoterMetric"],
+            "persistence": ["samesim.plugins.persistence.csv_exporter.CsvExporter"],
         },
         "plugin_configs": {"VoterBehavior": {"initial_ones": ONES},
                            "BarabasiAlbertTopology": {"m": M_EDGES}},
@@ -152,7 +152,7 @@ def main() -> None:
     out_json = HERE / ("voter_results_quick.json" if args.quick else "voter_results.json")
     results = []
     for seed in seeds:
-        for tool, fn in (("simul8", run_simul8), ("mesa", run_mesa)):
+        for tool, fn in (("samesim", run_samesim), ("mesa", run_mesa)):
             results.append({"tool": tool, "seed": seed, **fn(seed)})
         if seed % 100 == 0:
             print(f"{seed} seeds done", flush=True)

@@ -3,9 +3,9 @@ Library versions identical in every run: True ({'mesa': '3.0.3', 'ndlib': '6.0.0
 
 | Scenario | Same seed, same output everywhere? | Groups of identical output |
 |---|---|---|
-| `simul8/async_gossip` | **yes** | all 12 |
-| `simul8/sir` | **yes** | all 12 |
-| `simul8/gossip` | **yes** | all 12 |
+| `samesim/async_gossip` | **yes** | all 12 |
+| `samesim/sir` | **yes** | all 12 |
+| `samesim/gossip` | **yes** | all 12 |
 | `simpy/mm1` | **yes** | all 12 |
 | `simpy/mm1_service` | no: 3 different results | Linux 3.10/3.11/3.12/3.13; macOS 3.10/3.11/3.12/3.13; Windows 3.10/3.11/3.12/3.13 |
 | `mesa/voter` | **yes** | all 12 |

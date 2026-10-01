@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from simul8.app.experiment_runner import ExperimentRunner
+from samesim.app.experiment_runner import ExperimentRunner
 
 pytestmark = pytest.mark.slow
 
@@ -35,13 +35,13 @@ simulation:
   tick_interval: 1
 
 plugins:
-  behavior: "simul8.plugins.behaviors.leader_election.LeaderElectionBehavior"
-  communication: "simul8.plugins.communication.gossip.GossipProtocol"
-  topology: "simul8.plugins.topologies.random_graph.ErdosRenyiTopology"
+  behavior: "samesim.plugins.behaviors.leader_election.LeaderElectionBehavior"
+  communication: "samesim.plugins.communication.gossip.GossipProtocol"
+  topology: "samesim.plugins.topologies.random_graph.ErdosRenyiTopology"
   metrics:
-    - "simul8.plugins.metrics.leader_metrics.LeaderConsensusMetric"
+    - "samesim.plugins.metrics.leader_metrics.LeaderConsensusMetric"
   persistence:
-    - "simul8.plugins.persistence.csv_exporter.CsvExporter"
+    - "samesim.plugins.persistence.csv_exporter.CsvExporter"
 
 plugin_configs:
   ErdosRenyiTopology:

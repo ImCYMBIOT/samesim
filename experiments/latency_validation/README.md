@@ -85,7 +85,7 @@ regimes. Neither has been isolated yet:
 **Correction.** An earlier version of this study (5 seeds per point) also
 reported that the spread across seeds grows with the mean for exponential
 delays but stays flat for constant ones (±0.4 at mean 16), as support for
-mechanism 2. That was an artifact of Simul8's old seeding
+mechanism 2. That was an artifact of SameSim's old seeding
 (`seed XOR agent_id`), which made runs with different seeds partly copies of
 each other; see
 [external_validation/](../external_validation/README.md). With independent

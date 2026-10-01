@@ -14,7 +14,7 @@ is why it survived in the codebase long enough to skew a published-looking
 epidemic curve by ~28% before an external cross-check caught it.
 
 The rule enforced here is the addressing contract from
-simul8/ports/communication.py:
+samesim/ports/communication.py:
 
     broadcast=False  ->  recipients subset of {recipient_id}
     broadcast=True   ->  recipients subset of neighbors(sender_id)
@@ -40,14 +40,14 @@ import random
 
 import pytest
 
-import simul8.plugins.behaviors as behaviors_pkg
-import simul8.plugins.communication as communication_pkg
-from simul8.domain.delivery import as_delivery
-from simul8.domain.ids import AgentId
-from simul8.domain.state import AgentState
-from simul8.domain.topology import TopologyGraph
-from simul8.ports.behavior import BehaviorPort
-from simul8.ports.communication import CommunicationProtocolPort
+import samesim.plugins.behaviors as behaviors_pkg
+import samesim.plugins.communication as communication_pkg
+from samesim.domain.delivery import as_delivery
+from samesim.domain.ids import AgentId
+from samesim.domain.state import AgentState
+from samesim.domain.topology import TopologyGraph
+from samesim.ports.behavior import BehaviorPort
+from samesim.ports.communication import CommunicationProtocolPort
 
 
 def _discover(package, base_class) -> list[type]:

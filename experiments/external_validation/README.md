@@ -5,18 +5,18 @@
 (validates against mixing-time *theory*) and
 [experiments/scaling_benchmark/](../scaling_benchmark/) (validates
 *performance*) with the piece neither of those can catch: comparison
-against tools and math that share **no code** with Simul8. This is exactly
+against tools and math that share **no code** with SameSim. This is exactly
 the kind of check that catches an implementation bug hiding behind
 plausible-looking, theory-consistent numbers — and it did, twice.
 
 ## Why external validation, not more internal theory-checking
 
-The topology validation study confirms Simul8's *scaling behavior* matches
+The topology validation study confirms SameSim's *scaling behavior* matches
 mixing-time theory. It would not have caught a bug that inflates every
 agent's infection probability by a roughly-constant factor — the epidemic
 would still rise, peak, and burn out in the right *shape*, just at the
 wrong *magnitude*, and nothing in that study's checks would flag it. That
-gap is exactly what this suite is for: put Simul8 next to something that
+gap is exactly what this suite is for: put SameSim next to something that
 implements the same math independently, on the identical input, and see if
 the numbers actually agree.
 
@@ -30,16 +30,16 @@ the numbers actually agree.
 | 4 | `leader_election_vs_diameter.py` | Graph diameter (computed via NetworkX) — an analytical bound, not another simulator | 15/15 cases within the theoretical bound |
 | 5 | `event_count_vs_closed_form.py` | Exact combinatorial arithmetic (`n × fan_out × ticks`) | **Also caught a real bug** — see below |
 
-Run any of them (from this directory, `simul8` conda env active, with
+Run any of them (from this directory, `samesim` conda env active, with
 `pip install networkx ndlib six` for the SIR check specifically):
 `python sir_vs_ndlib.py`, `python gossip_vs_reference.py`,
 `python topology_vs_networkx.py`, `python leader_election_vs_diameter.py`,
 `python event_count_vs_closed_form.py`.
 
-`simul8_harness.py` is shared infrastructure: it wires Simul8's real core
+`samesim_harness.py` is shared infrastructure: it wires SameSim's real core
 (same code path as `ExperimentRunner`) but accepts a pre-built
 `TopologyGraph` — usually converted directly from a NetworkX graph — so
-Simul8 and the comparison tool run on the **exact same graph object**,
+SameSim and the comparison tool run on the **exact same graph object**,
 not two separately generated graphs that are merely statistically similar.
 
 ## Bug 1 — SIR double fan-out (found by check #1, confirmed by check #5's method)
@@ -52,18 +52,18 @@ The combination double-fanned-out: a degree-*d* infected agent delivered
 *d* copies to each neighbor instead of 1, inflating the effective
 transmission rate far above the configured `beta`.
 
-First signal: peak infection count was **~28% higher** in Simul8 than in
+First signal: peak infection count was **~28% higher** in SameSim than in
 20 matched NDlib runs on the identical graph — completely disjoint
-distributions (Simul8 `[457, 472]` vs. NDlib `[353, 378]`), not seed noise.
+distributions (SameSim `[457, 472]` vs. NDlib `[353, 378]`), not seed noise.
 Confirmed precisely by tracing delivery counts on a 4-agent star: a
 degree-3 infected agent was delivering **3 copies to each neighbor**
 instead of 1.
 
-**Fixed** in `simul8/plugins/behaviors/sir_behavior.py`: send exactly one
+**Fixed** in `samesim/plugins/behaviors/sir_behavior.py`: send exactly one
 message when infected and let the protocol handle fan-out, matching how
 `BroadcastProtocol` is documented to be used. Re-ran the same 20-seed
 comparison after the fix: peak infection mean **362.0 (NDlib) vs. 368.3
-(Simul8)**, standard deviations 7.2 vs. 6.9, ranges now heavily
+(SameSim)**, standard deviations 7.2 vs. 6.9, ranges now heavily
 overlapping. Locked in with
 `tests/unit/plugins/test_sir_broadcast_fanout.py`.
 
@@ -75,7 +75,7 @@ Welch t = 2.82, p = 0.008 -- a detectable difference, not a match. Reading
 NDlib's `SIRModel.iteration` side by side with ours found the formulas
 identical in distribution. The cause was elsewhere:
 
-**Simul8's seeds weren't independent.** Agent streams were seeded
+**SameSim's seeds weren't independent.** Agent streams were seeded
 `seed XOR agent_id`. For seeds below the agent count, XOR only permutes
 ids, so seeds 1 and 2 used the *identical set* of 500 agent streams,
 assigned to different agents. The 20 "independent" replicates were partly
@@ -84,7 +84,7 @@ for NDlib over 60 seeds) and made a small difference look significant.
 This affected every study that averages over seeds, not only this one.
 
 Fixed by class: streams are now hashed from `"<seed>/agent/<id>"`
-(`simul8/core/randomness_manager.py`), and
+(`samesim/core/randomness_manager.py`), and
 `tests/unit/core/test_randomness_manager.py` checks that no two of
 64 seeds x 1,024 agents share a stream and that named streams never
 coincide with agent streams. It fails for XOR, for seed + id and for
@@ -93,7 +93,7 @@ separator-free concatenation. Every study in `experiments/` was re-run.
 The same investigation found one real, smaller convention difference: the
 initially infected took a recovery draw before exposing anyone, an expected
 infectious period 10% shorter than every other agent's. The first
-synchronous step is now an announcement round, so Simul8's state at time t
+synchronous step is now an announcement round, so SameSim's state at time t
 is exactly iteration t of the standard discrete-time SIR.
 
 **Re-run, three ways, 200 seeds** (`sir_vs_ndlib.py`). A third
@@ -101,7 +101,7 @@ implementation referees: NDlib's iteration transcribed into plain Python
 with its own RNG. Means with 95% CIs; Welch's t-test for a difference;
 TOST for equivalence within ±1% of the reference mean.
 
-| | NDlib | Simul8 | Reference |
+| | NDlib | SameSim | Reference |
 |---|---:|---:|---:|
 | peak infected | 362.3 ± 1.5 | 360.4 ± 1.5 | 361.6 ± 1.6 |
 | final recovered | 498.75 ± 0.13 | 498.77 ± 0.13 | 498.65 ± 0.15 |
@@ -109,8 +109,8 @@ TOST for equivalence within ±1% of the reference mean.
 
 - No pair differs significantly on any metric (all Welch p > 0.07).
 - **Final size:** all three pairs equivalent within ±1% (TOST p < 10⁻¹⁶⁰).
-- **Peak:** Simul8 is equivalent to the reference (TOST p = 0.015), and
-  so is NDlib (p = 0.005). Simul8 vs. NDlib directly is not quite shown
+- **Peak:** SameSim is equivalent to the reference (TOST p = 0.015), and
+  so is NDlib (p = 0.005). SameSim vs. NDlib directly is not quite shown
   equivalent at ±1% (difference −1.95, TOST p = 0.065).
 - **Extinction tick:** ±1% is 0.7 ticks against a standard deviation of
   ~10; no pair, including NDlib vs. the reference, can be shown equivalent
@@ -160,11 +160,11 @@ for the addressing contract those tests enforce.
   counterpart) — the numpy reference substitutes for it; a real PeerSim
   comparison would mean a Java cross-language integration, flagged as a
   bigger lift than this pass justified.
-- Peak infected, Simul8 vs. NDlib directly: equivalence within ±1% is
+- Peak infected, SameSim vs. NDlib directly: equivalence within ±1% is
   borderline (TOST p = 0.065) at 200 seeds, although each is equivalent to
   the independent reference.
 - No real-world dataset comparison (e.g. a documented epidemic outbreak,
-  a real social-network topology) — deliberately out of scope: Simul8 is
+  a real social-network topology) — deliberately out of scope: SameSim is
   a systems/tools contribution, and matching noisy real data with unknown
   confounding parameters is a different (harder, less relevant) kind of
   validation than checking against a trusted independent implementation.
@@ -183,7 +183,7 @@ Nothing caught it because the scripts worked perfectly on the one machine
 they were written on — the same shape as the other bugs documented here:
 correct-looking behavior that was never exercised outside its original
 context. It is fixed (paths now derive from `Path(__file__)`; intermediate
-work goes to a gitignored `_work/` overridable via `SIMUL8_EXPERIMENT_WORK`)
+work goes to a gitignored `_work/` overridable via `SAMESIM_EXPERIMENT_WORK`)
 and guarded by `tests/unit/test_experiment_script_portability.py`, which
 sweeps every committed `.py` file rather than the five that happened to be
 wrong.

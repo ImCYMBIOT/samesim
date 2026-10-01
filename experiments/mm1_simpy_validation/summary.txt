@@ -1,6 +1,6 @@
 Mean over 100 seeds ± 95% CI. TOST margin ±3% of the closed form; p < 0.05 means equivalence is shown.
 
-| ρ | Metric | Closed form | Simul8 | SimPy | Simul8 ≡ theory (TOST p) | SimPy ≡ theory (TOST p) | Simul8 ≡ SimPy (TOST p) |
+| ρ | Metric | Closed form | SameSim | SimPy | SameSim ≡ theory (TOST p) | SimPy ≡ theory (TOST p) | SameSim ≡ SimPy (TOST p) |
 |---:|---|---:|---:|---:|---:|---:|---:|
 | 0.5 | Wq | 1.000 | 1.002 ± 0.007 | 1.000 ± 0.007 | 5.6e-12 | 1.1e-14 | 2.5e-08 |
 | 0.5 | W | 2.000 | 2.004 ± 0.008 | 2.000 ± 0.007 | 1.4e-25 | 1.2e-29 | 2.1e-20 |
@@ -14,7 +14,7 @@ Mean over 100 seeds ± 95% CI. TOST margin ±3% of the closed form; p < 0.05 mea
 
 Throughput, customers completed per second of run time (median, IQR):
 
-| ρ | Simul8 | SimPy | SimPy / Simul8 |
+| ρ | SameSim | SimPy | SimPy / SameSim |
 |---:|---:|---:|---:|
 | 0.5 | 19,381 (18,947–19,806) | 97,968 (94,873–99,674) | 5.1× |
 | 0.8 | 18,980 (18,656–19,196) | 95,945 (93,698–96,989) | 5.1× |

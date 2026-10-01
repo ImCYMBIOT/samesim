@@ -17,7 +17,7 @@ correlated seeds; see below.) It offered two untested explanations:
 2. the measurement: a 1% variance threshold, crossed while fast modes still
    dominate, before the slowest mode's O(n²) decay matters.
 
-Before Phase 2, Simul8 couldn't run Boyd et al.'s model at all, so the two
+Before Phase 2, SameSim couldn't run Boyd et al.'s model at all, so the two
 couldn't be separated. Now it can.
 
 ## Method
@@ -94,7 +94,7 @@ excluded from the 1e-4 means.
   last doubling 1.79 and 1.82). The classical O(n²) regime appears once the
   measurement reaches the slowest mode's decay, for synchronous push gossip
   as much as for Boyd's model.
-- **Simul8 reproduces Boyd et al.'s O(n²).** The asynchronous pairwise
+- **SameSim reproduces Boyd et al.'s O(n²).** The asynchronous pairwise
   model on a ring has a fitted slope of 1.80 (1.75–1.84) at 1e-4. The fit
   is pulled below 2 by the smallest rings, where constant terms matter.
 - **Pairwise exchange mixes faster than one-way push** for the same message
@@ -104,7 +104,7 @@ excluded from the 1e-4 means.
   receiver. It hasn't been isolated further.
 
 **Correction (2026-10-01).** The first version of this study (5 seeds,
-Simul8's old `seed XOR agent_id` seeding) reported 1% slopes of 1.04 and
+SameSim's old `seed XOR agent_id` seeding) reported 1% slopes of 1.04 and
 0.96, "both linear", and concluded that the threshold turns an O(n)
 measurement into an O(n²) one. With independent seeds the 1% slopes are
 1.37 and 1.34: superlinear, not linear. On a ring, XOR with a small seed

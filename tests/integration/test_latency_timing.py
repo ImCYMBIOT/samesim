@@ -21,12 +21,12 @@ from pathlib import Path
 import pytest
 import yaml
 
-from simul8.app.experiment_runner import ExperimentRunner
+from samesim.app.experiment_runner import ExperimentRunner
 from tests.integration.latency_probes import SendScheduleBehavior
 
 PROBE_BEHAVIOR = "tests.integration.latency_probes.SendScheduleBehavior"
 PROBE_PROTOCOL = "tests.integration.latency_probes.DelayBySendStepProtocol"
-LATENCY_PROTOCOL = "simul8.plugins.communication.latency.LatencyProtocol"
+LATENCY_PROTOCOL = "samesim.plugins.communication.latency.LatencyProtocol"
 
 
 def _run(tmp_path: Path, *, dt: float, max_time: float, send_steps, protocol: str,
@@ -39,7 +39,7 @@ def _run(tmp_path: Path, *, dt: float, max_time: float, send_steps, protocol: st
         "plugins": {
             "behavior": PROBE_BEHAVIOR,
             "communication": protocol,
-            "topology": "simul8.plugins.topologies.ring.RingTopology",
+            "topology": "samesim.plugins.topologies.ring.RingTopology",
             "metrics": [],
             "persistence": [],
         },

@@ -22,11 +22,11 @@ import pkgutil
 import pytest
 import yaml
 
-import simul8.plugins.behaviors as behaviors_pkg
-import simul8.plugins.communication as protocols_pkg
-from simul8.app.experiment_runner import ExperimentRunner
-from simul8.ports.behavior import BehaviorPort
-from simul8.ports.communication import CommunicationProtocolPort
+import samesim.plugins.behaviors as behaviors_pkg
+import samesim.plugins.communication as protocols_pkg
+from samesim.app.experiment_runner import ExperimentRunner
+from samesim.ports.behavior import BehaviorPort
+from samesim.ports.communication import CommunicationProtocolPort
 from tests.integration.event_probes import EventLogMetric
 
 
@@ -69,8 +69,8 @@ def test_churn_invariants(behavior, mode, protocol, tmp_path):
         "plugins": {
             "behavior": f"{behavior.__module__}.{behavior.__name__}",
             "communication": f"{protocol.__module__}.{protocol.__name__}",
-            "topology": "simul8.plugins.topologies.random_graph.ErdosRenyiTopology",
-            "dynamics": "simul8.plugins.dynamics.random_churn.RandomChurn",
+            "topology": "samesim.plugins.topologies.random_graph.ErdosRenyiTopology",
+            "dynamics": "samesim.plugins.dynamics.random_churn.RandomChurn",
             "metrics": ["tests.integration.event_probes.EventLogMetric"],
             "persistence": [],
         },

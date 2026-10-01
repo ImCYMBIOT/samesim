@@ -1,11 +1,11 @@
-# Same seed, same result? Simul8 and other Python simulators, across Python versions and operating systems
+# Same seed, same result? SameSim and other Python simulators, across Python versions and operating systems
 
 A fixed-seed scenario in each tool, run on Linux, macOS and Windows under
 Python 3.10, 3.11, 3.12 and 3.13 (12 combinations), with **identical
 library versions everywhere** so that only the interpreter and the
 platform vary. Each scenario's full output is fingerprinted with SHA-256.
 
-**Result: Simul8's runs were bit-identical in all 12 combinations. So
+**Result: SameSim's runs were bit-identical in all 12 combinations. So
 were the other tools' runs whose outputs avoid float `sum()` and keep no
 raw C-library results. Two things break bit-identity in ordinary Python
 model code, and both are platform facts rather than bugs in any tool:**
@@ -18,8 +18,8 @@ model code, and both are platform facts rather than bugs in any tool:**
    output depends on the model: SimPy's event times absorbed it here, while
    the service times drawn in the same run did not.
 
-Simul8 guards against both by construction and checks it continuously:
-`math.fsum` instead of `sum()`, `simul8.domain.portable_math` instead of
+SameSim guards against both by construction and checks it continuously:
+`math.fsum` instead of `sum()`, `samesim.domain.portable_math` instead of
 libm, a lint test that rejects platform-dependent math, and golden traces
 that must reproduce on every OS in CI.
 
@@ -34,7 +34,7 @@ releases supporting all four Python versions.
 
 | Scenario | What it is |
 |---|---|
-| `simul8/async_gossip`, `simul8/sir`, `simul8/gossip` | The shipped examples: event-driven gossip with Poisson clocks and exponential latency; SIR; synchronous gossip averaging |
+| `samesim/async_gossip`, `samesim/sir`, `samesim/gossip` | The shipped examples: event-driven gossip with Poisson clocks and exponential latency; SIR; synchronous gossip averaging |
 | `simpy/mm1` | M/M/1 queue, the SimPy idiom (`random.expovariate`); records each customer's arrival, start and end time |
 | `simpy/mm1_service` | The same run, recording each drawn service time |
 | `mesa/voter` | Synchronous voter model (integer state) |
@@ -56,9 +56,9 @@ The workflow is manual (`workflow_dispatch`). Raw per-platform results:
 
 | Scenario | Same seed, same output on all 12? | Groups of identical output |
 |---|---|---|
-| `simul8/async_gossip` | **yes** | |
-| `simul8/sir` | **yes** | |
-| `simul8/gossip` | **yes** | |
+| `samesim/async_gossip` | **yes** | |
+| `samesim/sir` | **yes** | |
+| `samesim/gossip` | **yes** | |
 | `simpy/mm1` | **yes** | |
 | `simpy/mm1_service` | no: 3 results | one per OS |
 | `mesa/voter` | **yes** | |
@@ -102,20 +102,20 @@ always rounds to the same clock value. The service times recorded in the
 same run keep the difference, and `simpy/mm1_service` differs on every OS.
 A model whose output depends on draws more directly will diverge. So will
 one with short times, where the clock is small, or with branches that
-compare draws. Simul8's event-driven runs did, before `portable_math`:
+compare draws. SameSim's event-driven runs did, before `portable_math`:
 golden traces recorded on Linux failed on macOS and Windows.
 
 ## What this shows, and what it doesn't
 
-- **Shown:** on these 12 platform combinations, Simul8's scenarios were
-  bit-identical, the platform math library was not, and Simul8's
+- **Shown:** on these 12 platform combinations, SameSim's scenarios were
+  bit-identical, the platform math library was not, and SameSim's
   replacement for it was.
 - **Shown:** the two mechanisms that break same-seed reproducibility in
   Python simulation code, and that they live in the interpreter and the
   platform, not in Mesa, SimPy or NDlib.
 - **Not shown:** that other tools *can't* be made bit-reproducible. A
   model written with `math.fsum` and platform-independent math would be.
-  The difference is that Simul8 enforces it for every plugin, with tests,
+  The difference is that SameSim enforces it for every plugin, with tests,
   instead of leaving it to each model's author.
 - The libm differences are for these runner images. C libraries change
   between releases, which is itself a reason not to depend on them.

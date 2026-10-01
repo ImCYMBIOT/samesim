@@ -5,11 +5,11 @@ import random
 
 import pytest
 
-from simul8.domain.event import AgentStateChangedEvent
-from simul8.domain.ids import AgentId, EventId, MessageId, VirtualTime
-from simul8.domain.message import Message
-from simul8.plugins.behaviors.raft_election import RaftElectionBehavior
-from simul8.plugins.metrics.raft_metrics import RaftElectionMetric
+from samesim.domain.event import AgentStateChangedEvent
+from samesim.domain.ids import AgentId, EventId, MessageId, VirtualTime
+from samesim.domain.message import Message
+from samesim.plugins.behaviors.raft_election import RaftElectionBehavior
+from samesim.plugins.metrics.raft_metrics import RaftElectionMetric
 
 A, B, C = AgentId(0), AgentId(1), AgentId(2)
 ALL = frozenset({A, B, C})

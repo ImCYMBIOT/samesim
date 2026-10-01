@@ -1,12 +1,12 @@
 """Unit tests for LeaderElectionBehavior and LeaderConsensusMetric."""
 import random
 import pytest
-from simul8.domain.ids import AgentId, MessageId, VirtualTime
-from simul8.domain.message import Message
-from simul8.domain.state import AgentState
-from simul8.plugins.behaviors.leader_election import LeaderElectionBehavior
-from simul8.plugins.metrics.leader_metrics import LeaderConsensusMetric
-from simul8.domain.topology import TopologyGraph
+from samesim.domain.ids import AgentId, MessageId, VirtualTime
+from samesim.domain.message import Message
+from samesim.domain.state import AgentState
+from samesim.plugins.behaviors.leader_election import LeaderElectionBehavior
+from samesim.plugins.metrics.leader_metrics import LeaderConsensusMetric
+from samesim.domain.topology import TopologyGraph
 
 
 def test_leader_election_initialization():
@@ -65,7 +65,7 @@ def test_leader_consensus_metric():
     
     # Initially, only agent 1 points to 50
     # Consensus fraction should be 1/3
-    from simul8.domain.event import TickEvent
+    from samesim.domain.event import TickEvent
     metric.on_event(TickEvent(event_id=MessageId(1), virtual_time=VirtualTime(0.0)), VirtualTime(0.0))
     
     series = metric.get_series()

@@ -15,7 +15,7 @@ project's central claim, so the test must be impossible to fool.
 It used to be foolable in three ways, and the first was being exploited:
 
 1. **Relative imports were invisible.** It compared ImportFrom.module against
-   "simul8.core", but `from ...core.agent_registry import X` is recorded by
+   "samesim.core", but `from ...core.agent_registry import X` is recorded by
    the AST as module="core.agent_registry", level=3 -- never a match. Two
    metric plugins imported core classes this way and received the live,
    mutable AgentRegistry through a duck-typed configure() back door, and
@@ -26,7 +26,7 @@ It used to be foolable in three ways, and the first was being exploited:
 
 All three are closed here: imports are resolved to absolute module names
 before checking, parse failures fail the test, and every .py file under
-simul8/ is walked -- so new layers' files and new plugins are covered
+samesim/ is walked -- so new layers' files and new plugins are covered
 without anyone registering them.
 """
 from __future__ import annotations
@@ -36,7 +36,7 @@ from pathlib import Path
 
 import pytest
 
-PACKAGE_ROOT = Path(__file__).resolve().parents[2] / "simul8"
+PACKAGE_ROOT = Path(__file__).resolve().parents[2] / "samesim"
 
 ALLOWED: dict[str, frozenset[str]] = {
     "domain": frozenset({"domain"}),
@@ -85,7 +85,7 @@ def _absolute_imports(path: Path) -> list[tuple[int, str]]:
 
 def _layer(module: str) -> str | None:
     parts = module.split(".")
-    return parts[1] if len(parts) > 1 and parts[0] == "simul8" else None
+    return parts[1] if len(parts) > 1 and parts[0] == "samesim" else None
 
 
 SOURCE_FILES = sorted(p for p in PACKAGE_ROOT.rglob("*.py") if "__pycache__" not in p.parts)

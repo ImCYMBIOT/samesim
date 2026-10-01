@@ -43,12 +43,12 @@ import yaml
 
 # Repo root, derived from this file so the script runs from any checkout.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from simul8.app.experiment_runner import ExperimentRunner  # noqa: E402
+from samesim.app.experiment_runner import ExperimentRunner  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 # Intermediate configs and per-run CSVs. Kept out of the repo by default
-# (see .gitignore); override with SIMUL8_EXPERIMENT_WORK to relocate.
-SCRATCH = Path(os.environ.get("SIMUL8_EXPERIMENT_WORK", HERE / "_work"))
+# (see .gitignore); override with SAMESIM_EXPERIMENT_WORK to relocate.
+SCRATCH = Path(os.environ.get("SAMESIM_EXPERIMENT_WORK", HERE / "_work"))
 
 N_AGENTS = 200
 AVG_DEGREE = 8.0
@@ -65,12 +65,12 @@ def _rows(path: Path) -> list[dict]:
 def run_one(f: float, downtime: float, seed: int) -> dict:
     name = f"churn_f{f:g}_D{downtime:g}_s{seed}"
     plugins = {
-        "behavior": "simul8.plugins.behaviors.gossip_behavior.GossipBehavior",
-        "communication": "simul8.plugins.communication.gossip.GossipProtocol",
-        "topology": "simul8.plugins.topologies.random_graph.ErdosRenyiTopology",
-        "metrics": ["simul8.plugins.metrics.consensus.ConsensusMetric",
-                    "simul8.plugins.metrics.churn_metrics.ChurnMetric"],
-        "persistence": ["simul8.plugins.persistence.csv_exporter.CsvExporter"],
+        "behavior": "samesim.plugins.behaviors.gossip_behavior.GossipBehavior",
+        "communication": "samesim.plugins.communication.gossip.GossipProtocol",
+        "topology": "samesim.plugins.topologies.random_graph.ErdosRenyiTopology",
+        "metrics": ["samesim.plugins.metrics.consensus.ConsensusMetric",
+                    "samesim.plugins.metrics.churn_metrics.ChurnMetric"],
+        "persistence": ["samesim.plugins.persistence.csv_exporter.CsvExporter"],
     }
     plugin_configs = {
         "GossipBehavior": {"fan_out": FAN_OUT, "initial_value_range": [0.0, 1.0]},
@@ -78,7 +78,7 @@ def run_one(f: float, downtime: float, seed: int) -> dict:
     }
     if f > 0:
         mu = 1.0 / downtime
-        plugins["dynamics"] = "simul8.plugins.dynamics.random_churn.RandomChurn"
+        plugins["dynamics"] = "samesim.plugins.dynamics.random_churn.RandomChurn"
         plugin_configs["RandomChurn"] = {"failure_rate": f * mu / (1.0 - f), "recovery_rate": mu}
     cfg = {
         "schema_version": "1.0",

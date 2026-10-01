@@ -24,16 +24,16 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from simul8_harness import networkx_to_topology_graph, run_simul8  # noqa: E402
+from samesim_harness import networkx_to_topology_graph, run_samesim  # noqa: E402
 
 # Repo root, derived from this file so the script runs from any checkout.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import networkx as nx  # noqa: E402
 
-from simul8.domain.ids import AgentId  # noqa: E402
-from simul8.plugins.behaviors.gossip_behavior import GossipBehavior  # noqa: E402
-from simul8.plugins.communication.gossip import GossipProtocol  # noqa: E402
-from simul8.plugins.metrics.message_count import MessageCountMetric  # noqa: E402
+from samesim.domain.ids import AgentId  # noqa: E402
+from samesim.plugins.behaviors.gossip_behavior import GossipBehavior  # noqa: E402
+from samesim.plugins.communication.gossip import GossipProtocol  # noqa: E402
+from samesim.plugins.metrics.message_count import MessageCountMetric  # noqa: E402
 
 FAN_OUT = 2
 
@@ -50,7 +50,7 @@ def check_one(n: int, ticks: int, seed: int, avg_degree: float = 8.0) -> tuple[b
     agent_ids = [AgentId(i) for i in range(n)]
     graph = networkx_to_topology_graph(g_nx, agent_ids)
 
-    series = run_simul8(
+    series = run_samesim(
         graph=graph,
         behavior=GossipBehavior(),
         behavior_config={"fan_out": FAN_OUT},

@@ -8,7 +8,7 @@ mixing time of a random walk on the underlying graph.
   - Ring (2-regular cycle): mixing time O(n^2)
     -> convergence time should grow much faster (~quadratically) with n.
 
-This script runs Simul8's real ExperimentRunner (the same code path the CLI
+This script runs SameSim's real ExperimentRunner (the same code path the CLI
 uses) across a sweep of (topology, n, seed), then measures the tick at which
 population variance of agent values first drops to <=1% of its initial value.
 """
@@ -25,12 +25,12 @@ import yaml
 
 # Repo root, derived from this file so the script runs from any checkout.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from simul8.app.experiment_runner import ExperimentRunner  # noqa: E402
+from samesim.app.experiment_runner import ExperimentRunner  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 # Intermediate configs and per-run CSVs. Kept out of the repo by default
-# (see .gitignore); override with SIMUL8_EXPERIMENT_WORK to relocate.
-SCRATCH = Path(os.environ.get("SIMUL8_EXPERIMENT_WORK", HERE / "_work"))
+# (see .gitignore); override with SAMESIM_EXPERIMENT_WORK to relocate.
+SCRATCH = Path(os.environ.get("SAMESIM_EXPERIMENT_WORK", HERE / "_work"))
 CONFIG_DIR = SCRATCH / "configs"
 RESULTS_DIR = SCRATCH / "results"
 CONFIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -49,11 +49,11 @@ def make_config(topology_name: str, topology_class: str, topology_config: dict,
         "experiment": {"name": name, "seed": seed},
         "simulation": {"num_agents": n, "max_virtual_time": max_time, "tick_interval": 1},
         "plugins": {
-            "behavior": "simul8.plugins.behaviors.gossip_behavior.GossipBehavior",
-            "communication": "simul8.plugins.communication.gossip.GossipProtocol",
+            "behavior": "samesim.plugins.behaviors.gossip_behavior.GossipBehavior",
+            "communication": "samesim.plugins.communication.gossip.GossipProtocol",
             "topology": topology_class,
-            "metrics": ["simul8.plugins.metrics.convergence.ConvergenceMetric"],
-            "persistence": ["simul8.plugins.persistence.csv_exporter.CsvExporter"],
+            "metrics": ["samesim.plugins.metrics.convergence.ConvergenceMetric"],
+            "persistence": ["samesim.plugins.persistence.csv_exporter.CsvExporter"],
         },
         "plugin_configs": {
             "GossipBehavior": {"initial_value_range": [0.0, 1.0], "fan_out": FAN_OUT},
@@ -134,9 +134,9 @@ if __name__ == "__main__":
     if args.mode == "pilot":
         jobs = []
         for n in (20, 40, 80):
-            jobs.append(("ring", "simul8.plugins.topologies.ring.RingTopology", {}, n, 6000, 1))
+            jobs.append(("ring", "samesim.plugins.topologies.ring.RingTopology", {}, n, 6000, 1))
         for n in (50, 200, 800):
-            jobs.append(("erdos_renyi", "simul8.plugins.topologies.random_graph.ErdosRenyiTopology", er_config(n), n, 200, 1))
+            jobs.append(("erdos_renyi", "samesim.plugins.topologies.random_graph.ErdosRenyiTopology", er_config(n), n, 200, 1))
     elif args.mode == "full":
         jobs = []
         seeds = tuple(range(1, 21))
@@ -144,24 +144,24 @@ if __name__ == "__main__":
         # ticks 9/51/64/176/249 respectively -- max(300, 8n) gives ample margin.
         for n in (10, 20, 40, 80, 160, 320):
             for s in seeds:
-                jobs.append(("ring", "simul8.plugins.topologies.ring.RingTopology", {}, n, max(300, 8 * n), s))
+                jobs.append(("ring", "samesim.plugins.topologies.ring.RingTopology", {}, n, max(300, 8 * n), s))
         for n in ER_NS:
             for s in seeds:
-                jobs.append(("erdos_renyi", "simul8.plugins.topologies.random_graph.ErdosRenyiTopology", er_config(n), n, 200, s))
+                jobs.append(("erdos_renyi", "samesim.plugins.topologies.random_graph.ErdosRenyiTopology", er_config(n), n, 200, s))
     elif args.mode == "pilot_ws_ba":
         jobs = []
         for n in (50, 800, 1600):
-            jobs.append(("watts_strogatz", "simul8.plugins.topologies.watts_strogatz.WattsStrogatzTopology", ws_config(n), n, 200, 1))
-            jobs.append(("barabasi_albert", "simul8.plugins.topologies.barabasi_albert.BarabasiAlbertTopology", ba_config(n), n, 200, 1))
+            jobs.append(("watts_strogatz", "samesim.plugins.topologies.watts_strogatz.WattsStrogatzTopology", ws_config(n), n, 200, 1))
+            jobs.append(("barabasi_albert", "samesim.plugins.topologies.barabasi_albert.BarabasiAlbertTopology", ba_config(n), n, 200, 1))
     else:  # full_ws_ba
         jobs = []
         seeds = tuple(range(1, 21))
         for n in ER_NS:
             for s in seeds:
-                jobs.append(("watts_strogatz", "simul8.plugins.topologies.watts_strogatz.WattsStrogatzTopology", ws_config(n), n, 200, s))
+                jobs.append(("watts_strogatz", "samesim.plugins.topologies.watts_strogatz.WattsStrogatzTopology", ws_config(n), n, 200, s))
         for n in ER_NS:
             for s in seeds:
-                jobs.append(("barabasi_albert", "simul8.plugins.topologies.barabasi_albert.BarabasiAlbertTopology", ba_config(n), n, 200, s))
+                jobs.append(("barabasi_albert", "samesim.plugins.topologies.barabasi_albert.BarabasiAlbertTopology", ba_config(n), n, 200, s))
 
     results = []
     for i, (topo_name, topo_class, topo_cfg, n, max_t, seed) in enumerate(jobs):

@@ -5,12 +5,12 @@ import random
 
 import pytest
 
-from simul8.domain.event import AgentStateChangedEvent, TickEvent
-from simul8.domain.ids import AgentId, EventId, MessageId, VirtualTime
-from simul8.domain.message import Message
-from simul8.domain.topology import TopologyGraph
-from simul8.plugins.behaviors.voter import VoterBehavior
-from simul8.plugins.metrics.voter_metrics import VoterMetric
+from samesim.domain.event import AgentStateChangedEvent, TickEvent
+from samesim.domain.ids import AgentId, EventId, MessageId, VirtualTime
+from samesim.domain.message import Message
+from samesim.domain.topology import TopologyGraph
+from samesim.plugins.behaviors.voter import VoterBehavior
+from samesim.plugins.metrics.voter_metrics import VoterMetric
 
 A, B, C = AgentId(0), AgentId(1), AgentId(2)
 

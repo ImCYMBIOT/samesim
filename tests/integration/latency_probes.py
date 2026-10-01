@@ -11,13 +11,13 @@ from __future__ import annotations
 import random
 from typing import Any
 
-from simul8.domain.delivery import Delivery
-from simul8.domain.ids import AgentId, MessageId, VirtualTime
-from simul8.domain.message import Message
-from simul8.domain.state import AgentState
-from simul8.domain.topology import TopologyGraph
-from simul8.ports.behavior import BehaviorPort, BehaviorResult
-from simul8.ports.communication import CommunicationProtocolPort
+from samesim.domain.delivery import Delivery
+from samesim.domain.ids import AgentId, MessageId, VirtualTime
+from samesim.domain.message import Message
+from samesim.domain.state import AgentState
+from samesim.domain.topology import TopologyGraph
+from samesim.ports.behavior import BehaviorPort, BehaviorResult
+from samesim.ports.communication import CommunicationProtocolPort
 
 
 class SendScheduleBehavior(BehaviorPort):

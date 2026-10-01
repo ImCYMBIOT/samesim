@@ -1,8 +1,8 @@
 """Unit tests for EventQueue."""
 import pytest
-from simul8.core.event_queue import EventQueue
-from simul8.domain.event import Event, TickEvent, SimulationStartedEvent
-from simul8.domain.ids import EventId, VirtualTime
+from samesim.core.event_queue import EventQueue
+from samesim.domain.event import Event, TickEvent, SimulationStartedEvent
+from samesim.domain.ids import EventId, VirtualTime
 
 
 def tick(eid: int, vt: float) -> TickEvent:

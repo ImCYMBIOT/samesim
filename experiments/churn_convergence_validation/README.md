@@ -94,7 +94,7 @@ threshold. At f = 0.5 the running network itself is slow, which the model
 ignores.
 
 **Correction.** An earlier version of this study (10 seeds per point, and
-Simul8's old `seed XOR agent_id` seeding, which made runs with different
+SameSim's old `seed XOR agent_id` seeding, which made runs with different
 seeds partly copies of each other; see
 [external_validation/](../external_validation/README.md)) reported this
 model as matching "within 10% up to f = 0.2". At 40 independent seeds it

@@ -6,11 +6,11 @@ import random
 
 import yaml
 
-from simul8.app.experiment_runner import ExperimentRunner
-from simul8.domain.event import AgentStateChangedEvent, TickEvent
-from simul8.domain.ids import AgentId, EventId, VirtualTime
-from simul8.plugins.behaviors.queue import DEPARTURE, QueueBehavior
-from simul8.plugins.metrics.queue_metrics import QueueMetric
+from samesim.app.experiment_runner import ExperimentRunner
+from samesim.domain.event import AgentStateChangedEvent, TickEvent
+from samesim.domain.ids import AgentId, EventId, VirtualTime
+from samesim.plugins.behaviors.queue import DEPARTURE, QueueBehavior
+from samesim.plugins.metrics.queue_metrics import QueueMetric
 
 S, A, B = AgentId(0), AgentId(1), AgentId(2)
 
@@ -23,8 +23,8 @@ def _behavior():
 
 
 def _customer():
-    from simul8.domain.ids import MessageId
-    from simul8.domain.message import Message
+    from samesim.domain.ids import MessageId
+    from samesim.domain.message import Message
     return Message(message_id=MessageId(1), sender_id=A, recipient_id=S, payload={"customer": True})
 
 
@@ -103,11 +103,11 @@ def test_littles_law_holds_within_a_run(tmp_path):
         "simulation": {"num_agents": 3, "max_virtual_time": 4000.0, "tick_interval": 50.0,
                        "activation": "event"},
         "plugins": {
-            "behavior": "simul8.plugins.behaviors.queue.QueueBehavior",
-            "communication": "simul8.plugins.communication.latency.LatencyProtocol",
-            "topology": "simul8.plugins.topologies.ring.RingTopology",
-            "metrics": ["simul8.plugins.metrics.queue_metrics.QueueMetric"],
-            "persistence": ["simul8.plugins.persistence.csv_exporter.CsvExporter"],
+            "behavior": "samesim.plugins.behaviors.queue.QueueBehavior",
+            "communication": "samesim.plugins.communication.latency.LatencyProtocol",
+            "topology": "samesim.plugins.topologies.ring.RingTopology",
+            "metrics": ["samesim.plugins.metrics.queue_metrics.QueueMetric"],
+            "persistence": ["samesim.plugins.persistence.csv_exporter.CsvExporter"],
         },
         "plugin_configs": {
             "QueueBehavior": {"arrival_rate": 0.35, "service_rate": 1.0},

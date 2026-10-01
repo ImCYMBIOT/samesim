@@ -1,6 +1,6 @@
 """
 Do same-seed runs give bit-identical results -- across runs, Python versions
-and operating systems -- in Simul8 and in other Python simulators?
+and operating systems -- in SameSim and in other Python simulators?
 
 Each scenario runs twice with a fixed seed in this interpreter, and its full
 output (every recorded number, as repr) is hashed with SHA-256. Run the
@@ -9,10 +9,10 @@ the hashes: identical hash = bit-identical run.
 
 Scenarios, each written the way the tool's documentation writes models:
 
-    simul8/async_gossip   examples/async_gossip_ring.yaml: event activation,
+    samesim/async_gossip   examples/async_gossip_ring.yaml: event activation,
                           Poisson clocks, exponential latency
-    simul8/sir            examples/sir_random.yaml
-    simul8/gossip         examples/gossip_1000_agents.yaml: float averaging
+    samesim/sir            examples/sir_random.yaml
+    samesim/gossip         examples/gossip_1000_agents.yaml: float averaging
     simpy/mm1             M/M/1 queue with random.expovariate, the SimPy idiom;
                           records each customer's arrival, start and end time
     simpy/mm1_service     the same run, recording each drawn service time
@@ -24,7 +24,7 @@ Scenarios, each written the way the tool's documentation writes models:
     libm/<function>       the platform C math library directly: math.log,
                           exp, pow, sin and random.expovariate, gauss,
                           lognormvariate, each over 200,000 inputs
-    portable/<function>   simul8.domain.portable_math's log, exp,
+    portable/<function>   samesim.domain.portable_math's log, exp,
                           expovariate, normalvariate, lognormvariate on the
                           same inputs
 
@@ -37,7 +37,7 @@ the C library's log(), which differs between operating systems.
     python survey.py                 # prints JSON to stdout
     python survey.py --out FILE      # also writes it to FILE
 
-Needs: simpy, mesa, ndlib, networkx (and Simul8, from this repository).
+Needs: simpy, mesa, ndlib, networkx (and SameSim, from this repository).
 A scenario whose tool isn't installed is reported as "missing".
 """
 from __future__ import annotations
@@ -66,12 +66,12 @@ def digest(values) -> str:
     return h.hexdigest()
 
 
-# ------------------------------------------------------------------ Simul8
+# ------------------------------------------------------------------ SameSim
 
-def _simul8(example: str) -> str:
+def _samesim(example: str) -> str:
     import logging
     logging.disable(logging.INFO)
-    from simul8.app.experiment_runner import ExperimentRunner
+    from samesim.app.experiment_runner import ExperimentRunner
     with tempfile.TemporaryDirectory() as tmp:
         ExperimentRunner().run(REPO / "examples" / example, output_dir=tmp)
         files = sorted(p for p in Path(tmp).glob("*.csv"))
@@ -276,20 +276,20 @@ def _variates(draw) -> dict:
 
 
 def _portable(fn) -> str:
-    from simul8.domain import portable_math
+    from samesim.domain import portable_math
     return digest(fn(portable_math, x) for x in _inputs())
 
 
 def _portable_variates(draw) -> str:
-    from simul8.domain import portable_math
+    from samesim.domain import portable_math
     rng = random.Random(SEED)
     return digest(draw(portable_math, rng) for _ in range(LIBM_N))
 
 
 SCENARIOS = {
-    "simul8/async_gossip": ("simul8", lambda: _simul8("async_gossip_ring.yaml")),
-    "simul8/sir": ("simul8", lambda: _simul8("sir_random.yaml")),
-    "simul8/gossip": ("simul8", lambda: _simul8("gossip_1000_agents.yaml")),
+    "samesim/async_gossip": ("samesim", lambda: _samesim("async_gossip_ring.yaml")),
+    "samesim/sir": ("samesim", lambda: _samesim("sir_random.yaml")),
+    "samesim/gossip": ("samesim", lambda: _samesim("gossip_1000_agents.yaml")),
     "simpy/mm1": ("simpy", simpy_mm1),
     "simpy/mm1_service": ("simpy", simpy_mm1_service),
     "mesa/voter": ("mesa", mesa_voter),
@@ -323,7 +323,7 @@ def main() -> None:
             versions[mod] = None
     results = {}
     for name, (needs, fn) in SCENARIOS.items():
-        if needs and needs != "simul8" and versions.get(needs) is None:
+        if needs and needs != "samesim" and versions.get(needs) is None:
             results[name] = {"status": "missing"}
             continue
         try:

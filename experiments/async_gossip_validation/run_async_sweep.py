@@ -1,5 +1,5 @@
 """
-Synchronous vs. asynchronous gossip: does Simul8 reproduce the O(n^2) ring?
+Synchronous vs. asynchronous gossip: does SameSim reproduce the O(n^2) ring?
 
 Runs, on the same graphs and seeds:
 
@@ -36,12 +36,12 @@ import yaml
 
 # Repo root, derived from this file so the script runs from any checkout.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from simul8.app.experiment_runner import ExperimentRunner  # noqa: E402
+from samesim.app.experiment_runner import ExperimentRunner  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 # Intermediate configs and per-run CSVs. Kept out of the repo by default
-# (see .gitignore); override with SIMUL8_EXPERIMENT_WORK to relocate.
-SCRATCH = Path(os.environ.get("SIMUL8_EXPERIMENT_WORK", HERE / "_work"))
+# (see .gitignore); override with SAMESIM_EXPERIMENT_WORK to relocate.
+SCRATCH = Path(os.environ.get("SAMESIM_EXPERIMENT_WORK", HERE / "_work"))
 THRESHOLDS = (1e-2, 1e-4)
 
 
@@ -57,18 +57,18 @@ def horizon(protocol: str, topology: str, n: int) -> float:
 
 def run_one(protocol: str, topology: str, n: int, seed: int) -> dict:
     name = f"{protocol}_{topology}_n{n}_s{seed}"
-    topo = ({"topology": "simul8.plugins.topologies.ring.RingTopology"}, {})
+    topo = ({"topology": "samesim.plugins.topologies.ring.RingTopology"}, {})
     if topology == "erdos_renyi":
-        topo = ({"topology": "simul8.plugins.topologies.random_graph.ErdosRenyiTopology"},
+        topo = ({"topology": "samesim.plugins.topologies.random_graph.ErdosRenyiTopology"},
                 {"ErdosRenyiTopology": {"edge_probability": 8.0 / (n - 1)}})
     if protocol == "sync":
-        plugins = {"behavior": "simul8.plugins.behaviors.gossip_behavior.GossipBehavior",
-                   "communication": "simul8.plugins.communication.gossip.GossipProtocol"}
+        plugins = {"behavior": "samesim.plugins.behaviors.gossip_behavior.GossipBehavior",
+                   "communication": "samesim.plugins.communication.gossip.GossipProtocol"}
         pconf = {"GossipBehavior": {"fan_out": 2, "initial_value_range": [0.0, 1.0]}}
         activation = "synchronous"
     else:
-        plugins = {"behavior": "simul8.plugins.behaviors.async_gossip.AsyncGossipBehavior",
-                   "communication": "simul8.plugins.communication.latency.LatencyProtocol"}
+        plugins = {"behavior": "samesim.plugins.behaviors.async_gossip.AsyncGossipBehavior",
+                   "communication": "samesim.plugins.communication.latency.LatencyProtocol"}
         pconf = {"AsyncGossipBehavior": {"clock_rate": 1.0, "initial_value_range": [0.0, 1.0]},
                  "LatencyProtocol": {"distribution": "constant", "delay": 0.01}}
         activation = "event"
@@ -79,8 +79,8 @@ def run_one(protocol: str, topology: str, n: int, seed: int) -> dict:
         "simulation": {"num_agents": n, "max_virtual_time": max_t,
                        "tick_interval": 1.0, "activation": activation},
         "plugins": {**plugins, **topo[0],
-                    "metrics": ["simul8.plugins.metrics.convergence.ConvergenceMetric"],
-                    "persistence": ["simul8.plugins.persistence.csv_exporter.CsvExporter"]},
+                    "metrics": ["samesim.plugins.metrics.convergence.ConvergenceMetric"],
+                    "persistence": ["samesim.plugins.persistence.csv_exporter.CsvExporter"]},
         "plugin_configs": {**pconf, **topo[1]},
     }
     (SCRATCH / "configs").mkdir(parents=True, exist_ok=True)

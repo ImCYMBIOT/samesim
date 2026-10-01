@@ -1,11 +1,11 @@
 """TraceDigestMetric: sensitive to every real difference, blind to incidental ones."""
 from __future__ import annotations
 
-from simul8.domain.event import AgentStateChangedEvent, MessageDeliveredEvent, TickEvent
-from simul8.domain.ids import AgentId, EventId, MessageId, VirtualTime
-from simul8.domain.message import Message
-from simul8.domain.topology import TopologyGraph
-from simul8.plugins.metrics.trace_digest import TraceDigestMetric
+from samesim.domain.event import AgentStateChangedEvent, MessageDeliveredEvent, TickEvent
+from samesim.domain.ids import AgentId, EventId, MessageId, VirtualTime
+from samesim.domain.message import Message
+from samesim.domain.topology import TopologyGraph
+from samesim.plugins.metrics.trace_digest import TraceDigestMetric
 
 A, B = AgentId(0), AgentId(1)
 GRAPH = TopologyGraph(agent_ids=frozenset({A, B}), adjacency={A: frozenset({B}), B: frozenset({A})})

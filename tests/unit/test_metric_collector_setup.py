@@ -8,14 +8,14 @@ from __future__ import annotations
 
 import pytest
 
-from simul8.app.experiment_runner import register_metric_collectors
-from simul8.core.agent_registry import AgentRegistry
-from simul8.domain.event import Event
-from simul8.domain.ids import MetricName
-from simul8.domain.metric import MetricSeries
-from simul8.domain.state import AgentState
-from simul8.domain.topology import TopologyGraph
-from simul8.ports.metric_collector import MetricCollectorPort
+from samesim.app.experiment_runner import register_metric_collectors
+from samesim.core.agent_registry import AgentRegistry
+from samesim.domain.event import Event
+from samesim.domain.ids import MetricName
+from samesim.domain.metric import MetricSeries
+from samesim.domain.state import AgentState
+from samesim.domain.topology import TopologyGraph
+from samesim.ports.metric_collector import MetricCollectorPort
 
 
 class _Recorder(MetricCollectorPort):

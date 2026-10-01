@@ -1,14 +1,14 @@
 """
 Shared harness for external validation scripts.
 
-Wires Simul8's real core (AgentRegistry, TopologyManager, CommunicationLayer,
+Wires SameSim's real core (AgentRegistry, TopologyManager, CommunicationLayer,
 MetricsEngine, EventQueue, TimeManager, Scheduler, SimulationEngine) exactly
 as ExperimentRunner.run() does -- same code paths, same determinism
 guarantees -- but accepts a pre-built TopologyGraph (e.g. constructed from a
 NetworkX graph) instead of generating one from a plugin + config, and
 returns MetricSeries objects in memory instead of writing CSVs.
 
-This lets the external-validation scripts run Simul8 on the EXACT SAME graph
+This lets the external-validation scripts run SameSim on the EXACT SAME graph
 object as the comparison tool (NetworkX, NDlib), rather than two separately
 generated graphs that are only statistically similar.
 """
@@ -22,22 +22,22 @@ from typing import Any
 # Repo root, derived from this file so the script runs from any checkout.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from simul8.core.agent_registry import AgentRegistry  # noqa: E402
-from simul8.core.communication_layer import CommunicationLayer  # noqa: E402
-from simul8.core.engine import SimulationEngine  # noqa: E402
-from simul8.core.event_queue import EventQueue  # noqa: E402
-from simul8.app.experiment_runner import register_metric_collectors  # noqa: E402
-from simul8.core.randomness_manager import RandomnessManager  # noqa: E402
-from simul8.core.scheduler import Scheduler  # noqa: E402
-from simul8.core.time_manager import TimeManager  # noqa: E402
-from simul8.core.topology_manager import TopologyManager  # noqa: E402
-from simul8.domain.experiment import ExperimentConfig, PluginsConfig, SimulationConfig  # noqa: E402
-from simul8.domain.ids import AgentId  # noqa: E402
-from simul8.domain.topology import TopologyGraph  # noqa: E402
-from simul8.ports.behavior import BehaviorPort  # noqa: E402
-from simul8.ports.communication import CommunicationProtocolPort  # noqa: E402
-from simul8.ports.metric_collector import MetricCollectorPort  # noqa: E402
-from simul8.ports.topology_generator import TopologyGeneratorPort  # noqa: E402
+from samesim.core.agent_registry import AgentRegistry  # noqa: E402
+from samesim.core.communication_layer import CommunicationLayer  # noqa: E402
+from samesim.core.engine import SimulationEngine  # noqa: E402
+from samesim.core.event_queue import EventQueue  # noqa: E402
+from samesim.app.experiment_runner import register_metric_collectors  # noqa: E402
+from samesim.core.randomness_manager import RandomnessManager  # noqa: E402
+from samesim.core.scheduler import Scheduler  # noqa: E402
+from samesim.core.time_manager import TimeManager  # noqa: E402
+from samesim.core.topology_manager import TopologyManager  # noqa: E402
+from samesim.domain.experiment import ExperimentConfig, PluginsConfig, SimulationConfig  # noqa: E402
+from samesim.domain.ids import AgentId  # noqa: E402
+from samesim.domain.topology import TopologyGraph  # noqa: E402
+from samesim.ports.behavior import BehaviorPort  # noqa: E402
+from samesim.ports.communication import CommunicationProtocolPort  # noqa: E402
+from samesim.ports.metric_collector import MetricCollectorPort  # noqa: E402
+from samesim.ports.topology_generator import TopologyGeneratorPort  # noqa: E402
 
 
 class FixedTopology(TopologyGeneratorPort):
@@ -53,14 +53,14 @@ class FixedTopology(TopologyGeneratorPort):
 
 
 def networkx_to_topology_graph(nx_graph, agent_ids: list[AgentId]) -> TopologyGraph:
-    """Convert a NetworkX graph (nodes 0..n-1) into a Simul8 TopologyGraph."""
+    """Convert a NetworkX graph (nodes 0..n-1) into a SameSim TopologyGraph."""
     adjacency: dict[AgentId, frozenset[AgentId]] = {}
     for i, aid in enumerate(agent_ids):
         adjacency[aid] = frozenset(AgentId(j) for j in nx_graph.neighbors(i))
     return TopologyGraph(agent_ids=frozenset(agent_ids), adjacency=adjacency)
 
 
-def run_simul8(
+def run_samesim(
     graph: TopologyGraph,
     behavior: BehaviorPort,
     behavior_config: dict[str, Any],
@@ -72,7 +72,7 @@ def run_simul8(
     tick_interval: float = 1.0,
     name: str = "external_validation",
 ) -> list:
-    """Run a full Simul8 experiment on a pre-built graph; return MetricSeries list."""
+    """Run a full SameSim experiment on a pre-built graph; return MetricSeries list."""
     n = len(graph.agent_ids)
     config = ExperimentConfig(
         schema_version="1.0",

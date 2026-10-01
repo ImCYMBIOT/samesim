@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from simul8.app.experiment_runner import ExperimentRunner
+from samesim.app.experiment_runner import ExperimentRunner
 
 
 def _run(tmp_path: Path, *, seed: int, n: int = 5, max_time: float = 3000.0,
@@ -18,12 +18,12 @@ def _run(tmp_path: Path, *, seed: int, n: int = 5, max_time: float = 3000.0,
         "simulation": {"num_agents": n, "max_virtual_time": max_time,
                        "tick_interval": 10.0, "activation": "event"},
         "plugins": {
-            "behavior": "simul8.plugins.behaviors.raft_election.RaftElectionBehavior",
-            "communication": "simul8.plugins.communication.latency.LatencyProtocol",
-            "topology": "simul8.plugins.topologies.random_graph.ErdosRenyiTopology",
-            "metrics": ["simul8.plugins.metrics.raft_metrics.RaftElectionMetric",
-                        "simul8.plugins.metrics.state_trace.StateTraceMetric"],
-            "persistence": ["simul8.plugins.persistence.csv_exporter.CsvExporter"],
+            "behavior": "samesim.plugins.behaviors.raft_election.RaftElectionBehavior",
+            "communication": "samesim.plugins.communication.latency.LatencyProtocol",
+            "topology": "samesim.plugins.topologies.random_graph.ErdosRenyiTopology",
+            "metrics": ["samesim.plugins.metrics.raft_metrics.RaftElectionMetric",
+                        "samesim.plugins.metrics.state_trace.StateTraceMetric"],
+            "persistence": ["samesim.plugins.persistence.csv_exporter.CsvExporter"],
         },
         "plugin_configs": {
             "RaftElectionBehavior": {"election_timeout_min": timeouts[0],

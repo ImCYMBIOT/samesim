@@ -5,7 +5,7 @@ For each rho and each of Wq, W, L:
   - each tool's mean over seeds with a 95% CI (t distribution);
   - TOST equivalence of each tool with the closed form, within +/-3% of
     the closed-form value (one-sample);
-  - TOST equivalence of Simul8 with SimPy, within +/-3% of the closed-form
+  - TOST equivalence of SameSim with SimPy, within +/-3% of the closed-form
     value (two-sample, Welch).
 The +/-3% margin was fixed before the first run.
 
@@ -59,13 +59,13 @@ def main() -> None:
     seeds = len({r["seed"] for r in rows})
     print(f"Mean over {seeds} seeds ± 95% CI. TOST margin ±{MARGIN:.0%} of the closed form; "
           f"p < 0.05 means equivalence is shown.\n")
-    print("| ρ | Metric | Closed form | Simul8 | SimPy | Simul8 ≡ theory (TOST p) | "
-          "SimPy ≡ theory (TOST p) | Simul8 ≡ SimPy (TOST p) |")
+    print("| ρ | Metric | Closed form | SameSim | SimPy | SameSim ≡ theory (TOST p) | "
+          "SimPy ≡ theory (TOST p) | SameSim ≡ SimPy (TOST p) |")
     print("|---:|---|---:|---:|---:|---:|---:|---:|")
     for rho in rhos:
         th = theory(rho)
         for metric in ("Wq", "W", "L"):
-            s8 = [r[metric] for r in rows if r["rho"] == rho and r["tool"] == "simul8"]
+            s8 = [r[metric] for r in rows if r["rho"] == rho and r["tool"] == "samesim"]
             sp = [r[metric] for r in rows if r["rho"] == rho and r["tool"] == "simpy"]
             m = MARGIN * th[metric]
             (ms, hs), (mp, hp) = ci95(s8), ci95(sp)
@@ -74,10 +74,10 @@ def main() -> None:
                   f"{tost_two(s8, sp, m):.2g} |")
 
     print("\nThroughput, customers completed per second of run time (median, IQR):\n")
-    print("| ρ | Simul8 | SimPy | SimPy / Simul8 |")
+    print("| ρ | SameSim | SimPy | SimPy / SameSim |")
     print("|---:|---:|---:|---:|")
     for rho in rhos:
-        s8 = [r["customers_per_s"] for r in rows if r["rho"] == rho and r["tool"] == "simul8"]
+        s8 = [r["customers_per_s"] for r in rows if r["rho"] == rho and r["tool"] == "samesim"]
         sp = [r["customers_per_s"] for r in rows if r["rho"] == rho and r["tool"] == "simpy"]
         a, b = quartiles(s8), quartiles(sp)
         print(f"| {rho:g} | {a[1]:,.0f} ({a[0]:,.0f}–{a[2]:,.0f}) | {b[1]:,.0f} ({b[0]:,.0f}–{b[2]:,.0f}) | "

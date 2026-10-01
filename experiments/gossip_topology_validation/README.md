@@ -1,7 +1,7 @@
 # Gossip Convergence vs. Topology — Validation Study
 
 > **Re-run with independent seeds (2026-10-01).** Earlier versions of this
-> study used Simul8's old `seed XOR agent_id` seeding, which made runs with
+> study used SameSim's old `seed XOR agent_id` seeding, which made runs with
 > different seeds partly copies of each other (see
 > [external_validation/](../external_validation/README.md)). On a ring it was
 > worse than partial: XOR with a small seed mostly swaps *adjacent* ids, so
@@ -24,12 +24,12 @@
 **Status:** validation pass across four topologies (one graph density, 20
 seeds per point). This is the first of the research directions proposed in
 the original research brief (now [docs/design.md](../../docs/design.md#8-roadmap)),
-picked first because it's also the cheapest way to sanity-check that Simul8's
+picked first because it's also the cheapest way to sanity-check that SameSim's
 gossip pipeline produces results consistent with known graph-mixing theory.
 
 ## Question
 
-Does Simul8's push-gossip convergence time behave the way graph mixing-time
+Does SameSim's push-gossip convergence time behave the way graph mixing-time
 theory predicts — fast on well-connected graphs, much slower on a poorly
 connected one, with the gap widening as the network grows? And does that hold
 consistently across different notions of "well-connected" (uniformly random,
@@ -37,7 +37,7 @@ small-world, scale-free), not just one?
 
 ## Method
 
-`run_sweep.py` drives Simul8's real `ExperimentRunner` (the same code path the
+`run_sweep.py` drives SameSim's real `ExperimentRunner` (the same code path the
 CLI uses) across a grid of `(topology, n, seed)`, using `GossipBehavior`
 (`fan_out=2`) and `ConvergenceMetric` (population variance of agent values).
 For each run, `converged_tick` is the first tick at which variance drops to
@@ -58,7 +58,7 @@ For each run, `converged_tick` is the first tick at which variance drops to
 - 20 seeds per `(topology, n)`. `max_virtual_time` is max(300, 8n) ticks on
   rings and 200 on the other topologies, calibrated from a pilot run.
 
-Run it yourself (from this directory, with the `simul8` conda env active):
+Run it yourself (from this directory, with the `samesim` conda env active):
 `python run_sweep.py --mode full` (ring + Erdős–Rényi, 240 runs, ~12 min)
 and `python run_sweep.py --mode full_ws_ba` (Watts–Strogatz + Barabási–Albert,
 240 runs, ~10 min), then `python analyze.py` for the tables below. Raw output:

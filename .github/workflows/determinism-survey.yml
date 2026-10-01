@@ -1,7 +1,7 @@
 name: determinism-survey
 
 # Manual only. Runs experiments/determinism_survey/survey.py -- fixed-seed
-# scenarios in Simul8, SimPy, Mesa, NDlib and plain Python -- on every
+# scenarios in SameSim, SimPy, Mesa, NDlib and plain Python -- on every
 # OS x Python combination and uploads each run's fingerprints. Comparing the
 # fingerprints shows which tools give bit-identical results across versions
 # and platforms. Not a test: other tools differing is a finding, not a failure.

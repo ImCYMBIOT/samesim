@@ -28,12 +28,12 @@ import yaml
 
 # Repo root, derived from this file so the script runs from any checkout.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from simul8.app.experiment_runner import ExperimentRunner  # noqa: E402
+from samesim.app.experiment_runner import ExperimentRunner  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 # Intermediate configs and per-run CSVs. Kept out of the repo by default
-# (see .gitignore); override with SIMUL8_EXPERIMENT_WORK to relocate.
-SCRATCH = Path(os.environ.get("SIMUL8_EXPERIMENT_WORK", HERE / "_work"))
+# (see .gitignore); override with SAMESIM_EXPERIMENT_WORK to relocate.
+SCRATCH = Path(os.environ.get("SAMESIM_EXPERIMENT_WORK", HERE / "_work"))
 
 N_AGENTS = 200
 AVG_DEGREE = 8.0
@@ -54,11 +54,11 @@ def run_one(shape: str, mean: float, seed: int) -> dict:
         "experiment": {"name": name, "seed": seed},
         "simulation": {"num_agents": N_AGENTS, "max_virtual_time": MAX_TIME, "tick_interval": 1},
         "plugins": {
-            "behavior": "simul8.plugins.behaviors.gossip_behavior.GossipBehavior",
-            "communication": "simul8.plugins.communication.latency.LatencyProtocol",
-            "topology": "simul8.plugins.topologies.random_graph.ErdosRenyiTopology",
-            "metrics": ["simul8.plugins.metrics.convergence.ConvergenceMetric"],
-            "persistence": ["simul8.plugins.persistence.csv_exporter.CsvExporter"],
+            "behavior": "samesim.plugins.behaviors.gossip_behavior.GossipBehavior",
+            "communication": "samesim.plugins.communication.latency.LatencyProtocol",
+            "topology": "samesim.plugins.topologies.random_graph.ErdosRenyiTopology",
+            "metrics": ["samesim.plugins.metrics.convergence.ConvergenceMetric"],
+            "persistence": ["samesim.plugins.persistence.csv_exporter.CsvExporter"],
         },
         "plugin_configs": {
             "GossipBehavior": {"fan_out": FAN_OUT, "initial_value_range": [0.0, 1.0]},

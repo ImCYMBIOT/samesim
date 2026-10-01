@@ -18,11 +18,11 @@ from __future__ import annotations
 
 import random
 
-from simul8.domain.ids import AgentId
-from simul8.domain.state import AgentState
-from simul8.domain.topology import TopologyGraph
-from simul8.plugins.behaviors.sir_behavior import SirEpidemicBehavior
-from simul8.plugins.communication.broadcast import BroadcastProtocol
+from samesim.domain.ids import AgentId
+from samesim.domain.state import AgentState
+from samesim.domain.topology import TopologyGraph
+from samesim.plugins.behaviors.sir_behavior import SirEpidemicBehavior
+from samesim.plugins.communication.broadcast import BroadcastProtocol
 
 
 def test_infected_agent_sends_exactly_one_message_per_tick():

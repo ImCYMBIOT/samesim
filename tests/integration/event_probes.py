@@ -20,18 +20,18 @@ from __future__ import annotations
 import random
 from typing import Any
 
-from simul8.domain.delivery import Delivery
-from simul8.domain.ids import AgentId, MessageId
-from simul8.domain.message import Message
-from simul8.domain.state import AgentState
-from simul8.domain.timer import Timer
-from simul8.ports.behavior import BehaviorPort, BehaviorResult
-from simul8.domain.event import (AgentStateChangedEvent, MessageDeliveredEvent,
+from samesim.domain.delivery import Delivery
+from samesim.domain.ids import AgentId, MessageId
+from samesim.domain.message import Message
+from samesim.domain.state import AgentState
+from samesim.domain.timer import Timer
+from samesim.ports.behavior import BehaviorPort, BehaviorResult
+from samesim.domain.event import (AgentStateChangedEvent, MessageDeliveredEvent,
                                  MessageLostEvent, TopologyChangeEvent)
-from simul8.domain.ids import MetricName
-from simul8.domain.metric import MetricSeries
-from simul8.ports.communication import CommunicationProtocolPort
-from simul8.ports.metric_collector import MetricCollectorPort
+from samesim.domain.ids import MetricName
+from samesim.domain.metric import MetricSeries
+from samesim.ports.communication import CommunicationProtocolPort
+from samesim.ports.metric_collector import MetricCollectorPort
 
 
 class ScriptedBehavior(BehaviorPort):

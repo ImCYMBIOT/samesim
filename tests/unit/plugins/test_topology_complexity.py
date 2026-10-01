@@ -45,9 +45,9 @@ import time
 
 import pytest
 
-import simul8.plugins.topologies as topologies_pkg
-from simul8.domain.ids import AgentId
-from simul8.ports.topology_generator import TopologyGeneratorPort
+import samesim.plugins.topologies as topologies_pkg
+from samesim.domain.ids import AgentId
+from samesim.ports.topology_generator import TopologyGeneratorPort
 
 # Per-generator config chosen to hold average degree roughly constant, so
 # the measurement reflects generation cost and not a denser graph.

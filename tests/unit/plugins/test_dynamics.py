@@ -7,14 +7,14 @@ from types import MappingProxyType
 
 import pytest
 
-from simul8.core.randomness_manager import RandomnessManager
-from simul8.core.topology_manager import TopologyManager
-from simul8.domain.ids import AgentId
-from simul8.domain.topology import TopologyGraph
-from simul8.domain.topology_change import TopologyChange
-from simul8.plugins.dynamics.random_churn import RandomChurn
-from simul8.plugins.dynamics.scheduled import ScheduledChurn
-from simul8.plugins.topologies.ring import RingTopology
+from samesim.core.randomness_manager import RandomnessManager
+from samesim.core.topology_manager import TopologyManager
+from samesim.domain.ids import AgentId
+from samesim.domain.topology import TopologyGraph
+from samesim.domain.topology_change import TopologyChange
+from samesim.plugins.dynamics.random_churn import RandomChurn
+from samesim.plugins.dynamics.scheduled import ScheduledChurn
+from samesim.plugins.topologies.ring import RingTopology
 
 IDS = [AgentId(i) for i in range(6)]
 

@@ -10,15 +10,15 @@ from pathlib import Path
 import pytest
 import yaml
 
-from simul8.app.experiment_runner import ExperimentRunner
+from samesim.app.experiment_runner import ExperimentRunner
 from tests.integration.event_probes import EventLogMetric, PayloadDelayProtocol, ScriptedBehavior
 
 PROBES = "tests.integration.event_probes"
-SCHEDULED = "simul8.plugins.dynamics.scheduled.ScheduledChurn"
+SCHEDULED = "samesim.plugins.dynamics.scheduled.ScheduledChurn"
 
 
 def _run(tmp_path, script=None, events=(), *, n=4, max_time=10.0, activation="event",
-         behavior=f"{PROBES}.ScriptedBehavior", topology="simul8.plugins.topologies.ring.RingTopology",
+         behavior=f"{PROBES}.ScriptedBehavior", topology="samesim.plugins.topologies.ring.RingTopology",
          behavior_config=None, metrics=(), persistence=(), extra_configs=None):
     ScriptedBehavior.log = []
     EventLogMetric.log = []
@@ -110,10 +110,10 @@ def test_joining_agent_is_initialized_exactly_as_at_t0(tmp_path):
     """An agent joining at t=2 must start from the same state it would have
     had if present from the start: same config, same per-agent RNG."""
     def first_value(n, events, subdir):
-        _run(tmp_path / subdir, behavior="simul8.plugins.behaviors.async_gossip.AsyncGossipBehavior",
+        _run(tmp_path / subdir, behavior="samesim.plugins.behaviors.async_gossip.AsyncGossipBehavior",
              behavior_config={}, n=n, events=events,
-             metrics=["simul8.plugins.metrics.state_trace.StateTraceMetric"],
-             persistence=["simul8.plugins.persistence.csv_exporter.CsvExporter"])
+             metrics=["samesim.plugins.metrics.state_trace.StateTraceMetric"],
+             persistence=["samesim.plugins.persistence.csv_exporter.CsvExporter"])
         with open(tmp_path / subdir / "out" / "churn_state_trace.csv", newline="") as f:
             rows = [r for r in csv.DictReader(l for l in f if not l.startswith("#"))]
         return next((float(r["virtual_time"]), r["state"]) for r in rows if r["agent_id"] == "4")
@@ -173,7 +173,7 @@ def test_every_message_is_delivered_or_reported_lost(tmp_path):
     events = [{"at": 0.3 * (k + 1), ("fail" if k % 2 == 0 else "recover"): [k // 2 % 6]}
               for k in range(12)]
     _, log = _run(tmp_path, script, events, n=6, max_time=20.0,
-                  topology="simul8.plugins.topologies.random_graph.ErdosRenyiTopology",
+                  topology="samesim.plugins.topologies.random_graph.ErdosRenyiTopology",
                   extra_configs={"ErdosRenyiTopology": {"edge_probability": 1.0}})
     sent = 6 * 5
     delivered = sum(1 for e in log if e[0] == "delivered")

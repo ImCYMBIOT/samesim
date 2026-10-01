@@ -1,11 +1,11 @@
 """ConsensusMetric: running-agent agreement, all-agent agreement, and drift."""
 from __future__ import annotations
 
-from simul8.domain.event import AgentStateChangedEvent, TickEvent, TopologyChangeEvent
-from simul8.domain.ids import AgentId, EventId, VirtualTime
-from simul8.domain.topology import TopologyGraph
-from simul8.domain.topology_change import TopologyChange
-from simul8.plugins.metrics.consensus import ConsensusMetric
+from samesim.domain.event import AgentStateChangedEvent, TickEvent, TopologyChangeEvent
+from samesim.domain.ids import AgentId, EventId, VirtualTime
+from samesim.domain.topology import TopologyGraph
+from samesim.domain.topology_change import TopologyChange
+from samesim.plugins.metrics.consensus import ConsensusMetric
 
 A, B, C = AgentId(0), AgentId(1), AgentId(2)
 GRAPH = TopologyGraph(agent_ids=frozenset({A, B, C}),

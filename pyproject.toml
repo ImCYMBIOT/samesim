@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "simul8"
+name = "samesim"
 version = "0.1.0"
-description = "Modular event-driven simulation platform for distributed systems research"
+description = "Same seed, same simulation: a deterministic discrete-event simulator for message-passing agents"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [{name = "Agnivesh Kumar"}]
@@ -30,7 +30,7 @@ dev = [
 ]
 
 [project.scripts]
-simul8 = "simul8.cli.main:main"
+samesim = "samesim.cli.main:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -43,4 +43,4 @@ markers = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["simul8*"]
+include = ["samesim*"]

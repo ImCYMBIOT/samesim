@@ -14,7 +14,7 @@ from decimal import Context, Decimal
 
 import pytest
 
-from simul8.domain import portable_math as pm
+from samesim.domain import portable_math as pm
 
 LOG_CASES = [
     (0.1, '-0x1.26bb1bbb55515p+1'),

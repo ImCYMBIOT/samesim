@@ -1,8 +1,8 @@
 """Unit tests for AgentRegistry."""
 import pytest
-from simul8.core.agent_registry import AgentRegistry
-from simul8.domain.ids import AgentId
-from simul8.domain.state import AgentState
+from samesim.core.agent_registry import AgentRegistry
+from samesim.domain.ids import AgentId
+from samesim.domain.state import AgentState
 
 
 class TestAgentRegistryCreation:

@@ -1,9 +1,9 @@
-# M/M/1 queue: Simul8 vs. SimPy vs. the closed forms
+# M/M/1 queue: SameSim vs. SimPy vs. the closed forms
 
 The standard check for a discrete-event simulator: an M/M/1 queue, whose
 mean wait, time in system and number in system are known exactly, run in
-Simul8 and in [SimPy](https://simpy.readthedocs.io), the general-purpose
-Python DES library, with identical parameters. It exercises Simul8's
+SameSim and in [SimPy](https://simpy.readthedocs.io), the general-purpose
+Python DES library, with identical parameters. It exercises SameSim's
 event-driven core end to end: Poisson timers, message delivery with
 latency, agent wakes and FIFO bookkeeping.
 
@@ -14,7 +14,7 @@ match each other except one borderline cell. SimPy is 5× faster.**
 
 - Poisson arrivals at rate λ = ρ, one server with exponential service at
   rate μ = 1, FIFO. ρ ∈ {0.5, 0.8, 0.9}.
-- **Simul8:** `QueueBehavior`, one source agent sending customers to one
+- **SameSim:** `QueueBehavior`, one source agent sending customers to one
   server agent as messages with constant latency 0.001 (which shifts every
   arrival equally, so arrivals stay Poisson), event activation,
   `QueueMetric`.
@@ -39,7 +39,7 @@ Raw output: [`mm1_results.json`](mm1_results.json); analysis output:
 
 ## Results
 
-| ρ | Metric | Closed form | Simul8 | SimPy | Simul8 ≡ theory (TOST p) | SimPy ≡ theory (TOST p) | Simul8 ≡ SimPy (TOST p) |
+| ρ | Metric | Closed form | SameSim | SimPy | SameSim ≡ theory (TOST p) | SimPy ≡ theory (TOST p) | SameSim ≡ SimPy (TOST p) |
 |---:|---|---:|---:|---:|---:|---:|---:|
 | 0.5 | Wq | 1.000 | 1.002 ± 0.007 | 1.000 ± 0.007 | 6×10⁻¹² | 1×10⁻¹⁴ | 3×10⁻⁸ |
 | 0.5 | W | 2.000 | 2.004 ± 0.008 | 2.000 ± 0.007 | 1×10⁻²⁵ | 1×10⁻²⁹ | 2×10⁻²⁰ |
@@ -53,7 +53,7 @@ Raw output: [`mm1_results.json`](mm1_results.json); analysis output:
 
 - **Both tools are equivalent to the closed forms within ±3%** for every
   load and metric.
-- **Simul8 and SimPy are equivalent within ±3%** everywhere except Wq at
+- **SameSim and SimPy are equivalent within ±3%** everywhere except Wq at
   ρ = 0.9, where it is borderline (p = 0.051). Neither differs from the
   other or from theory significantly anywhere: every CI contains the
   closed form.
@@ -65,7 +65,7 @@ Averages can hide a bug that happens to cancel out. For a FIFO single
 server each customer's wait follows from the draws alone (Lindley, 1952):
 W₁ = 0, Wₙ₊₁ = max(0, Wₙ + Sₙ − Aₙ₊₁).
 `tests/integration/test_queue_lindley.py` replays the exact random streams
-Simul8's source and server consume through this recursion and requires
+SameSim's source and server consume through this recursion and requires
 **every one of ~4,500 recorded waits to match to 10⁻⁹**. It does. Making
 the queue LIFO, or restarting service when a customer arrives at a busy
 server, fails it.
@@ -73,16 +73,16 @@ server, fails it.
 ### Throughput
 
 Customers completed per second of run time (the simulation loop itself,
-including Simul8's metric collection and SimPy's equivalent bookkeeping),
+including SameSim's metric collection and SimPy's equivalent bookkeeping),
 median and IQR over 100 runs, same machine:
 
-| ρ | Simul8 | SimPy | SimPy / Simul8 |
+| ρ | SameSim | SimPy | SimPy / SameSim |
 |---:|---:|---:|---:|
 | 0.5 | 19,381 (18,947–19,806) | 97,968 (94,873–99,674) | 5.1× |
 | 0.8 | 18,980 (18,656–19,196) | 95,945 (93,698–96,989) | 5.1× |
 | 0.9 | 19,127 (18,799–19,275) | 95,641 (94,143–96,517) | 5.0× |
 
-A profile of a Simul8 run shows no single hotspot; the cost is spread
+A profile of a SameSim run shows no single hotspot; the cost is spread
 across what the architecture does per customer:
 - Each customer is 4 scheduled events: arrival timer, message delivery,
   agent wake, departure timer. SimPy uses 2–3 generator resumptions.
@@ -91,14 +91,14 @@ across what the architecture does per customer:
   customer).
 - `portable_math` (platform-independent `log`) accounts for about 3%.
 
-Simul8 trades this speed for a message-level model of agents, a
+SameSim trades this speed for a message-level model of agents, a
 metric pipeline that never sees agent internals, and bit-identical runs on
 every OS and Python version. SimPy's model is a process interaction on one
 machine with the platform's `random.expovariate`.
 
 ## History
 
-The first full run used 20 seeds. At ρ = 0.9 it gave Simul8 Wq = 8.36 ±
+The first full run used 20 seeds. At ρ = 0.9 it gave SameSim Wq = 8.36 ±
 0.36, a CI excluding 9.0, while SimPy matched. 100 fresh seeds gave
 9.25 ± 0.21: the first 20 had been a low draw. At ρ = 0.9 per-run means
 are strongly right-skewed (rare long congestion episodes), so a small

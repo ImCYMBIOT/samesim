@@ -1,12 +1,12 @@
-# Voter model: Simul8 vs. Mesa vs. an exact result
+# Voter model: SameSim vs. Mesa vs. an exact result
 
-The voter model in Simul8 and in [Mesa](https://mesa.readthedocs.io), the
+The voter model in SameSim and in [Mesa](https://mesa.readthedocs.io), the
 standard Python agent-based modeling library, on identical graphs, checked
 against an exact martingale result. It is also a second, very different
 domain (opinion dynamics) run on the same engine with no core changes.
 
 **Result: both tools follow the exact prediction, not the naive one.
-Simul8 is shown equivalent to it within ±0.03; for Mesa, and between the
+SameSim is shown equivalent to it within ±0.03; for Mesa, and between the
 two tools, no difference is significant but equivalence isn't shown at
 2,000 seeds. Mesa is 7.4× faster per agent update.**
 
@@ -30,11 +30,11 @@ best-connected nodes: the plain fraction is 0.10, but M(0) averages 0.27.
 
 ## Setup
 
-- 2,000 seeds. Each seed gives one graph, **shared by both tools**: Simul8's
+- 2,000 seeds. Each seed gives one graph, **shared by both tools**: SameSim's
   `BarabasiAlbertTopology` with `random.Random(seed)`, exactly as the
   experiment runner builds it, handed to Mesa as an adjacency list. M(0)
   is computed per run (it is identical in both tools for every seed).
-- **Simul8:** `VoterBehavior` and `VoterMetric`, synchronous activation,
+- **SameSim:** `VoterBehavior` and `VoterMetric`, synchronous activation,
   `GossipProtocol`. Agents announce opinions at t = 0 and then only when
   they change.
 - **Mesa 3.5:** the same rule as a two-stage step (every agent chooses,
@@ -55,12 +55,12 @@ Raw output: [`voter_results.json`](voter_results.json); analysis output:
 
 | Tool | P(opinion 1 wins) | Mean M(0) | Wins − M(0), 95% CI | ≡ M(0) within ±0.03 (TOST p) | Wins − naive 0.10, 95% CI |
 |---|---:|---:|---:|---:|---:|
-| Simul8 | 0.267 | 0.272 | −0.005 ± 0.019 | **0.006** | +0.167 ± 0.019 |
+| SameSim | 0.267 | 0.272 | −0.005 ± 0.019 | **0.006** | +0.167 ± 0.019 |
 | Mesa | 0.255 | 0.272 | −0.017 ± 0.019 | 0.097 | +0.154 ± 0.019 |
 
 - **Both tools follow the martingale, and the naive prediction is
   decisively wrong** for both (+0.17 and +0.15, CIs far from 0).
-- **Simul8 is equivalent to the exact result within ±0.03.**
+- **SameSim is equivalent to the exact result within ±0.03.**
 - **Mesa is not significantly different from it** (the CI contains 0),
   but its CI reaches −0.036, so equivalence within ±0.03 isn't shown.
 - **Between the tools**, the win rates differ by +0.012, not
@@ -77,13 +77,13 @@ machine:
 
 | Tool | Updates/s | IQR |
 |---|---:|---:|
-| Simul8 | 139,213 | 120,986–151,600 |
+| SameSim | 139,213 | 120,986–151,600 |
 | Mesa | 1,026,714 | 914,497–1,123,623 |
 
 **Mesa is 7.4× faster.** A Mesa step is a direct method call on a Python
-object that reads its neighbor's attribute. In Simul8, opinions travel as
+object that reads its neighbor's attribute. In SameSim, opinions travel as
 messages through the protocol and event queue, state is immutable and
-copied on change, and every change is dispatched to metrics. Simul8 also
+copied on change, and every change is dispatched to metrics. SameSim also
 keeps stepping every agent after consensus until the horizon (its
 synchronous mode has no stop condition), which this measure counts as
 updates.
@@ -91,7 +91,7 @@ updates.
 ## What this doesn't cover yet
 
 - The asynchronous (random sequential) voter model, which Mesa would run
-  with `shuffle_do`; it needs a Poisson-clock version in Simul8's event mode.
+  with `shuffle_do`; it needs a Poisson-clock version in SameSim's event mode.
 - Cross-version and cross-platform determinism of either tool, run as its
   own study.
-- A stop-on-condition feature in Simul8, so runs can end at consensus.
+- A stop-on-condition feature in SameSim, so runs can end at consensus.

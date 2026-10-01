@@ -3,12 +3,12 @@ from __future__ import annotations
 
 import pytest
 
-from simul8.core.communication_layer import CommunicationLayer
-from simul8.domain.delivery import Delivery
-from simul8.domain.ids import AgentId, MessageId
-from simul8.domain.message import Message
-from simul8.domain.topology import TopologyGraph
-from simul8.ports.communication import CommunicationProtocolPort
+from samesim.core.communication_layer import CommunicationLayer
+from samesim.domain.delivery import Delivery
+from samesim.domain.ids import AgentId, MessageId
+from samesim.domain.message import Message
+from samesim.domain.topology import TopologyGraph
+from samesim.ports.communication import CommunicationProtocolPort
 
 A, B = AgentId(0), AgentId(1)
 GRAPH = TopologyGraph(agent_ids=frozenset({A, B}), adjacency={A: frozenset({B}), B: frozenset({A})})

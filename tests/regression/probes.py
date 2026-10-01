@@ -26,11 +26,11 @@ from __future__ import annotations
 import random
 from typing import Any
 
-from simul8.domain.ids import AgentId, MessageId, VirtualTime
-from simul8.domain.message import Message
-from simul8.domain.state import AgentState
-from simul8.domain.timer import Timer
-from simul8.ports.behavior import BehaviorPort, BehaviorResult
+from samesim.domain.ids import AgentId, MessageId, VirtualTime
+from samesim.domain.message import Message
+from samesim.domain.state import AgentState
+from samesim.domain.timer import Timer
+from samesim.ports.behavior import BehaviorPort, BehaviorResult
 
 
 class InboxProbeBehavior(BehaviorPort):

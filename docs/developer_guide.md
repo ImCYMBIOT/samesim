@@ -1,6 +1,6 @@
-# Simul8 Developer Guide
+# SameSim Developer Guide
 
-How Simul8 works inside, and how to extend it: writing plugins, the rules
+How SameSim works inside, and how to extend it: writing plugins, the rules
 they must follow, and the tests that enforce those rules. To run
 experiments with existing plugins, see the [User Guide](user_guide.md). For
 why the engine is built this way, see [Design](design.md).
@@ -19,12 +19,12 @@ why the engine is built this way, see [Design](design.md).
 
 > **The core never knows what it's simulating.**
 
-Simul8 uses a hexagonal (ports-and-adapters) architecture. The engine
+SameSim uses a hexagonal (ports-and-adapters) architecture. The engine
 handles agents, virtual time, events, message routing and metric dispatch.
 Everything domain-specific is a plugin behind an abstract port.
 
 ```
-simul8/
+samesim/
 ├── domain/    Data only: Agent, Message, Event, AgentState, TopologyGraph,
 │              Delivery, Timer, TopologyChange, MetricSeries, portable_math
 ├── ports/     Abstract contracts: BehaviorPort, CommunicationProtocolPort,
@@ -36,7 +36,7 @@ simul8/
 ├── app/       Orchestration: ConfigLoader, PluginLoader, ExperimentRunner
 ├── plugins/   behaviors/ communication/ topologies/ metrics/
 │              persistence/ dynamics/
-└── cli/       simul8 run, simul8 visualize
+└── cli/       samesim run, samesim visualize
 ```
 
 **Allowed imports**, enforced by `tests/unit/test_architecture_boundaries.py`
@@ -44,7 +44,7 @@ simul8/
 
 | Layer | May import |
 |---|---|
-| `domain` | nothing in `simul8` |
+| `domain` | nothing in `samesim` |
 | `ports` | `domain` |
 | `core` | `domain`, `ports` |
 | `plugins` | `domain`, `ports` |
@@ -145,7 +145,7 @@ Python and OS. These rules apply to all code in `domain`, `core` and
   `sum()` of floats, and every gossip run used to differ between 3.11 and
   3.12. `fsum` is correctly rounded, so it gives the same answer on every
   version and for any input order. Integer sums are fine.
-- **Use `simul8.domain.portable_math` for transcendental math:** `log`,
+- **Use `samesim.domain.portable_math` for transcendental math:** `log`,
   `exp`, `ipow`, `expovariate(rng, rate)`, `normalvariate`,
   `lognormvariate`. IEEE 754 fixes only `+ − × ÷ √`. `math.log`, `exp`,
   `pow`, float `**`, and `rng.expovariate` or `gauss` come from each OS's C
@@ -159,10 +159,10 @@ Python and OS. These rules apply to all code in `domain`, `core` and
 
 ## 4. Writing a plugin
 
-A plugin is a class in `simul8/plugins/<category>/` that subclasses one
+A plugin is a class in `samesim/plugins/<category>/` that subclasses one
 port. A config references it by dotted path. There is nothing to register.
 
-1. **Import only `simul8.domain` and `simul8.ports`.** If you need something
+1. **Import only `samesim.domain` and `samesim.ports`.** If you need something
    the port doesn't give you, the port is missing a feature; raise it rather
    than reaching into `core`. (Two metrics once did `from ...core import`
    to get the live agent registry, and the boundary test at the time
@@ -185,10 +185,10 @@ port. A config references it by dotted path. There is nothing to register.
 A minimal behavior:
 
 ```python
-from simul8.domain.ids import MessageId
-from simul8.domain.message import Message
-from simul8.domain.state import AgentState
-from simul8.ports.behavior import BehaviorPort, BehaviorResult
+from samesim.domain.ids import MessageId
+from samesim.domain.message import Message
+from samesim.domain.state import AgentState
+from samesim.ports.behavior import BehaviorPort, BehaviorResult
 
 class CounterBehavior(BehaviorPort):
     """Each agent adds up what it receives and tells one neighbor its total.
@@ -218,7 +218,7 @@ class CounterBehavior(BehaviorPort):
 
 ## 5. The ports
 
-The docstrings in `simul8/ports/*.py` are the specification. What follows
+The docstrings in `samesim/ports/*.py` are the specification. What follows
 summarizes each port.
 
 ### BehaviorPort: what an agent does
@@ -235,7 +235,7 @@ on_recover(agent_id, current_state, neighbors, virtual_time) -> BehaviorResult  
   you return, and per-agent RNGs go in a dict keyed by agent id.
 - `BehaviorResult(next_state, outbound_messages=[], set_timers=[],
   cancel_timers=frozenset())`. Timers are `Timer(tag, delay)` from
-  `simul8.domain.timer`, and a delay must be finite and > 0. Setting a timer
+  `samesim.domain.timer`, and a delay must be finite and > 0. Setting a timer
   in synchronous mode is an error.
 - `on_timer` raises by default, so implement it if you set timers.
 - `on_recover` defaults to a bootstrap step (`step()` with an empty
@@ -270,7 +270,7 @@ degree without crashing, and it inflated SIR transmission by about 28%
 until a cross-check against NDlib caught it.
 
 **Latency.** Return `Delivery(recipient_id, message, delay)` from
-`simul8.domain.delivery`. `None`, or a bare tuple, means one tick. A delay
+`samesim.domain.delivery`. `None`, or a bare tuple, means one tick. A delay
 must be finite and > 0, and the engine rejects anything else with an error
 naming your protocol. Draw delays from the protocol's `rng`, in a fixed
 order.
@@ -295,7 +295,7 @@ reset() -> None
 ```
 
 Subscribe to as few event types as you need. The event types are in
-`simul8/domain/event.py`: ticks, deliveries, state changes, timer firings,
+`samesim/domain/event.py`: ticks, deliveries, state changes, timer firings,
 topology changes and lost messages. `on_setup` gives read-only copies,
 never the core objects.
 
@@ -308,7 +308,7 @@ change(topology, virtual_time, states, failed) -> TopologyChange
 ```
 
 `TopologyChange(fail, recover, join, add_edges, remove_edges)` lives in
-`simul8.domain.topology_change`. Edges are undirected. The constructor
+`samesim.domain.topology_change`. Edges are undirected. The constructor
 rejects self-loops, an agent in more than one of fail, recover and join,
 and an edge that is both added and removed. The engine rejects changes
 that don't fit the current state, such as failing a failed agent or adding

@@ -6,7 +6,7 @@ interarrival and service times alone (Lindley, 1952):
     W_1 = 0,    W_{n+1} = max(0, W_n + S_n - A_{n+1})
 
 where S_n is customer n's service time and A_{n+1} the gap before customer
-n+1 arrives. This test replays the exact random draws Simul8's agents make
+n+1 arrives. This test replays the exact random draws SameSim's agents make
 -- the source's interarrival gaps from its stream, the server's service
 times from its own -- through the recursion, and requires every wait
 recorded by the engine to match.
@@ -23,8 +23,8 @@ import random
 
 import yaml
 
-from simul8.app.experiment_runner import ExperimentRunner
-from simul8.domain import portable_math
+from samesim.app.experiment_runner import ExperimentRunner
+from samesim.domain import portable_math
 
 SEED, LAM, MU, LATENCY, HORIZON = 11, 0.9, 1.0, 0.001, 5000.0
 
@@ -45,11 +45,11 @@ def test_waits_match_lindley_recursion_exactly(tmp_path):
         "simulation": {"num_agents": 2, "max_virtual_time": HORIZON, "tick_interval": 100.0,
                        "activation": "event"},
         "plugins": {
-            "behavior": "simul8.plugins.behaviors.queue.QueueBehavior",
-            "communication": "simul8.plugins.communication.latency.LatencyProtocol",
-            "topology": "simul8.plugins.topologies.ring.RingTopology",
-            "metrics": ["simul8.plugins.metrics.queue_metrics.QueueMetric"],
-            "persistence": ["simul8.plugins.persistence.csv_exporter.CsvExporter"],
+            "behavior": "samesim.plugins.behaviors.queue.QueueBehavior",
+            "communication": "samesim.plugins.communication.latency.LatencyProtocol",
+            "topology": "samesim.plugins.topologies.ring.RingTopology",
+            "metrics": ["samesim.plugins.metrics.queue_metrics.QueueMetric"],
+            "persistence": ["samesim.plugins.persistence.csv_exporter.CsvExporter"],
         },
         "plugin_configs": {
             "QueueBehavior": {"arrival_rate": LAM, "service_rate": MU},

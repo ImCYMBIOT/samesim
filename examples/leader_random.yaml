@@ -10,16 +10,16 @@ simulation:
   tick_interval: 1
 
 plugins:
-  behavior: "simul8.plugins.behaviors.leader_election.LeaderElectionBehavior"
-  communication: "simul8.plugins.communication.gossip.GossipProtocol"
-  topology: "simul8.plugins.topologies.random_graph.ErdosRenyiTopology"
+  behavior: "samesim.plugins.behaviors.leader_election.LeaderElectionBehavior"
+  communication: "samesim.plugins.communication.gossip.GossipProtocol"
+  topology: "samesim.plugins.topologies.random_graph.ErdosRenyiTopology"
   metrics:
-    - "simul8.plugins.metrics.message_count.MessageCountMetric"
-    - "simul8.plugins.metrics.leader_metrics.LeaderConsensusMetric"
-    - "simul8.plugins.metrics.state_trace.TopologyMetric"
-    - "simul8.plugins.metrics.state_trace.StateTraceMetric"
+    - "samesim.plugins.metrics.message_count.MessageCountMetric"
+    - "samesim.plugins.metrics.leader_metrics.LeaderConsensusMetric"
+    - "samesim.plugins.metrics.state_trace.TopologyMetric"
+    - "samesim.plugins.metrics.state_trace.StateTraceMetric"
   persistence:
-    - "simul8.plugins.persistence.csv_exporter.CsvExporter"
+    - "samesim.plugins.persistence.csv_exporter.CsvExporter"
 
 plugin_configs:
   LeaderElectionBehavior: {}

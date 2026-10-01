@@ -20,18 +20,18 @@ from pathlib import Path
 import pytest
 import yaml
 
-from simul8.app.config_loader import ConfigValidationError
-from simul8.app.experiment_runner import ExperimentRunner, TrackedConfig
-from simul8.domain.experiment import ExperimentConfig, PluginsConfig
+from samesim.app.config_loader import ConfigValidationError
+from samesim.app.experiment_runner import ExperimentRunner, TrackedConfig
+from samesim.domain.experiment import ExperimentConfig, PluginsConfig
 
 # One real plugin per configurable role, with an option it reads. Discovered
 # roles (below) must all appear here, so adding a role to PluginsConfig
 # fails this test until the new role is covered.
 ROLE_EXAMPLES = {
-    "behavior": ("simul8.plugins.behaviors.gossip_behavior.GossipBehavior", "fan_out", 2),
-    "communication": ("simul8.plugins.communication.lossy.LossyProtocol", "loss_probability", 0.1),
-    "topology": ("simul8.plugins.topologies.watts_strogatz.WattsStrogatzTopology", "k", 4),
-    "dynamics": ("simul8.plugins.dynamics.random_churn.RandomChurn", "failure_rate", 0.01),
+    "behavior": ("samesim.plugins.behaviors.gossip_behavior.GossipBehavior", "fan_out", 2),
+    "communication": ("samesim.plugins.communication.lossy.LossyProtocol", "loss_probability", 0.1),
+    "topology": ("samesim.plugins.topologies.watts_strogatz.WattsStrogatzTopology", "k", 4),
+    "dynamics": ("samesim.plugins.dynamics.random_churn.RandomChurn", "failure_rate", 0.01),
 }
 
 # Roles that hold one plugin (str) receive plugin_configs; list roles
@@ -45,8 +45,8 @@ def _cfg(**plugin_overrides) -> dict:
         "behavior": ROLE_EXAMPLES["behavior"][0],
         "communication": ROLE_EXAMPLES["communication"][0],
         "topology": ROLE_EXAMPLES["topology"][0],
-        "metrics": ["simul8.plugins.metrics.convergence.ConvergenceMetric"],
-        "persistence": ["simul8.plugins.persistence.csv_exporter.CsvExporter"],
+        "metrics": ["samesim.plugins.metrics.convergence.ConvergenceMetric"],
+        "persistence": ["samesim.plugins.persistence.csv_exporter.CsvExporter"],
     }
     plugins.update(plugin_overrides)
     return {
@@ -101,7 +101,7 @@ def test_a_misspelled_option_is_rejected_with_a_suggestion(tmp_path, role):
 def test_an_option_for_another_mode_is_rejected(tmp_path):
     # 'mean' configures the exponential distribution; with constant delays
     # it would be silently ignored.
-    cfg = _cfg(communication="simul8.plugins.communication.latency.LatencyProtocol")
+    cfg = _cfg(communication="samesim.plugins.communication.latency.LatencyProtocol")
     cfg["plugin_configs"]["LatencyProtocol"] = {"distribution": "constant", "mean": 5.0}
     with pytest.raises(ConfigValidationError, match="'mean'"):
         _run(tmp_path, cfg)
@@ -159,9 +159,9 @@ def _leaves(obj, prefix=""):
 
 def test_summary_records_every_config_field(tmp_path):
     cfg = _cfg(
-        behavior="simul8.plugins.behaviors.async_gossip.AsyncGossipBehavior",
-        communication="simul8.plugins.communication.latency.LatencyProtocol",
-        dynamics="simul8.plugins.dynamics.random_churn.RandomChurn",
+        behavior="samesim.plugins.behaviors.async_gossip.AsyncGossipBehavior",
+        communication="samesim.plugins.communication.latency.LatencyProtocol",
+        dynamics="samesim.plugins.dynamics.random_churn.RandomChurn",
     )
     cfg["simulation"].update({"activation": "event", "tick_interval": 0.5})
     cfg["plugin_configs"] = {
@@ -172,7 +172,7 @@ def test_summary_records_every_config_field(tmp_path):
     out = _run(tmp_path, cfg)
     recorded = json.loads((out / "summary.json").read_text())["config"]
 
-    from simul8.app.config_loader import ConfigLoader
+    from samesim.app.config_loader import ConfigLoader
     config: ExperimentConfig = ConfigLoader().load(tmp_path / "cfg.yaml")
     leaves = list(_leaves(config))
     assert leaves, "no fields found"

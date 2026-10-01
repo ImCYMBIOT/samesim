@@ -3,7 +3,7 @@ External validation 1/5: SIR epidemic dynamics vs. NDlib.
 
 NDlib (https://ndlib.readthedocs.io) is an independent, widely-used Python
 library for diffusion/epidemic modeling on networks. Its SIRModel uses the
-same discrete-time contact-process formulation as Simul8's
+same discrete-time contact-process formulation as SameSim's
 SirEpidemicBehavior: P(infection) = 1 - (1-beta)^k for a susceptible node
 with k infected neighbors, P(recovery) = gamma per tick for an infected
 node. Because the formulas match, running both on the IDENTICAL graph with
@@ -12,11 +12,11 @@ equivalent outbreak curves -- not bit-identical (different RNG streams),
 but the same ballpark across repeated seeds.
 
 This is a genuinely independent check: NDlib's implementation, RNG usage,
-and codebase share nothing with Simul8's.
+and codebase share nothing with SameSim's.
 
 A third party referees: `reference_sir`, NDlib's SIRModel.iteration
 transcribed into plain Python with its own RNG. If NDlib and the reference
-agree, a difference between Simul8 and both is Simul8's.
+agree, a difference between SameSim and both is SameSim's.
 
 Statistics per metric: mean with 95% CI for each implementation; Welch's
 t-test for a difference; and TOST (two one-sided tests) for EQUIVALENCE
@@ -25,7 +25,7 @@ evidence of agreement; a passed equivalence test is.
 
 History: the first version ran 20 seeds and reported "within 1.7%". An
 outside review recomputed it: Welch t = 2.82, p = 0.008. The cause was
-Simul8's seeding (seed XOR agent_id), which made replicates with different
+SameSim's seeding (seed XOR agent_id), which made replicates with different
 seeds partly copies of each other and understated their spread; see the
 README.
 """
@@ -45,14 +45,14 @@ import ndlib.models.ModelConfig as mc
 import ndlib.models.epidemics as ep
 
 sys.path.insert(0, str(Path(__file__).parent))
-from simul8_harness import networkx_to_topology_graph, run_simul8  # noqa: E402
+from samesim_harness import networkx_to_topology_graph, run_samesim  # noqa: E402
 
 # Repo root, derived from this file so the script runs from any checkout.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from simul8.domain.ids import AgentId  # noqa: E402
-from simul8.plugins.behaviors.sir_behavior import SirEpidemicBehavior  # noqa: E402
-from simul8.plugins.communication.broadcast import BroadcastProtocol  # noqa: E402
-from simul8.plugins.metrics.sir_metrics import (  # noqa: E402
+from samesim.domain.ids import AgentId  # noqa: E402
+from samesim.plugins.behaviors.sir_behavior import SirEpidemicBehavior  # noqa: E402
+from samesim.plugins.communication.broadcast import BroadcastProtocol  # noqa: E402
+from samesim.plugins.metrics.sir_metrics import (  # noqa: E402
     SirInfectedMetric,
     SirRecoveredMetric,
     SirSusceptibleMetric,
@@ -89,8 +89,8 @@ def run_ndlib(graph_nx, seed: int) -> dict:
     }
 
 
-def run_simul8_sir(graph_nx, agent_ids, graph, seed: int) -> dict:
-    series = run_simul8(
+def run_samesim_sir(graph_nx, agent_ids, graph, seed: int) -> dict:
+    series = run_samesim(
         graph=graph,
         behavior=SirEpidemicBehavior(),
         behavior_config={"transmission_rate": BETA, "recovery_rate": GAMMA, "initial_infected": INITIAL_INFECTED},
@@ -153,10 +153,10 @@ if __name__ == "__main__":
     g_nx = nx.erdos_renyi_graph(N, EDGE_PROB, seed=1000)  # SAME graph every seed -- only epidemic RNG varies
     agent_ids = [AgentId(i) for i in range(N)]
     graph = networkx_to_topology_graph(g_nx, agent_ids)
-    results = {"ndlib": [], "simul8": [], "reference": []}
+    results = {"ndlib": [], "samesim": [], "reference": []}
     for seed in range(1, N_SEEDS + 1):
         results["ndlib"].append(run_ndlib(g_nx, seed=seed))
-        results["simul8"].append(run_simul8_sir(g_nx, agent_ids, graph, seed=seed))
+        results["samesim"].append(run_samesim_sir(g_nx, agent_ids, graph, seed=seed))
         results["reference"].append(reference_sir(g_nx, seed=seed))
         if seed % 20 == 0:
             print(f"{seed}/{N_SEEDS} seeds", flush=True)
@@ -172,7 +172,7 @@ if __name__ == "__main__":
         for k, v in cols.items():
             m, h = ci95(v)
             print(f"  {k:10} {m:8.2f} +/- {h:.2f}  (sd {statistics.stdev(v):.2f}, n={len(v)})")
-        for a, b in (("simul8", "reference"), ("simul8", "ndlib"), ("ndlib", "reference")):
+        for a, b in (("samesim", "reference"), ("samesim", "ndlib"), ("ndlib", "reference")):
             c = compare(cols[a], cols[b], margin)
             summary[key][f"{a}_vs_{b}"] = c
             verdict = "EQUIVALENT" if c["tost_p"] < 0.05 else "not shown equivalent"

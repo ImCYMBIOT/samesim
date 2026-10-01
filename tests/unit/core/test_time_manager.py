@@ -1,7 +1,7 @@
 """Unit tests for TimeManager."""
 import pytest
-from simul8.core.time_manager import TimeManager
-from simul8.domain.ids import VirtualTime
+from samesim.core.time_manager import TimeManager
+from samesim.domain.ids import VirtualTime
 
 
 class TestTimeManagerInitial:

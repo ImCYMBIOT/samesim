@@ -40,9 +40,9 @@ def ci(v):
 
 def main() -> None:
     rows = json.loads((HERE / "voter_results.json").read_text())
-    tools = ("simul8", "mesa")
+    tools = ("samesim", "mesa")
     by = {t: [r for r in rows if r["tool"] == t] for t in tools}
-    print(f"{len(by['simul8'])} seeds per tool; each seed is one graph, shared by both tools.\n")
+    print(f"{len(by['samesim'])} seeds per tool; each seed is one graph, shared by both tools.\n")
     print("| Tool | Runs reaching consensus | P(opinion 1 wins) | Mean M(0) (prediction) | "
           "Wins − M(0), 95% CI | ≡ 0 within ±0.03 (TOST p) | Wins − naive 0.10, 95% CI |")
     print("|---|---:|---:|---:|---:|---:|---:|")
@@ -55,17 +55,17 @@ def main() -> None:
               f"{mean(r['m0'] for r in done):.3f} | {md:+.3f} ± {hd:.3f} | {tost_zero(d, MARGIN):.2g} | "
               f"{mn:+.3f} ± {hn:.3f} |")
 
-    s8 = [r["winner"] for r in by["simul8"] if r["winner"] is not None]
+    s8 = [r["winner"] for r in by["samesim"] if r["winner"] is not None]
     me = [r["winner"] for r in by["mesa"] if r["winner"] is not None]
     lo = stats.ttest_ind([x + MARGIN for x in s8], me, equal_var=False, alternative="greater").pvalue
     hi = stats.ttest_ind([x - MARGIN for x in s8], me, equal_var=False, alternative="less").pvalue
-    print(f"\nSimul8 − Mesa win rate: {mean(s8) - mean(me):+.3f}; equivalent within ±{MARGIN} "
+    print(f"\nSameSim − Mesa win rate: {mean(s8) - mean(me):+.3f}; equivalent within ±{MARGIN} "
           f"(TOST p = {max(lo, hi):.2g})")
 
-    ts8 = [r["consensus_tick"] for r in by["simul8"] if r["consensus_tick"] is not None]
+    ts8 = [r["consensus_tick"] for r in by["samesim"] if r["consensus_tick"] is not None]
     tme = [r["consensus_tick"] for r in by["mesa"] if r["consensus_tick"] is not None]
     ks = stats.ks_2samp(ts8, tme)
-    print(f"Consensus tick: Simul8 mean {mean(ts8):.1f}, median {median(ts8):g}; "
+    print(f"Consensus tick: SameSim mean {mean(ts8):.1f}, median {median(ts8):g}; "
           f"Mesa mean {mean(tme):.1f}, median {median(tme):g}; KS p = {ks.pvalue:.2g}")
 
     print("\nThroughput, agent-updates per second of run time (median, IQR):\n")
@@ -76,7 +76,7 @@ def main() -> None:
         q = stats.mstats.mquantiles([r["updates_per_s"] for r in by[t]], prob=[0.25, 0.5, 0.75])
         meds[t] = q[1]
         print(f"| {t} | {q[1]:,.0f} | {q[0]:,.0f}–{q[2]:,.0f} |")
-    print(f"\nMesa / Simul8: {meds['mesa'] / meds['simul8']:.1f}×")
+    print(f"\nMesa / SameSim: {meds['mesa'] / meds['samesim']:.1f}×")
 
 
 if __name__ == "__main__":

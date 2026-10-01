@@ -1,12 +1,12 @@
 """Unit tests for SirEpidemicBehavior and SIR metrics."""
 import random
 import pytest
-from simul8.domain.ids import AgentId, MessageId, VirtualTime
-from simul8.domain.message import Message
-from simul8.domain.state import AgentState
-from simul8.plugins.behaviors.sir_behavior import SirEpidemicBehavior
-from simul8.plugins.metrics.sir_metrics import SirSusceptibleMetric, SirInfectedMetric, SirRecoveredMetric
-from simul8.core.agent_registry import AgentRegistry
+from samesim.domain.ids import AgentId, MessageId, VirtualTime
+from samesim.domain.message import Message
+from samesim.domain.state import AgentState
+from samesim.plugins.behaviors.sir_behavior import SirEpidemicBehavior
+from samesim.plugins.metrics.sir_metrics import SirSusceptibleMetric, SirInfectedMetric, SirRecoveredMetric
+from samesim.core.agent_registry import AgentRegistry
 
 
 def test_sir_initialization():
@@ -75,7 +75,7 @@ def test_sir_metrics():
     r_metric = SirRecoveredMetric()
     
     # Manually populate their agent states as if events had fired
-    from simul8.domain.event import AgentStateChangedEvent, TickEvent
+    from samesim.domain.event import AgentStateChangedEvent, TickEvent
     
     for aid in registry.all_agent_ids():
         agent = registry.get(aid)
@@ -106,7 +106,7 @@ def test_first_step_is_an_announcement_round():
     draw before ever exposing anyone (standard discrete SIR, and NDlib, let
     them infect first)."""
     import random as _random
-    from simul8.domain.ids import AgentId as _Id
+    from samesim.domain.ids import AgentId as _Id
     b = SirEpidemicBehavior()
     config = {"transmission_rate": 1.0, "recovery_rate": 1.0, "initial_infected": 1}
     infected = b.initialize(_Id(0), config, _random.Random(0))

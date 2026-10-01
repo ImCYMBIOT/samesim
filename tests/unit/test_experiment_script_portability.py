@@ -20,7 +20,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT_DIRS = ("experiments", "simul8", "tests")
+SCRIPT_DIRS = ("experiments", "samesim", "tests")
 
 # An absolute path into a user's home, a temp dir, or a Windows drive is
 # never legitimate in committed code. Paths under /usr, /etc and similar

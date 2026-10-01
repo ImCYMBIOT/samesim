@@ -1,6 +1,6 @@
-# Simul8 User Guide
+# SameSim User Guide
 
-How to run experiments with the plugins that ship with Simul8: the config
+How to run experiments with the plugins that ship with SameSim: the config
 file, the two activation modes, latency, churn, every plugin's options, and
 what a run writes. To write your own plugins, see the
 [Developer Guide](developer_guide.md).
@@ -23,8 +23,8 @@ what a run writes. To write your own plugins, see the
 Python 3.10–3.13. One runtime dependency (PyYAML).
 
 ```bash
-git clone https://github.com/ImCYMBIOT/Simul8.git
-cd Simul8
+git clone https://github.com/ImCYMBIOT/SameSim.git
+cd SameSim
 pip install -e ".[dev]"      # editable, with pytest
 pytest                        # optional: ~90 s, 1042 tests
 ```
@@ -32,18 +32,18 @@ pytest                        # optional: ~90 s, 1042 tests
 ## 2. Run an experiment
 
 ```bash
-simul8 run examples/sir_random.yaml --output ./results
-simul8 visualize ./results            # writes ./results/dashboard.html
+samesim run examples/sir_random.yaml --output ./results
+samesim visualize ./results            # writes ./results/dashboard.html
 ```
 
-`simul8 run` options:
+`samesim run` options:
 
 | Option | Default | Meaning |
 |---|---|---|
 | `--output`, `-o` | `./results` | Directory for result files |
 | `--log-level` | `INFO` | `DEBUG`, `INFO`, `WARNING` or `ERROR` |
 
-`simul8 visualize [DIR]` builds a self-contained HTML dashboard from a
+`samesim visualize [DIR]` builds a self-contained HTML dashboard from a
 results directory: a chart per metric, plus a network animation when the run
 included `StateTraceMetric` and `TopologyMetric`. The page loads its charting
 libraries from public CDNs, so it needs a network connection to view.
@@ -51,7 +51,7 @@ libraries from public CDNs, so it needs a network connection to view.
 From Python:
 
 ```python
-from simul8.app.experiment_runner import ExperimentRunner
+from samesim.app.experiment_runner import ExperimentRunner
 ExperimentRunner().run("examples/sir_random.yaml", output_dir="./results")
 ```
 
@@ -73,14 +73,14 @@ simulation:
   activation: synchronous        # or "event"; default synchronous (section 4)
 
 plugins:                         # fully qualified class paths
-  behavior: "simul8.plugins.behaviors.sir_behavior.SirEpidemicBehavior"          # required
-  communication: "simul8.plugins.communication.gossip.GossipProtocol"           # required
-  topology: "simul8.plugins.topologies.random_graph.ErdosRenyiTopology"         # required
-  dynamics: "simul8.plugins.dynamics.random_churn.RandomChurn"                  # optional (section 6)
+  behavior: "samesim.plugins.behaviors.sir_behavior.SirEpidemicBehavior"          # required
+  communication: "samesim.plugins.communication.gossip.GossipProtocol"           # required
+  topology: "samesim.plugins.topologies.random_graph.ErdosRenyiTopology"         # required
+  dynamics: "samesim.plugins.dynamics.random_churn.RandomChurn"                  # optional (section 6)
   metrics:                                                                       # optional, any number
-    - "simul8.plugins.metrics.sir_metrics.SirInfectedMetric"
+    - "samesim.plugins.metrics.sir_metrics.SirInfectedMetric"
   persistence:                                                                   # optional, any number
-    - "simul8.plugins.persistence.csv_exporter.CsvExporter"
+    - "samesim.plugins.persistence.csv_exporter.CsvExporter"
 
 plugin_configs:                  # options per plugin, keyed by CLASS name
   SirEpidemicBehavior:
@@ -154,7 +154,7 @@ Without a latency protocol every message takes exactly one
 
 ```yaml
 plugins:
-  communication: "simul8.plugins.communication.latency.LatencyProtocol"
+  communication: "samesim.plugins.communication.latency.LatencyProtocol"
 plugin_configs:
   LatencyProtocol:
     distribution: exponential    # constant | uniform | exponential | lognormal
@@ -212,7 +212,7 @@ arrive.
 
 ## 7. Plugin reference
 
-All paths start with `simul8.plugins.`. Options go under
+All paths start with `samesim.plugins.`. Options go under
 `plugin_configs.<ClassName>`; defaults are in parentheses.
 
 ### Behaviors (`behaviors.*`)

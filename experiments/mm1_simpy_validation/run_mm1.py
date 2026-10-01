@@ -1,10 +1,10 @@
 """
-M/M/1 queue: Simul8 vs. SimPy vs. the closed forms.
+M/M/1 queue: SameSim vs. SimPy vs. the closed forms.
 
 The same queue -- Poisson arrivals at rate lambda, one server with
 exponential service at rate mu = 1, FIFO -- run in both tools:
 
-    simul8  QueueBehavior (one source agent sending customers to one server
+    samesim  QueueBehavior (one source agent sending customers to one server
             agent as messages, constant latency 0.001), event activation,
             QueueMetric
     simpy   the textbook SimPy model: a source process, a Resource of
@@ -18,7 +18,7 @@ time units with the first 5,000 discarded as warm-up. Per run:
     W   mean time in system of the same customers
     L   time-average number in system over [warm-up, horizon]
     customers_per_s  customers completed per second of run time (the
-        simulation itself: Simul8's engine loop, SimPy's env.run)
+        simulation itself: SameSim's engine loop, SimPy's env.run)
 
 Closed forms: Wq = rho / (mu - lambda), W = 1 / (mu - lambda),
 L = rho / (1 - rho).
@@ -44,15 +44,15 @@ import yaml
 
 # Repo root, derived from this file so the script runs from any checkout.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from simul8.app.experiment_runner import ExperimentRunner  # noqa: E402
+from samesim.app.experiment_runner import ExperimentRunner  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
-SCRATCH = Path(os.environ.get("SIMUL8_EXPERIMENT_WORK", HERE / "_work"))
+SCRATCH = Path(os.environ.get("SAMESIM_EXPERIMENT_WORK", HERE / "_work"))
 
 MU = 1.0
 HORIZON = 50_000.0
 WARMUP = 5_000.0
-LATENCY = 0.001  # Simul8's source -> server message delay: shifts every arrival equally
+LATENCY = 0.001  # SameSim's source -> server message delay: shifts every arrival equally
 
 
 def summarize(customers, area_at, horizon, warmup):
@@ -64,7 +64,7 @@ def summarize(customers, area_at, horizon, warmup):
     return {"Wq": wq, "W": w, "L": L, "customers": len(customers)}
 
 
-def run_simul8(rho: float, seed: int) -> dict:
+def run_samesim(rho: float, seed: int) -> dict:
     name = f"mm1_r{rho:g}_s{seed}"
     cfg = {
         "schema_version": "1.0",
@@ -72,11 +72,11 @@ def run_simul8(rho: float, seed: int) -> dict:
         "simulation": {"num_agents": 2, "max_virtual_time": HORIZON,
                        "tick_interval": 100.0, "activation": "event"},
         "plugins": {
-            "behavior": "simul8.plugins.behaviors.queue.QueueBehavior",
-            "communication": "simul8.plugins.communication.latency.LatencyProtocol",
-            "topology": "simul8.plugins.topologies.ring.RingTopology",
-            "metrics": ["simul8.plugins.metrics.queue_metrics.QueueMetric"],
-            "persistence": ["simul8.plugins.persistence.csv_exporter.CsvExporter"],
+            "behavior": "samesim.plugins.behaviors.queue.QueueBehavior",
+            "communication": "samesim.plugins.communication.latency.LatencyProtocol",
+            "topology": "samesim.plugins.topologies.ring.RingTopology",
+            "metrics": ["samesim.plugins.metrics.queue_metrics.QueueMetric"],
+            "persistence": ["samesim.plugins.persistence.csv_exporter.CsvExporter"],
         },
         "plugin_configs": {
             "QueueBehavior": {"arrival_rate": rho * MU, "service_rate": MU},
@@ -157,7 +157,7 @@ def main() -> None:
     results = []
     for rho in rhos:
         for seed in seeds:
-            for tool, fn in (("simul8", run_simul8), ("simpy", run_simpy)):
+            for tool, fn in (("samesim", run_samesim), ("simpy", run_simpy)):
                 r = {"tool": tool, "rho": rho, "seed": seed, **fn(rho, seed)}
                 results.append(r)
                 print(f"{tool:6} rho={rho} seed={seed:2d}  Wq={r['Wq']:.3f}  W={r['W']:.3f}  "

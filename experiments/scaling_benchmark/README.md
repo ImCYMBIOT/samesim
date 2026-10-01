@@ -2,7 +2,7 @@
 
 **Status:** first performance-validation pass, alongside the correctness
 validation in [experiments/gossip_topology_validation/](../gossip_topology_validation/).
-That study asked "does Simul8 produce trustworthy numbers?" — this one asks
+That study asked "does SameSim produce trustworthy numbers?" — this one asks
 "can it actually run at scale, and what does the clean architecture cost?"
 
 **[Interactive chart](https://claude.ai/artifact/Wmy1hyBGx2rcxe23uxFnP4)**
@@ -21,13 +21,13 @@ Three things, each isolating a different question:
    full pipeline most experiments actually use.
 3. **`naive_gossip.py`** — a deliberately bare-bones reference
    implementation of the identical push-gossip protocol (same per-agent RNG
-   scheme, same topology, same per-tick work) with none of Simul8's event
+   scheme, same topology, same per-tick work) with none of SameSim's event
    queue, dataclass events, ports, or metrics pipeline — just plain Python
-   lists and a for-loop. Compared against Simul8 on Ring topology (again to
+   lists and a for-loop. Compared against SameSim on Ring topology (again to
    avoid the O(n²) confound) to isolate what the clean architecture costs in
    raw speed.
 
-Run them yourself (from this directory, `simul8` conda env active):
+Run them yourself (from this directory, `samesim` conda env active):
 `python run_scaling_ring.py`, `python run_scaling.py`,
 `python naive_gossip.py --ns 100,1000,10000,100000`.
 
@@ -56,7 +56,7 @@ The first pass of this benchmark caught a real bug in the running: local
 slope on Erdős–Rényi climbed from 0.89 (small n) to 1.37 (n=10,000→30,000)
 — visibly bending toward quadratic, not staying flat like Ring did. The
 cause was in the code, not mysterious:
-[`ErdosRenyiTopology.generate()`](../../simul8/plugins/topologies/random_graph.py)
+[`ErdosRenyiTopology.generate()`](../../samesim/plugins/topologies/random_graph.py)
 checked **every possible pair** of agents (`for i in range(n): for j in
 range(i+1, n)`) regardless of `edge_probability` — O(n²) time no matter how
 sparse the resulting graph was. At n=30,000 that's ~450 million pair-checks.
@@ -116,7 +116,7 @@ quadratic bug.
 
 ## Result 4 — architecture overhead is real, and roughly constant
 
-| n | naive (bare loop) | Simul8 (full engine) | ratio |
+| n | naive (bare loop) | SameSim (full engine) | ratio |
 |---:|---:|---:|---:|
 | 100 | 0.018s | 0.101s | 5.6× |
 | 1,000 | 0.144s | 1.039s | 7.2× |
@@ -129,7 +129,7 @@ roughly an **order of magnitude in raw throughput** versus the simplest
 possible equivalent script. The ratio climbs slightly then **plateaus around
 8×** — it's a roughly constant multiplier, not a tax that compounds with
 scale. That's the honest price of determinism (§3 of
-[the Simul8 explainer](https://claude.ai/artifact/5LqUn79Xu9AgHtnZ16PkiW)),
+[the SameSim explainer](https://claude.ai/artifact/5LqUn79Xu9AgHtnZ16PkiW)),
 reproducibility, and a plugin architecture that can't be broken by a bad
 research idea — and it's worth being able to state precisely rather than
 either hiding it or overselling raw speed.

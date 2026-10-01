@@ -1,6 +1,6 @@
 """
 Naive reference implementation of push-gossip averaging, for measuring what
-Simul8's clean architecture (event queue, ports, dataclass events, metrics
+SameSim's clean architecture (event queue, ports, dataclass events, metrics
 pipeline) costs in raw speed versus the simplest possible Python loop doing
 equivalent work.
 
@@ -13,7 +13,7 @@ RingTopology.generate() is O(n), so it isolates the loop/engine overhead.
 
 Fairness notes (so the comparison means something):
   - Uses the SAME per-agent RNG scheme ("<seed>/agent/<id>") as
-    RandomnessManager, and the SAME topology (built via Simul8's own
+    RandomnessManager, and the SAME topology (built via SameSim's own
     RingTopology plugin) -- the only thing being measured is the
     tick/message loop, not a different graph or different randomness.
   - Does the same amount of real work per tick: each agent still calls
@@ -23,7 +23,7 @@ Fairness notes (so the comparison means something):
     pipeline entirely.
   - Same 1-tick delivery latency (an agent averages with values that
     arrived from the *previous* tick's sends, not the current one),
-    matching Simul8's MessageDeliveredEvent semantics.
+    matching SameSim's MessageDeliveredEvent semantics.
 """
 from __future__ import annotations
 
@@ -35,8 +35,8 @@ from pathlib import Path
 
 # Repo root, derived from this file so the script runs from any checkout.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from simul8.domain.ids import AgentId  # noqa: E402
-from simul8.plugins.topologies.ring import RingTopology  # noqa: E402
+from samesim.domain.ids import AgentId  # noqa: E402
+from samesim.plugins.topologies.ring import RingTopology  # noqa: E402
 
 FAN_OUT = 2
 

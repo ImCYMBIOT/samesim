@@ -9,14 +9,14 @@ macOS and Windows. In an event-driven run those bits are event times, so
 the simulation itself diverges. It was found by golden traces recorded on
 Linux failing on macOS and Windows.
 
-This walks every file under simul8/core, simul8/plugins and simul8/domain,
+This walks every file under samesim/core, samesim/plugins and samesim/domain,
 so new code is covered automatically, and rejects:
 
     math.<transcendental>(...)    and  from math import <transcendental>
     <anything>.expovariate(...)   and the other libm-based random variates
     x ** y  and  pow(x, y)        (float ** calls the platform's pow())
 
-Use simul8.domain.portable_math instead. Integer-only ** is legitimate; mark
+Use samesim.domain.portable_math instead. Integer-only ** is legitimate; mark
 that line with `# portable: int` to allow it.
 """
 from __future__ import annotations
@@ -26,7 +26,7 @@ from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[2] / "simul8"
+ROOT = Path(__file__).resolve().parents[2] / "samesim"
 SCANNED = ("core", "plugins", "domain")
 EXEMPT = {ROOT / "domain" / "portable_math.py"}  # the one place allowed to build on math
 
@@ -85,7 +85,7 @@ def test_no_platform_dependent_math(path):
         f"{path.relative_to(ROOT.parent)} uses math whose results differ between "
         f"platforms, so the same seed would give different runs on Linux, macOS "
         f"and Windows:\n" + "\n".join(found) +
-        "\n\nUse simul8.domain.portable_math (log, exp, ipow, expovariate, "
+        "\n\nUse samesim.domain.portable_math (log, exp, ipow, expovariate, "
         "normalvariate, lognormvariate), or x * x for squares. For integer-only "
         f"**, add `{ALLOW_MARK}` to the line."
     )

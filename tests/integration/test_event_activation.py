@@ -12,12 +12,12 @@ from pathlib import Path
 import pytest
 import yaml
 
-from simul8.app.config_loader import ConfigValidationError
-from simul8.app.experiment_runner import ExperimentRunner
+from samesim.app.config_loader import ConfigValidationError
+from samesim.app.experiment_runner import ExperimentRunner
 from tests.integration.event_probes import ScriptedBehavior
 
 PROBES = "tests.integration.event_probes"
-RING = "simul8.plugins.topologies.ring.RingTopology"
+RING = "samesim.plugins.topologies.ring.RingTopology"
 
 
 def _run(tmp_path: Path, script=None, *, n=4, max_time=10.0, dt=1.0, activation="event",
@@ -63,8 +63,8 @@ def test_agents_do_not_run_on_ticks(tmp_path):
 
 def test_ticks_still_sample_metrics(tmp_path):
     _run(tmp_path, max_time=5,
-         metrics=["simul8.plugins.metrics.trace_digest.TraceDigestMetric"],
-         persistence=["simul8.plugins.persistence.csv_exporter.CsvExporter"])
+         metrics=["samesim.plugins.metrics.trace_digest.TraceDigestMetric"],
+         persistence=["samesim.plugins.persistence.csv_exporter.CsvExporter"])
     rows = [l for l in (tmp_path / "out" / "event_trace_digest.csv").read_text().splitlines()
             if l and not l.startswith("#")][1:]
     tick_times = [float(r.split(",")[0]) for r in rows][:-1]  # last row is the end marker
@@ -187,8 +187,8 @@ def test_shipped_tick_driven_behaviors_are_rejected_under_event_activation(tmp_p
     """The concrete failure this guards against: GossipBehavior under event
     activation would step once at t=0 and never again."""
     with pytest.raises(ConfigValidationError, match="GossipBehavior does not support"):
-        _run(tmp_path, behavior="simul8.plugins.behaviors.gossip_behavior.GossipBehavior",
-             protocol="simul8.plugins.communication.gossip.GossipProtocol")
+        _run(tmp_path, behavior="samesim.plugins.behaviors.gossip_behavior.GossipBehavior",
+             protocol="samesim.plugins.communication.gossip.GossipProtocol")
 
 
 def test_unknown_activation_value_is_rejected(tmp_path):

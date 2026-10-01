@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from simul8.app.experiment_runner import ExperimentRunner
+from samesim.app.experiment_runner import ExperimentRunner
 
 pytestmark = pytest.mark.slow
 
@@ -36,15 +36,15 @@ simulation:
   tick_interval: 1
 
 plugins:
-  behavior: "simul8.plugins.behaviors.sir_behavior.SirEpidemicBehavior"
-  communication: "simul8.plugins.communication.broadcast.BroadcastProtocol"
-  topology: "simul8.plugins.topologies.watts_strogatz.WattsStrogatzTopology"
+  behavior: "samesim.plugins.behaviors.sir_behavior.SirEpidemicBehavior"
+  communication: "samesim.plugins.communication.broadcast.BroadcastProtocol"
+  topology: "samesim.plugins.topologies.watts_strogatz.WattsStrogatzTopology"
   metrics:
-    - "simul8.plugins.metrics.sir_metrics.SirSusceptibleMetric"
-    - "simul8.plugins.metrics.sir_metrics.SirInfectedMetric"
-    - "simul8.plugins.metrics.sir_metrics.SirRecoveredMetric"
+    - "samesim.plugins.metrics.sir_metrics.SirSusceptibleMetric"
+    - "samesim.plugins.metrics.sir_metrics.SirInfectedMetric"
+    - "samesim.plugins.metrics.sir_metrics.SirRecoveredMetric"
   persistence:
-    - "simul8.plugins.persistence.csv_exporter.CsvExporter"
+    - "samesim.plugins.persistence.csv_exporter.CsvExporter"
 
 plugin_configs:
   SirEpidemicBehavior:

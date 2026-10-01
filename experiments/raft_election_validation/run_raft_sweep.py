@@ -41,12 +41,12 @@ import yaml
 
 # Repo root, derived from this file so the script runs from any checkout.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from simul8.app.experiment_runner import ExperimentRunner  # noqa: E402
+from samesim.app.experiment_runner import ExperimentRunner  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 # Intermediate configs and per-run CSVs. Kept out of the repo by default
-# (see .gitignore); override with SIMUL8_EXPERIMENT_WORK to relocate.
-SCRATCH = Path(os.environ.get("SIMUL8_EXPERIMENT_WORK", HERE / "_work"))
+# (see .gitignore); override with SAMESIM_EXPERIMENT_WORK to relocate.
+SCRATCH = Path(os.environ.get("SAMESIM_EXPERIMENT_WORK", HERE / "_work"))
 
 RANGES = {
     "randomness": [(150, 150), (150, 151), (150, 155), (150, 175), (150, 200), (150, 300)],
@@ -63,11 +63,11 @@ def run_trial(lo: float, hi: float, seed: int) -> dict:
         "simulation": {"num_agents": 5, "max_virtual_time": HORIZON_MS,
                        "tick_interval": 100.0, "activation": "event"},
         "plugins": {
-            "behavior": "simul8.plugins.behaviors.raft_election.RaftElectionBehavior",
-            "communication": "simul8.plugins.communication.latency.LatencyProtocol",
-            "topology": "simul8.plugins.topologies.random_graph.ErdosRenyiTopology",
-            "metrics": ["simul8.plugins.metrics.raft_metrics.RaftElectionMetric"],
-            "persistence": ["simul8.plugins.persistence.csv_exporter.CsvExporter"],
+            "behavior": "samesim.plugins.behaviors.raft_election.RaftElectionBehavior",
+            "communication": "samesim.plugins.communication.latency.LatencyProtocol",
+            "topology": "samesim.plugins.topologies.random_graph.ErdosRenyiTopology",
+            "metrics": ["samesim.plugins.metrics.raft_metrics.RaftElectionMetric"],
+            "persistence": ["samesim.plugins.persistence.csv_exporter.CsvExporter"],
         },
         "plugin_configs": {
             "RaftElectionBehavior": {"election_timeout_min": lo, "election_timeout_max": hi,

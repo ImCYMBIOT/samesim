@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pytest
 
-from simul8.app.experiment_runner import ExperimentRunner
+from samesim.app.experiment_runner import ExperimentRunner
 
 CONFIG = """\
 schema_version: "1.0"
@@ -36,14 +36,14 @@ simulation:
   tick_interval: 1
 
 plugins:
-  behavior: "simul8.plugins.behaviors.gossip_behavior.GossipBehavior"
-  communication: "simul8.plugins.communication.gossip.GossipProtocol"
-  topology: "simul8.plugins.topologies.ring.RingTopology"
+  behavior: "samesim.plugins.behaviors.gossip_behavior.GossipBehavior"
+  communication: "samesim.plugins.communication.gossip.GossipProtocol"
+  topology: "samesim.plugins.topologies.ring.RingTopology"
   metrics:
-    - "simul8.plugins.metrics.message_count.MessageCountMetric"
-    - "simul8.plugins.metrics.convergence.ConvergenceMetric"
+    - "samesim.plugins.metrics.message_count.MessageCountMetric"
+    - "samesim.plugins.metrics.convergence.ConvergenceMetric"
   persistence:
-    - "simul8.plugins.persistence.csv_exporter.CsvExporter"
+    - "samesim.plugins.persistence.csv_exporter.CsvExporter"
 
 plugin_configs:
   GossipBehavior:
