@@ -250,7 +250,7 @@ All paths start with `samesim.plugins.`. Options go under
 | Class | Model | Options |
 |---|---|---|
 | `gossip_behavior.GossipBehavior` | Synchronous push gossip: each tick, average own value with received values, push to `fan_out` random neighbors. State: `value`. | `initial_value_range` ([0, 1]), `fan_out` (3) |
-| `async_gossip.AsyncGossipBehavior` | Boyd et al. (2006) randomized pairwise averaging on Poisson clocks. Event mode. State: `value`. | `clock_rate` (1.0), `initial_value_range` ([0, 1]) |
+| `async_gossip.AsyncGossipBehavior` | Randomized pairwise averaging: on Boyd et al. (2006) Poisson clocks, or in PeerSim-style cycles (one exchange per agent per unit time, in a random order). Event mode. State: `value`. | `schedule` (`poisson` or `cycle`), `clock_rate` (1.0, Poisson only), `initial_value_range` ([0, 1]) |
 | `leader_election.LeaderElectionBehavior` | Max-id flooding: adopt and rebroadcast the largest candidate id seen. | none |
 | `raft_election.RaftElectionBehavior` | Raft leader election (§5.2): terms, randomized timeouts, votes, heartbeats. No log replication. Event mode. Needs a complete graph (`ErdosRenyiTopology` with `edge_probability: 1.0`). State: `role`, `term`, `voted_for`, `votes`, `leader_id`. | `election_timeout_min` (150), `election_timeout_max` (300), `heartbeat_interval` (50), `initial_leader` (none: cold start) |
 | `voter.VoterBehavior` | Synchronous voter model: each tick every agent adopts a random neighbor's previous opinion (0 or 1). Opinion 1 wins with probability equal to its degree-weighted initial fraction. State: `opinion`. | `initial_ones` (agents 0..k−1 start with 1) or `initial_fraction` (0.5) |

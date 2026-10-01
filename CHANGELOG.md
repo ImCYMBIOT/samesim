@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- `AsyncGossipBehavior` option `schedule: cycle`: one exchange per agent per
+  unit time, at a random point in it, as in PeerSim's cycle-driven engine.
+- Validation study: push-pull averaging vs. PeerSim 1.0.5 and Jelasity et
+  al.'s closed form 1/(2√e), on identical graphs, with a speed comparison.
+
 ## 0.2.0 — 2026-10
 
 First public release, under a new name.

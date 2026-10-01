@@ -62,3 +62,28 @@ def test_clock_intervals_are_exponential_with_the_configured_rate():
 def test_rejects_non_positive_rate(rate):
     with pytest.raises(ValueError, match="clock_rate must be > 0"):
         AsyncGossipBehavior().initialize(A, {"clock_rate": rate}, random.Random(1))
+
+
+def test_cycle_schedule_starts_exactly_one_exchange_per_unit_of_time():
+    from samesim.domain.ids import VirtualTime
+    g = AsyncGossipBehavior()
+    state = g.initialize(A, {"schedule": "cycle"}, random.Random(3))
+    t = 0.0
+    timer = g.step(A, state, [], frozenset({B}), VirtualTime(t)).set_timers[0]
+    for cycle in range(200):
+        t = t + timer.delay
+        assert cycle <= t < cycle + 1, f"exchange {cycle} at t={t}, outside its cycle"
+        timer = g.on_timer(A, state, timer.tag, frozenset({B}), VirtualTime(t)).set_timers[0]
+
+
+def test_cycle_schedule_after_recovery_waits_for_the_next_cycle():
+    from samesim.domain.ids import VirtualTime
+    g = AsyncGossipBehavior()
+    state = g.initialize(A, {"schedule": "cycle"}, random.Random(3))
+    timer = g.on_recover(A, state, frozenset({B}), VirtualTime(5.3)).set_timers[0]
+    assert 6.0 <= 5.3 + timer.delay < 7.0
+
+
+def test_unknown_schedule_is_rejected():
+    with pytest.raises(ValueError, match="schedule"):
+        AsyncGossipBehavior().initialize(A, {"schedule": "hourly"}, random.Random(1))

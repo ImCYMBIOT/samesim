@@ -89,6 +89,7 @@ Gossip (fan-out 2), 50 ticks, one core, pure Python:
 
 - **The engine scales linearly.** On a ring, the local log-log slope of runtime vs. agents stays between 0.92 and 1.13 from 100 to 100,000 agents. On Erdős–Rényi (average degree 8) it's 0.81–1.35, mildly superlinear in the middle of the range: runtime is 1.0× Ring's at 300 agents and 1.7× at 100,000. The extra cost has been traced to `GossipBehavior.step()`, not the engine, but not yet to a specific line.
 - **No topology generator is quadratic.** Erdős–Rényi with 100,000 agents builds in 0.82 s. A contract test fails the build if any generator, including future ones, grows quadratically.
+- **Against PeerSim, the P2P simulator, PeerSim is 9× faster at 1,000 agents and 91× at 100,000** on push-pull averaging. PeerSim's cycle-driven engine is a compiled Java loop of direct method calls, and its JVM startup dominates small runs; in SameSim each exchange is a timer plus two messages through the event queue. Details: [`experiments/peersim_validation/`](experiments/peersim_validation/).
 - **Against Mesa, the ABM library, Mesa is 7.4× faster** per agent update on the voter model, where SameSim sends opinions as messages. Details: [`experiments/voter_mesa_validation/`](experiments/voter_mesa_validation/).
 - **Against another simulator, SimPy is 5× faster** on the same M/M/1 queue (about 96,000 vs 19,000 customers per second, median of 100 runs each). Each SameSim customer is 4 scheduled events plus metric dispatch and immutable-state copies; the profile has no single hotspot. Details: [`experiments/mm1_simpy_validation/`](experiments/mm1_simpy_validation/).
 - **The architecture costs about an order of magnitude.** A bare-loop implementation of the same gossip protocol runs 6–12× faster across our measurements, and the ratio stops growing above ~1,000 agents. That overhead pays for the event queue, determinism, and plugin isolation.
@@ -105,6 +106,7 @@ SameSim was checked against software and math it shares no code with, on the ide
 | SIR: final recovered | 498.77 ± 0.13 | 498.75 ± 0.13 (NDlib) | Equivalent within ±1% (TOST p < 10⁻¹⁶⁰) |
 | M/M/1 queue, ρ = 0.5 / 0.8 / 0.9, 100 seeds: mean wait | 1.002 / 4.01 / 9.01 | 1.000 / 4.05 / 9.05 ([SimPy](https://simpy.readthedocs.io)); closed form 1 / 4 / 9 | Equivalent to the closed form within ±3% at every load; every customer's wait also matches Lindley's recursion exactly |
 | Voter model, 2,000 seeds: P(opinion 1 wins) | 0.267 | 0.255 ([Mesa](https://mesa.readthedocs.io)); exact martingale result 0.272; naive 0.10 | SameSim equivalent to the exact result within ±0.03 (TOST p = 0.006); Mesa not significantly different, equivalence not shown |
+| Push-pull averaging, 1,000 agents, 50 seeds: per-cycle variance factor, complete / sparse graph | 0.3026 / 0.3360 | 0.3022 / 0.3367 ([PeerSim](https://peersim.sourceforge.net)); closed form 1/(2√e) = 0.3033 on the complete graph | Both tools equivalent to the closed form and to each other within ±0.01 (TOST p < 10⁻¹⁵) |
 | Gossip ticks to converge, 300 agents, 200 seeds | 10.91 ± 0.21 | 10.89 ± 0.21 (independent numpy impl.) | Equivalent within ±0.5 tick (TOST p = 0.001) |
 | Watts–Strogatz clustering / avg. path | 0.4164 / 4.094 | 0.4164 / 4.094 ([NetworkX](https://networkx.org)) | Exact |
 | Ring and grid diameter / avg. path | 250 / 125.25, 20 / 10.03 | Identical (NetworkX) | Exact |
@@ -141,7 +143,7 @@ The same fixed-seed scenarios in SameSim, SimPy, Mesa, NDlib and plain Python, o
 
 ### Tests
 
-**1116 passing on each of Python 3.10, 3.11, 3.12 and 3.13** (unit, integration, regression). Seven of the suites are *contract tests that discover their targets automatically*, so they also cover plugins and files that don't exist yet:
+**1122 passing on each of Python 3.10, 3.11, 3.12 and 3.13** (unit, integration, regression). Seven of the suites are *contract tests that discover their targets automatically*, so they also cover plugins and files that don't exist yet:
 - every behavior × protocol pairing delivers exactly once per intended recipient
 - no topology generator scales quadratically
 - every module respects the layering (`plugins` → `domain`, `ports` only), with relative imports resolved
