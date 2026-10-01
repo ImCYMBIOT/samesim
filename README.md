@@ -32,8 +32,8 @@ samesim/
 ├── core/          # Engine: SimulationEngine, Scheduler, EventQueue, AgentRegistry, TopologyManager, ...
 ├── app/           # Orchestration: ConfigLoader, PluginLoader, ExperimentRunner
 ├── plugins/       # behaviors/ communication/ topologies/ metrics/ persistence/ dynamics/
+├── examples/      # Ready-to-run YAML configs (`samesim examples`)
 └── cli/           # samesim run, samesim visualize
-examples/          # Ready-to-run YAML configs
 experiments/       # Validation studies: scripts, raw results, write-ups
 tests/             # unit/ integration/ regression/
 ```
@@ -70,7 +70,7 @@ virtual_time,value
 | Exporters | CSV |
 | Churn (optional) | Scheduled faults with state-based targeting ("crash whoever is leader at t=1000"), random Poisson failure/recovery |
 
-All eight example configs in `examples/` finish in under 3 seconds each (seven of them in under a second), including interpreter startup.
+All eight shipped example configs (`samesim examples`) finish in under 3 seconds each (seven of them in under a second), including interpreter startup.
 
 ## By the numbers
 
@@ -141,7 +141,7 @@ The same fixed-seed scenarios in SameSim, SimPy, Mesa, NDlib and plain Python, o
 
 ### Tests
 
-**1042 passing on each of Python 3.10, 3.11, 3.12 and 3.13** (unit, integration, regression). Seven of the suites are *contract tests that discover their targets automatically*, so they also cover plugins and files that don't exist yet:
+**1116 passing on each of Python 3.10, 3.11, 3.12 and 3.13** (unit, integration, regression). Seven of the suites are *contract tests that discover their targets automatically*, so they also cover plugins and files that don't exist yet:
 - every behavior × protocol pairing delivers exactly once per intended recipient
 - no topology generator scales quadratically
 - every module respects the layering (`plugins` → `domain`, `ports` only), with relative imports resolved
@@ -160,27 +160,45 @@ All three phases of the time-model design are in: per-message latency, event-dri
 
 ## Getting Started
 
-### Installation
+```bash
+pip install samesim
+```
 
-Clone the repository and install it in editable dev mode:
+Python 3.10–3.13; the only runtime dependency is PyYAML.
+
+### From the command line
 
 ```bash
+samesim examples                          # the shipped example configs
+samesim run raft_leader_crash             # run one by name
+samesim new my_study --from sir_random    # copy one to start your own
+samesim validate my_study.yaml            # check everything without running
+samesim run my_study.yaml --seed 3 --set simulation.num_agents=500 -o results
+samesim sweep my_study.yaml --seeds 1-20 -o sweep   # many seeds, one at a time
+samesim plugins                           # every plugin; `samesim plugins NAME` for its options
+samesim visualize results                 # interactive dashboard.html
+```
+
+`validate` does everything a run does before its first event, so a misspelled option, an unknown field or an incompatible plugin fails in a second instead of after a long sweep.
+
+### From Python
+
+```python
+import samesim
+
+result = samesim.run("sir_random", seed=3, overrides={"simulation.num_agents": 500})
+infected = result.series["sir_infected"]
+print([(r.virtual_time, r.value) for r in infected.records][:5])
+```
+
+`samesim.run` takes a YAML path, an example name or a config dict, keeps results in memory, and writes files only when given `output_dir`. The [User Guide](docs/user_guide.md) covers writing your own configs.
+
+### Development
+
+```bash
+git clone https://github.com/ImCYMBIOT/samesim.git && cd samesim
 pip install -e ".[dev]"
-```
-
-### Running an Experiment
-
-```bash
-samesim run examples/raft_leader_crash.yaml --output ./results
-samesim visualize ./results        # interactive dashboard.html
-```
-
-This crashes a Raft cluster's leader at t=1000 ms and restarts it at 2500 ms, and writes the elections, running-agent counts and message counts as CSV to `./results`. The [User Guide](docs/user_guide.md) covers writing your own configs.
-
-### Running Tests
-
-```bash
-pytest                  # ~70 s
+pytest                  # ~90 s
 pytest -m "not slow"    # skip the scale tests
 ```
 

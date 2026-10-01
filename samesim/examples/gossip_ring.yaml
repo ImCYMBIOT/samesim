@@ -1,7 +1,8 @@
+# Push-gossip averaging on a ring (100 agents): the slow-mixing case.
 schema_version: "1.0"
 
 experiment:
-  name: "gossip_random"
+  name: "gossip_ring"
   seed: 42
 
 simulation:
@@ -12,7 +13,7 @@ simulation:
 plugins:
   behavior: "samesim.plugins.behaviors.gossip_behavior.GossipBehavior"
   communication: "samesim.plugins.communication.gossip.GossipProtocol"
-  topology: "samesim.plugins.topologies.random_graph.ErdosRenyiTopology"
+  topology: "samesim.plugins.topologies.ring.RingTopology"
   metrics:
     - "samesim.plugins.metrics.message_count.MessageCountMetric"
     - "samesim.plugins.metrics.convergence.ConvergenceMetric"
@@ -25,5 +26,4 @@ plugin_configs:
   GossipBehavior:
     initial_value_range: [0.0, 1.0]
     fan_out: 2
-  ErdosRenyiTopology:
-    edge_probability: 0.08
+  RingTopology: {}

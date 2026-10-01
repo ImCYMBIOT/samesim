@@ -8,6 +8,8 @@ Output format:
 Metadata is embedded as a comment header (lines starting with #) for
 self-describing output files. This ensures results are reproducible:
 the experiment name and seed are recorded alongside the data.
+
+Config keys: none.
 """
 from __future__ import annotations
 

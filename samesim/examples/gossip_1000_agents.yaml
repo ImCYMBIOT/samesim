@@ -1,3 +1,5 @@
+# Push-gossip averaging: 1,000 agents on an Erdos-Renyi graph, each averaging
+# with what it receives and pushing to 3 random neighbors per tick.
 schema_version: "1.0"
 
 experiment:

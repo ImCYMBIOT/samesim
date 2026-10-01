@@ -23,7 +23,7 @@ What is pinned:
               recovery hooks. (ScheduledChurn is pinned by the Raft
               leader-crash example.)
 
-    EXAMPLES  Every config in examples/, with every CSV it writes hashed
+    EXAMPLES  Every config in samesim/examples/, with every CSV it writes hashed
               byte-for-byte -- covering the metric and exporter plugins
               the matrix does not exercise.
 
@@ -84,7 +84,7 @@ BEHAVIOR_CONFIGS = {
     # but the bootstrap. Scaled so candidacy, voting and term escalation
     # happen inside the window. No matrix topology is complete, so no cell
     # reaches a majority (19 of 36) -- leadership and heartbeats are pinned
-    # by examples/raft_election.yaml instead.
+    # by samesim/examples/raft_election.yaml instead.
     "RaftElectionBehavior": {"election_timeout_min": 3.0, "election_timeout_max": 6.0,
                              "heartbeat_interval": 1.0},
 }
@@ -123,7 +123,7 @@ def _path(cls: type) -> str:
 BEHAVIORS = _discover(behaviors_pkg, BehaviorPort) + [InboxProbeBehavior, EventProbeBehavior]
 PROTOCOLS = _discover(protocols_pkg, CommunicationProtocolPort)
 TOPOLOGIES = _discover(topologies_pkg, TopologyGeneratorPort)
-EXAMPLES = sorted((REPO_ROOT / "examples").glob("*.yaml"))
+EXAMPLES = sorted((REPO_ROOT / "samesim" / "examples").glob("*.yaml"))
 
 # Every activation mode each behavior declares is its own set of cells.
 MATRIX = [

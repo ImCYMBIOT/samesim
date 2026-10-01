@@ -23,37 +23,65 @@ what a run writes. To write your own plugins, see the
 Python 3.10–3.13. One runtime dependency (PyYAML).
 
 ```bash
-git clone https://github.com/ImCYMBIOT/SameSim.git
-cd SameSim
-pip install -e ".[dev]"      # editable, with pytest
-pytest                        # optional: ~90 s, 1042 tests
+pip install samesim
 ```
+
+For development, from a clone: `pip install -e ".[dev]"`, then `pytest`.
 
 ## 2. Run an experiment
 
+Everything goes through the `samesim` command. CONFIG is a YAML file or
+the name of a shipped example.
+
+| Command | Does |
+|---|---|
+| `samesim examples` | Lists the shipped example configs |
+| `samesim new NAME --from EXAMPLE` | Writes `NAME.yaml`, a copy of an example to edit (comments kept) |
+| `samesim plugins [KIND \| NAME]` | Lists every plugin, or one plugin's options and defaults |
+| `samesim validate CONFIG` | Everything a run does before its first event: loads every plugin, creates the agents, builds the graph, checks every option. Fails in seconds instead of after a long sweep |
+| `samesim run CONFIG [-o DIR]` | Runs once; results to `DIR` (default `./results`) |
+| `samesim sweep CONFIG --seeds 1-20 [-o DIR]` | Runs each seed in turn into `DIR/seed-<n>/` |
+| `samesim digest DIR` | Prints a run's SHA-256 fingerprint (needs `TraceDigestMetric`; section 9) |
+| `samesim visualize DIR` | Writes `DIR/dashboard.html` |
+
+`run`, `validate` and `sweep` take `--seed N` (except `sweep`) and any
+number of `--set path.to.key=value`, which overrides one value without
+editing the file. The value is read as YAML, so numbers, booleans and lists
+come out typed:
+
 ```bash
-samesim run examples/sir_random.yaml --output ./results
-samesim visualize ./results            # writes ./results/dashboard.html
+samesim run my_study.yaml --seed 7 \
+    --set simulation.num_agents=500 \
+    --set plugin_configs.GossipBehavior.fan_out=4
 ```
 
-`samesim run` options:
+Errors print one line, with a suggestion when a name is misspelled; add
+`--log-level DEBUG` for the full traceback.
 
-| Option | Default | Meaning |
-|---|---|---|
-| `--output`, `-o` | `./results` | Directory for result files |
-| `--log-level` | `INFO` | `DEBUG`, `INFO`, `WARNING` or `ERROR` |
+`samesim visualize` builds a self-contained HTML dashboard: a chart per
+metric, plus a network animation when the run included `StateTraceMetric`
+and `TopologyMetric`. The page loads its charting libraries from public
+CDNs, so it needs a network connection to view.
 
-`samesim visualize [DIR]` builds a self-contained HTML dashboard from a
-results directory: a chart per metric, plus a network animation when the run
-included `StateTraceMetric` and `TopologyMetric`. The page loads its charting
-libraries from public CDNs, so it needs a network connection to view.
-
-From Python:
+### From Python
 
 ```python
-from samesim.app.experiment_runner import ExperimentRunner
-ExperimentRunner().run("examples/sir_random.yaml", output_dir="./results")
+import samesim
+
+result = samesim.run("my_study.yaml", seed=7,
+                     overrides={"simulation.num_agents": 500})
+series = result.series["convergence_variance"]      # a MetricSeries
+times = [r.virtual_time for r in series.records]
+values = [r.value for r in series.records]
+result.digest                                       # if TraceDigestMetric ran
+
+samesim.validate("my_study.yaml")                   # raises on any problem
+samesim.run({...}, output_dir="results")            # a config dict; writes files
 ```
+
+`samesim.run` accepts a YAML path, an example name or a dict in the YAML
+file's shape. It keeps results in memory and writes files only when given
+`output_dir`.
 
 ## 3. The config file
 
@@ -92,6 +120,8 @@ plugin_configs:                  # options per plugin, keyed by CLASS name
 Before the first event, a config is rejected if:
 
 - a required field is missing, or `activation` isn't a known mode;
+- a field is unknown, anywhere the config's own sections are defined
+  (`activaton:` for `activation:`); the error names the closest real field;
 - the behavior doesn't support the requested activation mode (section 4);
 - a `plugin_configs` section names a class that isn't in the experiment
   (e.g. `GossipBehaviour`), or gives options to a metric or exporter,
@@ -317,17 +347,19 @@ they diverged.
 
 ## 10. Examples
 
-All in `examples/`. Each finishes in a few seconds at most.
+Shipped with the package; list them with `samesim examples`, run one by
+name (`samesim run gossip_ring`) or copy one with `samesim new`. Each
+finishes in a few seconds at most.
 
-| File | What it shows |
+| Name | What it shows |
 |---|---|
-| `gossip_1000_agents.yaml` | Gossip averaging, 1,000 agents on Erdős–Rényi |
-| `gossip_random.yaml`, `gossip_ring.yaml` | Gossip on a random graph vs. a ring |
-| `async_gossip_ring.yaml` | Boyd et al.'s asynchronous gossip, event mode, with latency |
-| `leader_random.yaml` | Max-id flooding election |
-| `sir_random.yaml` | SIR epidemic on a random graph |
-| `raft_election.yaml` | Raft election on a 5-node cluster |
-| `raft_leader_crash.yaml` | Raft Fig. 16 scenario: crash the leader at t=1000, restart it at t=2500 |
+| `gossip_1000_agents` | Gossip averaging, 1,000 agents on Erdős–Rényi |
+| `gossip_random`, `gossip_ring` | Gossip on a random graph vs. a ring |
+| `async_gossip_ring` | Boyd et al.'s asynchronous gossip, event mode, with latency |
+| `leader_random` | Max-id flooding election |
+| `sir_random` | SIR epidemic on a Watts–Strogatz small-world graph |
+| `raft_election` | Raft election on a 5-node cluster |
+| `raft_leader_crash` | Raft Fig. 16 scenario: crash the leader at t=1000, restart it at t=2500 |
 
 For studies built from these, with their data and scripts, see
 [`experiments/`](../experiments/) and the "By the numbers" section of the

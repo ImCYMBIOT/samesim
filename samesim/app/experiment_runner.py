@@ -39,6 +39,7 @@ from ..core.time_manager import TimeManager
 from ..core.topology_manager import TopologyManager
 from ..domain.experiment import ExperimentConfig
 from ..domain.ids import AgentId
+from ..domain.metric import MetricSeries
 from ..domain.topology import TopologyGraph
 from ..ports.behavior import BehaviorPort
 from ..ports.communication import CommunicationProtocolPort
@@ -240,6 +241,39 @@ def register_metric_collectors(
     return engine
 
 
+@dataclasses.dataclass
+class RunResult:
+    """What a run produced, in memory.
+
+    Attributes:
+        config:   The resolved experiment configuration (defaults filled in).
+        series:   Every metric's series, keyed by series name
+                  (e.g. "convergence_variance").
+        wall_clock_seconds: Run time of the simulation loop itself.
+        output_files: Files written, if the run wrote any.
+    """
+
+    config: ExperimentConfig
+    series: dict[str, MetricSeries]
+    wall_clock_seconds: float
+    output_files: list[str]
+
+    @property
+    def digest(self) -> str | None:
+        """The run's final fingerprint, if TraceDigestMetric was collected."""
+        s = self.series.get("trace_digest")
+        if s is None or not s.records:
+            return None
+        return dict(s.records[-1].tags).get("digest")
+
+
+@dataclasses.dataclass
+class _Prepared:
+    engine: SimulationEngine
+    metrics_engine: MetricsEngine
+    persistence_adapters: list[PersistencePort]
+
+
 class ExperimentRunner:
     """Assembles and runs a simulation experiment from a YAML config file.
 
@@ -256,21 +290,71 @@ class ExperimentRunner:
         self._config_loader = config_loader or ConfigLoader()
         self._plugin_loader = plugin_loader or PluginLoader()
 
+    def resolve(self, config: ExperimentConfig | dict[str, Any] | Path | str) -> ExperimentConfig:
+        """An ExperimentConfig from a config object, a dict, or a YAML file path."""
+        if isinstance(config, ExperimentConfig):
+            return config
+        if isinstance(config, dict):
+            return self._config_loader.load_dict(config)
+        return self._config_loader.load(config)
+
+    def validate(self, config: ExperimentConfig | dict[str, Any] | Path | str) -> ExperimentConfig:
+        """Do everything a run does before its first event, then stop.
+
+        Loads and checks the config, loads every plugin, creates the agents,
+        builds the topology and initializes every plugin -- so an unknown
+        plugin, an incompatible activation mode, an invalid value or an
+        option that would have no effect fails here, exactly as it would at
+        the start of a run.
+
+        Raises:
+            ConfigValidationError, PluginLoadError, ValueError: as run() would.
+        """
+        config = self.resolve(config)
+        self._prepare(config)
+        return config
+
     def run(
         self,
-        config_path: Path | str,
+        config: ExperimentConfig | dict[str, Any] | Path | str,
         output_dir: Path | str | None = None,
-    ) -> None:
+        *,
+        write: bool = True,
+    ) -> RunResult:
         """Execute a full simulation experiment end-to-end.
 
         Args:
-            config_path: Path to the YAML experiment config file.
-            output_dir:  Directory for result files (default: ./results).
+            config:     An ExperimentConfig, a dict in the YAML file's shape,
+                        or the path of a YAML file.
+            output_dir: Directory for result files (default: ./results).
+            write:      False keeps the results in memory only: no files,
+                        no persistence plugins, no summary.
+
+        Returns:
+            The metric series, the resolved config and run time.
         """
-        # --- 1. Load config ---
-        config = self._config_loader.load(config_path)
-        output_path = Path(output_dir) if output_dir else Path("./results")
-        output_path.mkdir(parents=True, exist_ok=True)
+        config = self.resolve(config)
+        prepared = self._prepare(config)
+
+        start_wall_time = time.perf_counter()
+        prepared.engine.run()
+        elapsed_wall_time = time.perf_counter() - start_wall_time
+
+        series = prepared.metrics_engine.get_all_series()
+        written_paths: list[str] = []
+        if write:
+            output_path = Path(output_dir) if output_dir else Path("./results")
+            output_path.mkdir(parents=True, exist_ok=True)
+            for adapter in prepared.persistence_adapters:
+                for path in adapter.write(series, config, output_path):
+                    written_paths.append(str(path))
+                    logger.info("Wrote results: %s", path)
+            self._write_summaries(config, elapsed_wall_time, written_paths, output_path)
+        return RunResult(config=config, series={str(s.name): s for s in series},
+                         wall_clock_seconds=elapsed_wall_time, output_files=written_paths)
+
+    def _prepare(self, config: ExperimentConfig) -> _Prepared:
+        """Steps 2-8: everything before the first event."""
         logger.info(
             "Loaded config '%s' | seed=%d | agents=%d",
             config.name, config.seed, config.simulation.num_agents,
@@ -375,23 +459,8 @@ class ExperimentRunner:
             dynamics=dynamics,
             join_agent=join_agent,
         )
-
-        # --- 9. Run with wall-clock timing ---
-        start_wall_time = time.perf_counter()
-        engine.run()
-        elapsed_wall_time = time.perf_counter() - start_wall_time
-
-        # --- 10. Export ---
-        series = metrics_engine.get_all_series()
-        written_paths = []
-        for adapter in persistence_adapters:
-            written = adapter.write(series, config, output_path)
-            for path in written:
-                written_paths.append(str(path))
-                logger.info("Wrote results: %s", path)
-
-        # --- 11. Write summaries ---
-        self._write_summaries(config, elapsed_wall_time, written_paths, output_path)
+        return _Prepared(engine=engine, metrics_engine=metrics_engine,
+                         persistence_adapters=persistence_adapters)
 
     def _write_summaries(
         self,

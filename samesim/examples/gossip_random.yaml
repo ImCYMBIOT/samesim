@@ -1,7 +1,8 @@
+# Push-gossip averaging on an Erdos-Renyi random graph (100 agents).
 schema_version: "1.0"
 
 experiment:
-  name: "gossip_ring"
+  name: "gossip_random"
   seed: 42
 
 simulation:
@@ -12,7 +13,7 @@ simulation:
 plugins:
   behavior: "samesim.plugins.behaviors.gossip_behavior.GossipBehavior"
   communication: "samesim.plugins.communication.gossip.GossipProtocol"
-  topology: "samesim.plugins.topologies.ring.RingTopology"
+  topology: "samesim.plugins.topologies.random_graph.ErdosRenyiTopology"
   metrics:
     - "samesim.plugins.metrics.message_count.MessageCountMetric"
     - "samesim.plugins.metrics.convergence.ConvergenceMetric"
@@ -25,4 +26,5 @@ plugin_configs:
   GossipBehavior:
     initial_value_range: [0.0, 1.0]
     fan_out: 2
-  RingTopology: {}
+  ErdosRenyiTopology:
+    edge_probability: 0.08

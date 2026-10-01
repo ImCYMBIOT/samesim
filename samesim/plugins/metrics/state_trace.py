@@ -3,6 +3,8 @@ StateTraceMetric and TopologyMetric.
 
 Used to collect node-level state traces and network topology structure.
 This data is used by the visualizer to animate graph states over time.
+
+Config keys: none.
 """
 from __future__ import annotations
 

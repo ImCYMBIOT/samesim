@@ -15,6 +15,8 @@ inflating effective transmission rates rather than failing loudly. The
 addressing contract in ports/communication.py and the matrix test in
 tests/unit/plugins/test_addressing_contract.py exist to prevent that class
 of bug from returning.
+
+Config keys: none.
 """
 from __future__ import annotations
 

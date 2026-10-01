@@ -5,6 +5,8 @@ Subscribes to: MessageDeliveredEvent
 
 Records a running total at each delivery event. The resulting series
 gives cumulative message volume over virtual time.
+
+Config keys: none.
 """
 from __future__ import annotations
 

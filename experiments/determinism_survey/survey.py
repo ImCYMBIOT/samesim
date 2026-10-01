@@ -9,10 +9,10 @@ the hashes: identical hash = bit-identical run.
 
 Scenarios, each written the way the tool's documentation writes models:
 
-    samesim/async_gossip   examples/async_gossip_ring.yaml: event activation,
+    samesim/async_gossip   samesim/examples/async_gossip_ring.yaml: event activation,
                           Poisson clocks, exponential latency
-    samesim/sir            examples/sir_random.yaml
-    samesim/gossip         examples/gossip_1000_agents.yaml: float averaging
+    samesim/sir            samesim/examples/sir_random.yaml
+    samesim/gossip         samesim/examples/gossip_1000_agents.yaml: float averaging
     simpy/mm1             M/M/1 queue with random.expovariate, the SimPy idiom;
                           records each customer's arrival, start and end time
     simpy/mm1_service     the same run, recording each drawn service time
@@ -73,7 +73,7 @@ def _samesim(example: str) -> str:
     logging.disable(logging.INFO)
     from samesim.app.experiment_runner import ExperimentRunner
     with tempfile.TemporaryDirectory() as tmp:
-        ExperimentRunner().run(REPO / "examples" / example, output_dir=tmp)
+        ExperimentRunner().run(REPO / "samesim" / "examples" / example, output_dir=tmp)
         files = sorted(p for p in Path(tmp).glob("*.csv"))
         return digest(p.name + "\n" + p.read_text() for p in files)
 

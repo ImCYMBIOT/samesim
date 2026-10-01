@@ -5,6 +5,8 @@ Calculates the percentage of agents that have adopted the true maximum leader ID
 
 Reads every agent's initial state in on_setup() to discover the true maximum
 leader ID before the simulation starts.
+
+Config keys: none.
 """
 from __future__ import annotations
 

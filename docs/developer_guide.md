@@ -178,9 +178,11 @@ port. A config references it by dotted path. There is nothing to register.
    invalid values with a `ValueError` that names your plugin, so a run
    never fails partway through.
 3. **Follow the determinism rules** in section 3.
-4. **Document the plugin in its module docstring:** what it models, which
-   activation modes it supports, and each `plugin_configs` key with its
-   default. Copy the format of any existing plugin.
+4. **Document the plugin in its module docstring:** what it models (first
+   line), which activation modes it supports, and each `plugin_configs` key
+   with its default, under a line starting `Configuration` or `Config keys`
+   (or `Config keys: none.`). `samesim plugins NAME` shows exactly that, and
+   `tests/integration/test_cli_and_api.py` fails a plugin without it.
 
 A minimal behavior:
 
@@ -392,6 +394,7 @@ the `portable_math` known-answer tests on macOS and Windows.
       also get an integration test.
 - [ ] `pytest` passes. New plugins have their golden traces recorded, and
       the JSON diff contains only additions.
-- [ ] New experiment types get an example in `examples/`.
+- [ ] New experiment types get an example in `samesim/examples/`, starting with a
+      `# ...` comment that says what it shows (`samesim examples` displays it).
 - [ ] New experiment scripts go under `experiments/<study>/`, with a README
       and raw results next to them.

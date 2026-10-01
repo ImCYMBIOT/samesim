@@ -1,3 +1,4 @@
+# Leader election by max-id flooding on an Erdos-Renyi random graph.
 schema_version: "1.0"
 
 experiment:

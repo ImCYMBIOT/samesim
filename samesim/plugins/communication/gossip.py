@@ -5,6 +5,8 @@ Delivers every message exactly as addressed, with no transport effects.
 Honours both addressing modes (see Message.broadcast): an addressed
 message goes to its recipient; a broadcast message reaches every neighbor
 of the sender. That makes this protocol safe to pair with any behavior.
+
+Config keys: none.
 """
 from __future__ import annotations
 

@@ -8,6 +8,8 @@ Defines three separate metric collectors, one for each state:
 
 Each collector subscribes to AgentStateChangedEvent and TickEvent,
 tracks agent states, and exports a single MetricSeries.
+
+Config keys: none.
 """
 from __future__ import annotations
 

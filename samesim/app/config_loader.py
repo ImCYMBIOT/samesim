@@ -6,13 +6,18 @@ Responsibilities:
     - Validate required fields with clear error messages
     - Enforce schema_version compatibility
 
-The loader is strict by design: unknown fields are silently ignored,
-but missing required fields raise ConfigValidationError with the exact
-field path. Research reproducibility depends on catching config mistakes
-before a simulation runs.
+The loader is strict by design: missing required fields and unknown
+fields both raise ConfigValidationError with the exact field path (and,
+for an unknown field, the closest known one). An unknown field used to be
+ignored, so a typo such as `activaton: event` silently ran the default.
+Research reproducibility depends on catching config mistakes before a
+simulation runs. (Options inside plugin_configs are checked separately,
+against what each plugin actually reads; see ExperimentRunner.)
 """
 from __future__ import annotations
 
+import dataclasses
+import difflib
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +31,8 @@ from ..domain.experiment import (
 )
 
 SUPPORTED_SCHEMA_VERSIONS: frozenset[str] = frozenset({"1.0"})
+TOP_LEVEL_KEYS = ("schema_version", "experiment", "simulation", "plugins", "plugin_configs")
+EXPERIMENT_KEYS = ("name", "seed")
 
 
 class ConfigValidationError(Exception):
@@ -63,6 +70,20 @@ class ConfigLoader:
 
         return self._parse(raw)
 
+    def load_dict(self, raw: dict[str, Any]) -> ExperimentConfig:
+        """Validate a config given as a dict in the YAML file's shape."""
+        if not isinstance(raw, dict):
+            raise ConfigValidationError(f"A config must be a mapping, got {type(raw).__name__}")
+        return self._parse(raw)
+
+    def load_raw(self, path: Path | str) -> dict[str, Any]:
+        """The YAML file as a plain dict, before validation."""
+        path = Path(path)
+        if not path.exists():
+            raise FileNotFoundError(f"Config file not found: {path}")
+        with open(path, "r", encoding="utf-8") as f:
+            return yaml.safe_load(f) or {}
+
     def _parse(self, raw: dict[str, Any]) -> ExperimentConfig:
         version = raw.get("schema_version")
         if version not in SUPPORTED_SCHEMA_VERSIONS:
@@ -71,10 +92,22 @@ class ConfigLoader:
                 f"Supported versions: {sorted(SUPPORTED_SCHEMA_VERSIONS)}"
             )
 
-        experiment = raw.get("experiment", {})
-        simulation = raw.get("simulation", {})
-        plugins = raw.get("plugins", {})
-        plugin_configs = raw.get("plugin_configs", {})
+        experiment = raw.get("experiment") or {}
+        simulation = raw.get("simulation") or {}
+        plugins = raw.get("plugins") or {}
+        plugin_configs = raw.get("plugin_configs") or {}
+
+        # Unknown keys, in every section the loader owns. The allowed names
+        # come from the config dataclasses' own fields, so a field added to
+        # SimulationConfig or PluginsConfig is accepted automatically.
+        self._known(raw, set(TOP_LEVEL_KEYS), "")
+        for name, section in (("experiment", experiment), ("simulation", simulation),
+                              ("plugins", plugins), ("plugin_configs", plugin_configs)):
+            if not isinstance(section, dict):
+                raise ConfigValidationError(f"'{name}' must be a mapping, got {section!r}")
+        self._known(experiment, set(EXPERIMENT_KEYS), "experiment.")
+        self._known(simulation, {f.name for f in dataclasses.fields(SimulationConfig)}, "simulation.")
+        self._known(plugins, {f.name for f in dataclasses.fields(PluginsConfig)}, "plugins.")
 
         # Validate required fields
         self._require(experiment, "name", "experiment.name")
@@ -118,8 +151,59 @@ class ConfigLoader:
         )
 
     # ------------------------------------------------------------------
+    # Overrides
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def with_overrides(raw: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:
+        """A copy of `raw` with dotted-path values replaced or added.
+
+        {"simulation.num_agents": 500, "plugin_configs.GossipBehavior.fan_out": 4}
+        sets those two values. Intermediate mappings are created as needed
+        under plugin_configs (a plugin with no section yet); anywhere else a
+        missing section or a path through a non-mapping is an error, so a
+        mistyped path fails instead of being silently added.
+
+        Raises:
+            ConfigValidationError: naming the bad path.
+        """
+        import copy
+        out = copy.deepcopy(raw)
+        for path, value in overrides.items():
+            parts = path.split(".")
+            if not all(parts):
+                raise ConfigValidationError(f"Override path '{path}' has an empty part")
+            node = out
+            for i, part in enumerate(parts[:-1]):
+                if part not in node:
+                    if parts[0] == "plugin_configs":
+                        node[part] = {}
+                    else:
+                        raise ConfigValidationError(
+                            f"Override '{path}': no section '{'.'.join(parts[:i + 1])}' in the config"
+                        )
+                node = node[part]
+                if not isinstance(node, dict):
+                    raise ConfigValidationError(
+                        f"Override '{path}': '{'.'.join(parts[:i + 1])}' is not a section"
+                    )
+            node[parts[-1]] = value
+        return out
+
+    # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _known(section: dict, allowed: set[str], prefix: str) -> None:
+        for key in section:
+            if key not in allowed:
+                close = difflib.get_close_matches(str(key), sorted(allowed), n=1)
+                hint = f" Did you mean '{prefix}{close[0]}'?" if close else ""
+                raise ConfigValidationError(
+                    f"Unknown config field '{prefix}{key}' -- it would be ignored.{hint} "
+                    f"Known fields here: {sorted(allowed)}."
+                )
 
     @staticmethod
     def _require(section: dict, key: str, path: str) -> None:

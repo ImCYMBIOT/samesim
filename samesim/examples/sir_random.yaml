@@ -1,3 +1,5 @@
+# SIR epidemic on a Watts-Strogatz small-world graph (80 agents): infection
+# with probability beta per infected neighbor, recovery with probability gamma per tick.
 schema_version: "1.0"
 
 experiment:

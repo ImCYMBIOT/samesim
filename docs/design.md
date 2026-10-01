@@ -215,21 +215,22 @@ Each phase was to ship with a result the old engine couldn't produce.
 4. **Why a run ended.** An event-mode run whose agents all go silent ends
    when the queue empties. `SimulationEndedEvent` should say which
    condition ended it.
-5. **`samesim validate`.** Setup already rejects every bad option before
-   the first event. A command that runs setup alone would let a sweep
-   check all its configs before committing hours of compute.
+5. **Stopping on a condition.** Synchronous runs always go to
+   `max_virtual_time`, even after a voter model has reached consensus or an
+   epidemic has died out. A stop condition (a metric reaching a value)
+   would save most of a sweep's time.
 6. **Config migration.** `schema_version` is checked but only `"1.0"`
    exists. The first schema change needs a migration path so old configs
    still reproduce.
 
 ## 8. Roadmap
 
-**Near term: make it adoptable.**
-- a license
-- a versioned release on PyPI
-- a Python API that builds and runs an experiment without YAML and returns
-  results in memory
-- a `samesim validate` command (open question 5)
+**Done in 0.2:** MIT license; the name SameSim; a command line (`examples`,
+`new`, `plugins`, `validate`, `run --set/--seed`, `sweep`, `digest`); a
+Python API (`samesim.run`, `samesim.validate`) that returns results in
+memory; examples shipped with the package; unknown config fields rejected.
+
+**Near term:** the first PyPI release; a stop condition (open question 5).
 
 **Capability gaps.**
 - Network partitions and one-way links: messages in flight across a cut

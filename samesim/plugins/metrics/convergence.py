@@ -14,6 +14,8 @@ The per-agent value tracker uses the state_snapshot["value"] key.
 This coupling to the "value" key is intentional: it is the gossip protocol's
 contract. Future behavior plugins may use different keys; a new metric
 plugin would track those.
+
+Config keys: none.
 """
 from __future__ import annotations
 
