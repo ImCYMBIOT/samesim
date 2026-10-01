@@ -139,7 +139,7 @@ if __name__ == "__main__":
             jobs.append(("erdos_renyi", "simul8.plugins.topologies.random_graph.ErdosRenyiTopology", er_config(n), n, 200, 1))
     elif args.mode == "full":
         jobs = []
-        seeds = (1, 2, 3, 4, 5)
+        seeds = tuple(range(1, 21))
         # Calibrated from pilot data: ring n=20/40/80/160/320 converged at
         # ticks 9/51/64/176/249 respectively -- max(300, 8n) gives ample margin.
         for n in (10, 20, 40, 80, 160, 320):
@@ -155,7 +155,7 @@ if __name__ == "__main__":
             jobs.append(("barabasi_albert", "simul8.plugins.topologies.barabasi_albert.BarabasiAlbertTopology", ba_config(n), n, 200, 1))
     else:  # full_ws_ba
         jobs = []
-        seeds = (1, 2, 3, 4, 5)
+        seeds = tuple(range(1, 21))
         for n in ER_NS:
             for s in seeds:
                 jobs.append(("watts_strogatz", "simul8.plugins.topologies.watts_strogatz.WattsStrogatzTopology", ws_config(n), n, 200, s))

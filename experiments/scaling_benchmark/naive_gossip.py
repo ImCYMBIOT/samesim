@@ -12,7 +12,7 @@ is actually trying to make (event-loop overhead, not topology-generation cost
 RingTopology.generate() is O(n), so it isolates the loop/engine overhead.
 
 Fairness notes (so the comparison means something):
-  - Uses the SAME per-agent RNG scheme (global_seed XOR agent_id) as
+  - Uses the SAME per-agent RNG scheme ("<seed>/agent/<id>") as
     RandomnessManager, and the SAME topology (built via Simul8's own
     RingTopology plugin) -- the only thing being measured is the
     tick/message loop, not a different graph or different randomness.
@@ -49,7 +49,7 @@ def run_naive_gossip(n: int, ticks: int, seed: int) -> dict:
 
     topology = RingTopology().generate(agent_ids, {}, global_rng)
 
-    agent_rngs = [random.Random(seed ^ i) for i in range(n)]
+    agent_rngs = [random.Random(f"{seed}/agent/{i}") for i in range(n)]
     values = [agent_rngs[i].uniform(0.0, 1.0) for i in range(n)]
 
     inbox: list[list[float]] = [[] for _ in range(n)]

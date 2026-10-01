@@ -97,3 +97,24 @@ def test_sir_metrics():
     assert s_metric.get_series().records[0].value == 2.0
     assert i_metric.get_series().records[0].value == 1.0
     assert r_metric.get_series().records[0].value == 1.0
+
+
+def test_first_step_is_an_announcement_round():
+    """At t=0 nobody has communicated yet: infected agents expose their
+    neighbors and nobody changes state -- not even with certain recovery or
+    certain infection. Otherwise the initially infected would take a recovery
+    draw before ever exposing anyone (standard discrete SIR, and NDlib, let
+    them infect first)."""
+    import random as _random
+    from simul8.domain.ids import AgentId as _Id
+    b = SirEpidemicBehavior()
+    config = {"transmission_rate": 1.0, "recovery_rate": 1.0, "initial_infected": 1}
+    infected = b.initialize(_Id(0), config, _random.Random(0))
+    susceptible = b.initialize(_Id(1), config, _random.Random(1))
+    r = b.step(_Id(0), infected, [], frozenset({_Id(1)}), VirtualTime(0.0))
+    assert r.next_state.get("status") == "I" and len(r.outbound_messages) == 1
+    r = b.step(_Id(1), susceptible, [], frozenset({_Id(0)}), VirtualTime(0.0))
+    assert r.next_state.get("status") == "S" and not r.outbound_messages
+    # From t=1 on the usual transitions apply.
+    r = b.step(_Id(0), infected, [], frozenset({_Id(1)}), VirtualTime(1.0))
+    assert r.next_state.get("status") == "R"

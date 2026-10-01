@@ -26,7 +26,7 @@ Python 3.10–3.13. One runtime dependency (PyYAML).
 git clone https://github.com/ImCYMBIOT/Simul8.git
 cd Simul8
 pip install -e ".[dev]"      # editable, with pytest
-pytest                        # optional: ~70 s, 898 tests
+pytest                        # optional: ~80 s, 906 tests
 ```
 
 ## 2. Run an experiment

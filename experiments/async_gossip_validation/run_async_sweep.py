@@ -104,7 +104,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--quick", action="store_true")
     args = parser.parse_args()
-    seeds = [1, 2] if args.quick else [1, 2, 3, 4, 5]
+    seeds = [1, 2] if args.quick else list(range(1, 21))
     grid = {
         "ring": [10, 20, 40] if args.quick else [10, 20, 40, 80, 160],
         "erdos_renyi": [50, 100] if args.quick else [50, 100, 200, 400, 800],

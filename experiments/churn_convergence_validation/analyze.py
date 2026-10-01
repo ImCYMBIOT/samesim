@@ -23,6 +23,16 @@ def _med(values):
     return (median(vals), len(values) - len(vals)) if vals else (None, len(values))
 
 
+def _med_ci(values, boot=2000, seed=0):
+    """Median with a bootstrap 95% CI, ignoring censored (None) runs."""
+    vals = [v for v in values if v is not None]
+    if len(vals) < 5:
+        return None, None, None
+    rng = random.Random(seed)
+    reps = sorted(median([vals[rng.randrange(len(vals))] for _ in vals]) for _ in range(boot))
+    return median(vals), reps[int(0.025 * boot)], reps[int(0.975 * boot) - 1]
+
+
 def _iqr(values):
     vals = sorted(v for v in values if v is not None)
     if len(vals) < 4:
@@ -100,13 +110,33 @@ def main() -> None:
     # t_star is not fitted: it is the churn-free time to reach 1e-2 v0,
     # after which a typical agent is within ~0.1 sigma of consensus.
     t_star, _ = _med([r["t_running_0.01"] for r in base])
-    print(f"\nstale-agent model (t* = {t_star:g}) vs observed median t_all(1e-4):")
+    print(f"\nrunning-agent t(1e-4), median (95% CI):")
+    for d in downtimes:
+        cells = []
+        for f in fractions:
+            rs = base if f == 0 else [r for r in rows if r["down_fraction"] == f and r["downtime"] == d]
+            m, lo, hi = _med_ci([r["t_running_0.0001"] for r in rs])
+            cells.append(f"f={f:g}: {m:g} ({lo:g}-{hi:g})")
+        print(f"  D={d:g}: " + "; ".join(cells))
+
+    print(f"\nstale-agent model (t* = {t_star:g}) vs observed median t_all(1e-4) with 95% CI:")
     for d in downtimes:
         for f in fractions:
             if f == 0:
                 continue
-            obs, _ = _med([r["t_all_0.0001"] for r in rows if r["down_fraction"] == f and r["downtime"] == d])
-            print(f"  D={d:<4g} f={f:<5g} model {stale_model(f, d, t_star, b_run):6.1f}   observed {obs}")
+            m, lo, hi = _med_ci([r["t_all_0.0001"] for r in rows if r["down_fraction"] == f and r["downtime"] == d])
+            model = stale_model(f, d, t_star, b_run)
+            inside = "inside" if lo is not None and lo <= model <= hi else "OUTSIDE"
+            print(f"  D={d:<4g} f={f:<5g} model {model:6.1f}   observed {m} ({lo}-{hi})  {inside}")
+
+    print("\n|drift| (in initial sigma), median (95% CI):")
+    for d in downtimes:
+        cells = []
+        for f in fractions:
+            rs = base if f == 0 else [r for r in rows if r["down_fraction"] == f and r["downtime"] == d]
+            m, lo, hi = _med_ci([abs(r["drift"]) for r in rs])
+            cells.append(f"f={f:g}: {m:.3f} ({lo:.3f}-{hi:.3f})")
+        print(f"  D={d:g}: " + "; ".join(cells))
 
 
 if __name__ == "__main__":

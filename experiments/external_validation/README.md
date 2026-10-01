@@ -24,8 +24,8 @@ the numbers actually agree.
 
 | # | Script | Compared against | Result |
 |---|---|---|---|
-| 1 | `sir_vs_ndlib.py` | [NDlib](https://ndlib.readthedocs.io) (independent epidemiology-on-networks library) | **Found and fixed a real bug** — see below |
-| 2 | `gossip_vs_reference.py` | A numpy-based reference gossip implementation, written from the algorithm's spec | Matches (mean 11.3 vs. 12.3 ticks to converge, overlapping distributions) |
+| 1 | `sir_vs_ndlib.py` | [NDlib](https://ndlib.readthedocs.io) (independent epidemiology-on-networks library), plus a transcribed reference | **Found two real bugs** (double fan-out; correlated seeds) — see below. Now equivalent within ±1% to the reference |
+| 2 | `gossip_vs_reference.py` | A numpy-based reference gossip implementation, written from the algorithm's spec | Equivalent within ±0.5 tick over 200 seeds (10.91 vs. 10.89, TOST p = 0.001). The old 1-tick gap was an indexing off-by-one in the reference |
 | 3 | `topology_vs_networkx.py` | NetworkX's equivalent generators, for all 5 topologies | Near-exact match on every structural statistic |
 | 4 | `leader_election_vs_diameter.py` | Graph diameter (computed via NetworkX) — an analytical bound, not another simulator | 15/15 cases within the theoretical bound |
 | 5 | `event_count_vs_closed_form.py` | Exact combinatorial arithmetic (`n × fan_out × ticks`) | **Also caught a real bug** — see below |
@@ -64,12 +64,57 @@ message when infected and let the protocol handle fan-out, matching how
 `BroadcastProtocol` is documented to be used. Re-ran the same 20-seed
 comparison after the fix: peak infection mean **362.0 (NDlib) vs. 368.3
 (Simul8)**, standard deviations 7.2 vs. 6.9, ranges now heavily
-overlapping. A small residual difference remains (~1.7%, two-sample
-t≈2.8) — plausibly a one-tick difference in when a newly-infected node
-starts spreading between the two tools' discrete-time conventions, not
-another correctness bug; flagged as an open, low-priority question rather
-than asserted as explained. Locked in with
+overlapping. Locked in with
 `tests/unit/plugins/test_sir_broadcast_fanout.py`.
+
+## The residual gap, resolved: correlated seeds (2026-09-28)
+
+That "~1.7%" was reported here as a small residual, "plausibly a one-tick
+convention difference". An outside review recomputed it from the raw JSON:
+Welch t = 2.82, p = 0.008 -- a detectable difference, not a match. Reading
+NDlib's `SIRModel.iteration` side by side with ours found the formulas
+identical in distribution. The cause was elsewhere:
+
+**Simul8's seeds weren't independent.** Agent streams were seeded
+`seed XOR agent_id`. For seeds below the agent count, XOR only permutes
+ids, so seeds 1 and 2 used the *identical set* of 500 agent streams,
+assigned to different agents. The 20 "independent" replicates were partly
+copies of each other, which understated their spread (sd 7.6 against 10.8
+for NDlib over 60 seeds) and made a small difference look significant.
+This affected every study that averages over seeds, not only this one.
+
+Fixed by class: streams are now hashed from `"<seed>/agent/<id>"`
+(`simul8/core/randomness_manager.py`), and
+`tests/unit/core/test_randomness_manager.py` checks that no two of
+64 seeds x 1,024 agents share a stream and that named streams never
+coincide with agent streams. It fails for XOR, for seed + id and for
+separator-free concatenation. Every study in `experiments/` was re-run.
+
+The same investigation found one real, smaller convention difference: the
+initially infected took a recovery draw before exposing anyone, an expected
+infectious period 10% shorter than every other agent's. The first
+synchronous step is now an announcement round, so Simul8's state at time t
+is exactly iteration t of the standard discrete-time SIR.
+
+**Re-run, three ways, 200 seeds** (`sir_vs_ndlib.py`). A third
+implementation referees: NDlib's iteration transcribed into plain Python
+with its own RNG. Means with 95% CIs; Welch's t-test for a difference;
+TOST for equivalence within ±1% of the reference mean.
+
+| | NDlib | Simul8 | Reference |
+|---|---:|---:|---:|
+| peak infected | 362.3 ± 1.5 | 360.4 ± 1.5 | 361.6 ± 1.6 |
+| final recovered | 498.75 ± 0.13 | 498.77 ± 0.13 | 498.65 ± 0.15 |
+| extinction tick | 70.0 ± 1.4 | 69.7 ± 1.5 | 70.8 ± 1.6 |
+
+- No pair differs significantly on any metric (all Welch p > 0.07).
+- **Final size:** all three pairs equivalent within ±1% (TOST p < 10⁻¹⁶⁰).
+- **Peak:** Simul8 is equivalent to the reference (TOST p = 0.015), and
+  so is NDlib (p = 0.005). Simul8 vs. NDlib directly is not quite shown
+  equivalent at ±1% (difference −1.95, TOST p = 0.065).
+- **Extinction tick:** ±1% is 0.7 ticks against a standard deviation of
+  ~10; no pair, including NDlib vs. the reference, can be shown equivalent
+  that tightly at this sample size. No pair differs significantly either.
 
 ## Bug 2 — engine silently dropped the final tick (found designing check #5)
 
@@ -115,8 +160,9 @@ for the addressing contract those tests enforce.
   counterpart) — the numpy reference substitutes for it; a real PeerSim
   comparison would mean a Java cross-language integration, flagged as a
   bigger lift than this pass justified.
-- The SIR residual ~1.7% gap (see Bug 1) isn't fully explained, just
-  bounded and judged small relative to the bug that was fixed.
+- Peak infected, Simul8 vs. NDlib directly: equivalence within ±1% is
+  borderline (TOST p = 0.065) at 200 seeds, although each is equivalent to
+  the independent reference.
 - No real-world dataset comparison (e.g. a documented epidemic outbreak,
   a real social-network topology) — deliberately out of scope: Simul8 is
   a systems/tools contribution, and matching noisy real data with unknown
@@ -146,5 +192,6 @@ All five checks above have been re-verified from a foreign working
 directory on the post-audit engine: topology matches NetworkX, leader
 election stays within the diameter bound, the closed-form event count now
 agrees **exactly** (it was short by one tick before the engine fix), gossip
-matches the numpy reference (11.27 vs. 12.33 mean ticks), and SIR matches
-NDlib (368.3 vs. 362.0 peak infected — unchanged, as expected).
+matches the numpy reference, and SIR matches NDlib. (The gossip and SIR
+numbers in that re-verification were later superseded: see "The residual
+gap, resolved" above for the 200-seed, independently seeded comparison.)

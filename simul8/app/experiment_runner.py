@@ -349,7 +349,7 @@ class ExperimentRunner:
 
         def join_agent(agent_id: AgentId):
             # A joining agent is initialized exactly as it would have been
-            # at t=0: same behavior config, same per-agent RNG (seed XOR id).
+            # at t=0: same behavior config, same per-agent RNG stream.
             return behavior.initialize(agent_id, behavior_config, rng_manager.get_agent_rng(agent_id))
 
         # --- 7. Register metric collectors ---

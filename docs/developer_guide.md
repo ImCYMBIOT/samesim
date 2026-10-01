@@ -62,7 +62,7 @@ simul8/
 | `TopologyManager` | The current graph. Churn replaces it copy-on-write, and graphs are never mutated. |
 | `CommunicationLayer` | Calls the protocol, normalizes and validates what it returns, and counts messages sent, delivered and lost. |
 | `MetricsEngine` | Sends each event only to the collectors that subscribed to its type. |
-| `RandomnessManager` | Per-agent RNGs (`seed XOR agent_id`) and named streams (`Random(f"{seed}/{name}")`) for plugins such as churn. |
+| `RandomnessManager` | Per-agent RNGs (`Random(f"{seed}/agent/{id}")`) and named streams (`Random(f"{seed}/stream/{name}")`) for plugins such as churn. |
 
 ## 2. How a run executes
 

@@ -10,7 +10,7 @@ graph, for two delay shapes with the same mean:
 and records ticks until population variance falls to 1% of its initial
 value (the same convergence criterion as gossip_topology_validation/).
 
-    python run_latency_sweep.py            # full sweep (~1-2 min)
+    python run_latency_sweep.py            # full sweep, 20 seeds (~20 min)
     python run_latency_sweep.py --quick    # smoke run
 
 Output: latency_results.json next to this script.
@@ -86,7 +86,7 @@ def main() -> None:
     args = parser.parse_args()
 
     means = [1, 2, 4] if args.quick else [1, 2, 3, 4, 6, 8, 12, 16]
-    seeds = [1, 2] if args.quick else [1, 2, 3, 4, 5]
+    seeds = [1, 2] if args.quick else list(range(1, 21))
     results = []
     for shape in ("constant", "exponential"):
         for mean in means:
@@ -96,7 +96,7 @@ def main() -> None:
                 print(f"{shape:12} mean={mean:<3} seed={seed}  converged at tick {r['converged_tick']}",
                       flush=True)
 
-    out_json = HERE / "latency_results.json"
+    out_json = HERE / ("latency_results_quick.json" if args.quick else "latency_results.json")
     out_json.write_text(json.dumps(results, indent=2))
     print(f"\nWrote {out_json}")
 

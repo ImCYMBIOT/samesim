@@ -25,7 +25,7 @@ Recorded per run, relative to the initial variance v0:
     lost                   messages lost to crashed agents
     down_fraction_observed mean fraction of agents down over the run
 
-    python run_churn_sweep.py            # full sweep, resumable (~10 min)
+    python run_churn_sweep.py            # full sweep, 40 seeds, resumable (~25 min)
     python run_churn_sweep.py --quick    # smoke run -> churn_results_quick.json
 
 Output: churn_results.json next to this script.
@@ -130,7 +130,7 @@ def main() -> None:
 
     fractions = [0.0, 0.1, 0.3] if args.quick else [0.0, 0.01, 0.02, 0.05, 0.1, 0.2, 0.3, 0.5]
     downtimes = [5.0] if args.quick else [5.0, 50.0]
-    seeds = [1, 2] if args.quick else list(range(1, 11))
+    seeds = [1, 2] if args.quick else list(range(1, 41))
     out_json = HERE / ("churn_results_quick.json" if args.quick else "churn_results.json")
 
     # Resumable: keep finished runs, skip them on restart.

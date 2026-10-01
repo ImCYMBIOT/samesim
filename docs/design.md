@@ -124,9 +124,11 @@ adding it never shifts the protocol's draws.
 Determinism rests on four mechanisms:
 
 - **The event order is total:** `(virtual_time, priority, event_id)`.
-- **Per-agent RNGs** are seeded `seed XOR agent_id`, so adding an agent or
-  reordering work doesn't change anyone else's random numbers. Plugins
-  that need their own randomness, such as churn, get named streams.
+- **Per-agent RNG streams** are hashed from `"<seed>/agent/<id>"`, so
+  adding an agent or reordering work doesn't change anyone else's random
+  numbers, and every (seed, agent) pair has its own stream. Plugins that
+  need their own randomness, such as churn, get named streams in a
+  separate namespace (`"<seed>/stream/<name>"`).
 - **`math.fsum` instead of `sum()`** for floats, because CPython 3.12
   changed `sum()`.
 - **`portable_math`** for `log`, `exp`, powers and non-uniform variates.
@@ -168,12 +170,15 @@ the argument for principle 5.
 | Unused `plugin_configs` options were silently ignored: an example's `CsvExporter: output_dir` never did anything, and `LossyProtocol` swallowed a removed `mode` option | Documentation audit | Each plugin's section is tracked during setup, and any option never read is rejected, with a suggestion. This works for any plugin without it declaring its keys, and it also catches options for a mode that wasn't chosen. |
 | `summary.json` listed config fields by hand and missed every field added later | Documentation audit | The summary serializes the whole `ExperimentConfig`; a test walks its dataclass fields |
 | `gossip_1000_agents.yaml` ran 100 agents | Documentation audit | Now 1,000 agents |
+| Replicates "with different seeds" were partly copies: `seed XOR agent_id` only permutes ids, so seeds 1 and 2 used the identical set of agent streams (every gossip replicate started from the same multiset of values). This understated the spread across seeds and made a 0.3% SIR difference from NDlib look significant (t = 2.8) | External review recomputing our NDlib comparison | Streams hashed from `"<seed>/agent/<id>"`; a guard checks every (seed, agent) pair and every named stream is distinct, mutation-tested against XOR, addition and concatenation. Every study re-run with 20–40 seeds and confidence intervals. Five published claims were withdrawn: the ring's "linear at 1%" exponent, the ordering among well-connected topologies, the Raft "299 vs 177 ms" crash headline (a median of a bimodal distribution), the churn model's "within 10%", and latency's "flat spread for constant delays" |
+| Initially infected SIR agents took a recovery draw before exposing anyone (a 10% shorter expected infectious period) | Same investigation | The first synchronous step is an announcement round; from t=1 the state matches iteration t of standard discrete SIR |
 
 Scientific findings are in the README's "By the numbers" section and in
 each study under `experiments/`. The one that matters most for how the
-tool should be used: the ring's O(n) convergence came from the 1%
-threshold, not the protocol. At 1e-4, both synchronous and asynchronous
-gossip on a ring are about O(n²), matching Boyd et al.
+tool should be used: a measured convergence exponent depends on the
+threshold. On a ring it is about 1.35 at 1% and about 1.8 at 1e-4, for
+synchronous and asynchronous gossip alike; the strict threshold matches
+Boyd et al.'s O(n²).
 
 ## 5. Validation status
 
@@ -182,12 +187,12 @@ Each phase was to ship with a result the old engine couldn't produce.
 | Phase | Target | Status |
 |---|---|---|
 | 1 | Delays match their configured distribution; convergence grows linearly with mean latency | Done: KS and χ² tests pass; linear with R² ≥ 0.997, and delay shape matters at equal mean |
-| 2 | Asynchronous gossip on a ring is ~O(n²) | Done: slope 1.78 at 1e-4, with synchronous at 1.82 |
+| 2 | Asynchronous gossip on a ring is ~O(n²) | Done (20 seeds): slope 1.80 (1.75–1.84) at 1e-4, with synchronous at 1.83 (1.78–1.87) |
 | 2 | Raft election time vs. timeout range | Done: reproduces Ongaro & Ousterhout Fig. 16, with zero safety violations in 11,000 trials |
-| 3 | Leader crash recovery | Done: 150–300 ms restores a leader in a median of 186 ms (p95 325 ms) |
+| 3 | Leader crash recovery | Done: 150–300 ms restores a leader in a median of 185 ms (p95 335 ms); split votes are more common after a crash than from a cold start at every range |
 | 3 | `RandomChurn` down fraction matches λ/(λ+μ) | Done: within 0.01 |
-| 3 | Gossip convergence degrades gracefully as the churn rate rises | Done: among running agents, t ∝ (1 − f)^−1.5 (short outages) to (1 − f)^−1.0 (long), no cliff up to half the agents down. Agreement across *all* agents is set by downtime, and a stale-value model predicts it within 10% up to f = 0.2 |
-| 3 | Lost messages match the churn rate | Done: f(1 − f)·n·k·T within 4% |
+| 3 | Gossip convergence degrades gracefully as the churn rate rises | Done (40 seeds): among running agents, t ∝ (1 − f)^−1.8 (short outages) to (1 − f)^−1.5 (long), no cliff up to half the agents down. Agreement across *all* agents is dominated by downtime; a simple stale-value model gets the trend but not the numbers |
+| 3 | Lost messages match the churn rate | Done: f(1 − f)·n·k·T within 2.5% |
 
 ## 6. Non-goals
 

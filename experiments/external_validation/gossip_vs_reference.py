@@ -11,19 +11,30 @@ using numpy array operations rather than Simul8's agent/message/event
 architecture -- a structurally independent implementation of the same
 spec, not a copy of GossipBehavior's code.
 
-Checks statistical equivalence (convergence-tick distribution, final
-variance-reduction ratio) across repeated seeds on the identical graph,
-not bit-identical trajectories -- the two implementations consume
-randomness completely differently.
+Checks statistical equivalence of the convergence-tick distribution across
+repeated seeds on the identical graph, not bit-identical trajectories -- the
+two implementations consume randomness completely differently. Welch's
+t-test for a difference, and TOST for equivalence within +/-0.5 tick (the
+resolution of the measurement), fixed before running.
+
+History: the first version compared 15 seeds and reported "overlapping
+distributions" (11.3 vs 12.3 ticks). That difference was an indexing
+off-by-one in this reference, not in Simul8: it recorded the initial
+variance AND the first (no-op, empty-inbox) tick as separate entries, so its
+tick numbers ran one ahead of Simul8's, where tick 0 is the first step. The
+reference now records one entry per tick, tick 0 first, as Simul8 does.
 """
 from __future__ import annotations
 
+import json
+import math
 import statistics
 import sys
 from pathlib import Path
 
 import networkx as nx
 import numpy as np
+from scipy import stats
 
 sys.path.insert(0, str(Path(__file__).parent))
 from simul8_harness import networkx_to_topology_graph, run_simul8  # noqa: E402
@@ -39,7 +50,8 @@ N = 300
 AVG_DEGREE = 8
 FAN_OUT = 2
 TICKS = 40
-N_SEEDS = 15
+N_SEEDS = 200
+EQUIV_MARGIN_TICKS = 0.5
 CONVERGENCE_FRACTION = 0.01
 
 
@@ -51,8 +63,11 @@ def reference_gossip(adjacency: list[list[int]], ticks: int, fan_out: int, seed:
     values = rng.uniform(0.0, 1.0, size=n)
     inbox: list[list[float]] = [[] for _ in range(n)]
 
-    variance_series = [float(np.var(values))]
-    for _tick in range(ticks):
+    # One entry per tick, recorded after the tick, tick 0 first -- Simul8's
+    # convention (its first step is tick 0; inboxes are empty then, so the
+    # tick-0 variance equals the initial variance).
+    variance_series = []
+    for _tick in range(ticks + 1):
         next_inbox: list[list[float]] = [[] for _ in range(n)]
         for i in range(n):
             if inbox[i]:
@@ -99,16 +114,28 @@ if __name__ == "__main__":
 
     ref_ticks, simul8_ticks = [], []
     for seed in range(1, N_SEEDS + 1):
-        ref_series = reference_gossip(adjacency, TICKS, FAN_OUT, seed=seed)
-        simul8_series = run_simul8_gossip(graph, seed=seed)
+        t_ref = convergence_tick(reference_gossip(adjacency, TICKS, FAN_OUT, seed=seed), CONVERGENCE_FRACTION)
+        t_s8 = convergence_tick(run_simul8_gossip(graph, seed=seed), CONVERGENCE_FRACTION)
+        assert t_ref is not None and t_s8 is not None, "a run didn't converge within TICKS"
+        ref_ticks.append(t_ref)
+        simul8_ticks.append(t_s8)
 
-        t_ref = convergence_tick(ref_series, CONVERGENCE_FRACTION)
-        t_simul8 = convergence_tick(simul8_series, CONVERGENCE_FRACTION)
-        ref_ticks.append(t_ref if t_ref is not None else TICKS)
-        simul8_ticks.append(t_simul8 if t_simul8 is not None else TICKS)
-        print(f"seed={seed:2d}  reference converged at tick={t_ref}   simul8 converged at tick={t_simul8}", flush=True)
+    def ci(v):
+        return statistics.mean(v), 1.96 * statistics.stdev(v) / math.sqrt(len(v))
 
-    print()
-    print(f"=== Summary over {N_SEEDS} seeds (n={N}, avg_degree={AVG_DEGREE}, fan_out={FAN_OUT}) ===")
-    print(f"reference: mean={statistics.mean(ref_ticks):.2f} std={statistics.stdev(ref_ticks):.2f} range=[{min(ref_ticks)},{max(ref_ticks)}]")
-    print(f"simul8:    mean={statistics.mean(simul8_ticks):.2f} std={statistics.stdev(simul8_ticks):.2f} range=[{min(simul8_ticks)},{max(simul8_ticks)}]")
+    welch = stats.ttest_ind(simul8_ticks, ref_ticks, equal_var=False)
+    m = EQUIV_MARGIN_TICKS
+    lo = stats.ttest_ind([x + m for x in simul8_ticks], ref_ticks, equal_var=False, alternative="greater")
+    hi = stats.ttest_ind([x - m for x in simul8_ticks], ref_ticks, equal_var=False, alternative="less")
+    tost_p = max(lo.pvalue, hi.pvalue)
+    print(f"=== {N_SEEDS} seeds (n={N}, avg_degree={AVG_DEGREE}, fan_out={FAN_OUT}), ticks to 1% of initial variance ===")
+    for name, v in (("reference", ref_ticks), ("simul8", simul8_ticks)):
+        mean, h = ci(v)
+        print(f"{name:10} {mean:6.2f} +/- {h:.2f}  (sd {statistics.stdev(v):.2f}, range {min(v)}-{max(v)})")
+    diff = statistics.mean(simul8_ticks) - statistics.mean(ref_ticks)
+    print(f"simul8 - reference: {diff:+.2f}  Welch p={welch.pvalue:.3f}  "
+          f"TOST(+/-{m} tick) p={tost_p:.2g} -> {'EQUIVALENT' if tost_p < 0.05 else 'not shown equivalent'}")
+    out = Path(__file__).resolve().parent / "gossip_vs_reference_results.json"
+    out.write_text(json.dumps({"reference": ref_ticks, "simul8": simul8_ticks, "diff": diff,
+                               "welch_p": welch.pvalue, "tost_p": tost_p, "margin_ticks": m}, indent=2))
+    print(f"Wrote {out}")

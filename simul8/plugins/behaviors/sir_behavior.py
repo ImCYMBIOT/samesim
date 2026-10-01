@@ -15,6 +15,16 @@ Transitions:
 Initialization:
     Typically, 1 agent starts as Infected ("I"), and all other agents start as Susceptible ("S").
 
+Timing: the step at t=0 is an announcement round. Every inbox is empty then,
+since nobody has communicated yet, so nobody changes state; infected agents
+only expose their neighbors. From t=1 on, the state at time t is exactly
+iteration t of the standard discrete-time SIR (as in NDlib): infection from
+the previous step's infected neighbors, and an infected agent exposes its
+neighbors in every step before the one in which it recovers. Without the
+announcement round, the initially infected took a recovery draw before
+exposing anyone -- an expected infectious period 10% shorter than every other
+agent's (9 steps instead of 10 at gamma = 0.1).
+
 Configuration:
     transmission_rate: float — probability of infection per infected neighbor (default 0.2)
     recovery_rate: float     — probability of recovery per tick (default 0.1)
@@ -69,7 +79,9 @@ class SirEpidemicBehavior(BehaviorPort):
         status = current_state.get("status", "S")
         next_status = status
 
-        if status == "S":
+        if virtual_time == 0:
+            pass  # announcement round (see module docstring): no transitions
+        elif status == "S":
             # 1. Count infected contacts received in inbox
             infected_contacts = sum(
                 1 for msg in inbox if msg.get("status") == "I"

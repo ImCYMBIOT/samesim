@@ -80,3 +80,52 @@ class TestRandomnessReset:
         r_after = rm.get_agent_rng(AgentId(0))
         # After reset, the agent RNG is a fresh object (re-seeded)
         assert r_before is not r_after
+
+
+class TestStreamsAreDistinctAcrossSeeds:
+    """Every (seed, agent) pair and every named stream must be its own stream.
+
+    Replicate runs are only independent if different seeds give different
+    streams, not the same streams handed to different agents. The seed used
+    to be seed XOR agent_id: for seeds below the agent count that only
+    permutes ids, so seeds 1 and 2 used the identical set of agent streams
+    and "independent" replicates were partly copies of each other. Any seed
+    + id arithmetic has the same flaw. These checks fail for all of them.
+    """
+
+    SEEDS = range(64)
+    AGENTS = range(1024)
+
+    @staticmethod
+    def _first_draws(rng, k=2):
+        return tuple(rng.random() for _ in range(k))
+
+    def test_no_two_seed_agent_pairs_share_a_stream(self):
+        seen = {}
+        for seed in self.SEEDS:
+            rm = RandomnessManager()
+            rm.initialize(seed)
+            for a in self.AGENTS:
+                key = self._first_draws(rm.get_agent_rng(AgentId(a)))
+                assert key not in seen, (
+                    f"seed {seed} agent {a} reuses the stream of seed/agent {seen[key]}"
+                )
+                seen[key] = (seed, a)
+
+    def test_different_seeds_give_different_agent_populations(self):
+        # The symptom XOR produced: the same multiset of initial draws.
+        def population(seed):
+            rm = RandomnessManager()
+            rm.initialize(seed)
+            return {rm.get_agent_rng(AgentId(a)).random() for a in range(200)}
+        assert not (population(1) & population(2))
+
+    def test_named_streams_never_coincide_with_agent_streams(self):
+        rm = RandomnessManager()
+        rm.initialize(5)
+        agents = {self._first_draws(rm.get_agent_rng(AgentId(a))) for a in range(64)}
+        names = ["dynamics", "agent/0", "agent/1", "0", "1", "stream/dynamics"]
+        streams = {self._first_draws(rm.stream(n)) for n in names}
+        assert len(streams) == len(names)
+        assert not (agents & streams)
+        assert self._first_draws(rm.global_rng) not in agents | streams

@@ -7,7 +7,7 @@ The core engine is domain-agnostic and manages only agents, virtual time, event 
 ## Features
 
 - **Clean Hexagonal Architecture**: Strictly separated domain, ports, core engine, and application layers. Plugins cannot import the core; a test enforces it.
-- **Deterministic and Reproducible**: Every agent gets its own seeded RNG (`seed XOR agent_id`), and events are ordered by `(virtual_time, priority, event_id)`, so the same seed produces the same run, bit for bit, on Python 3.10 through 3.13 and across Linux, macOS and Windows. CI checks this on every push. `TraceDigestMetric` gives each run a SHA-256 fingerprint you can publish with a result as a reproducibility receipt.
+- **Deterministic and Reproducible**: Every agent gets its own RNG stream, hashed from the seed and its id, and events are ordered by `(virtual_time, priority, event_id)`, so the same seed produces the same run, bit for bit, on Python 3.10 through 3.13 and across Linux, macOS and Windows. CI checks this on every push. `TraceDigestMetric` gives each run a SHA-256 fingerprint you can publish with a result as a reproducibility receipt.
 - **Pluggable Architecture**: Swap behaviors, communication protocols, network topologies, metrics, and exporters from YAML. No core changes needed.
 - **Lean**: Pure Python with a single runtime dependency (PyYAML). Built with a future Rust port in mind. See [By the numbers](#by-the-numbers) for what that costs in speed.
 
@@ -97,41 +97,41 @@ Simul8 was checked against software and math it shares no code with, on the iden
 
 | Check | Simul8 | Reference | Verdict |
 |---|---|---|---|
-| SIR epidemic, 500 agents, 20 seeds: peak infected | 368.3 ± 6.9 | 362.0 ± 7.2 ([NDlib](https://ndlib.readthedocs.io)) | Within 1.7% |
-| SIR: final recovered | 499.1 | 498.9 (NDlib) | Match |
-| Gossip ticks to converge, 300 agents, 15 seeds | 11.3 ± 1.6 | 12.3 ± 1.8 (independent numpy impl.) | Distributions overlap |
+| SIR epidemic, 500 agents, 200 seeds: peak infected (mean ± 95% CI) | 360.4 ± 1.5 | 362.3 ± 1.5 ([NDlib](https://ndlib.readthedocs.io)); 361.6 ± 1.6 (independent reference) | Equivalent to the reference within ±1% (TOST p = 0.015); vs. NDlib no significant difference (p = 0.07), equivalence borderline (TOST p = 0.065) |
+| SIR: final recovered | 498.77 ± 0.13 | 498.75 ± 0.13 (NDlib) | Equivalent within ±1% (TOST p < 10⁻¹⁶⁰) |
+| Gossip ticks to converge, 300 agents, 200 seeds | 10.91 ± 0.21 | 10.89 ± 0.21 (independent numpy impl.) | Equivalent within ±0.5 tick (TOST p = 0.001) |
 | Watts–Strogatz clustering / avg. path | 0.4164 / 4.094 | 0.4164 / 4.094 ([NetworkX](https://networkx.org)) | Exact |
 | Ring and grid diameter / avg. path | 250 / 125.25, 20 / 10.03 | Identical (NetworkX) | Exact |
 | Erdős–Rényi, Barabási–Albert structure | avg. degree, diameter, clustering | NetworkX | Within single-sample noise |
 | Leader election consensus time | ≤ diameter in 15/15 cases (n = 50–1,000) | Graph diameter (analytical bound) | Always within bound |
 | Total messages delivered | n × fan-out × ticks | Closed-form count | Exact |
 
-These checks found three real bugs, which are fixed and have regression tests: an O(n²) topology generator, a dropped final tick, and a double fan-out that inflated SIR transmission by ~28%. Details: [`experiments/external_validation/`](experiments/external_validation/).
+These checks found three real bugs, which are fixed and have regression tests: an O(n²) topology generator, a dropped final tick, and a double fan-out that inflated SIR transmission by ~28%. An outside review of the NDlib comparison then found a fourth: runs with different seeds shared the same agent random streams (`seed XOR agent_id`), so replicates were partly copies of each other and a 0.3% difference looked significant. Streams are now hashed per (seed, agent), a guard test covers it, and every study was re-run. Details: [`experiments/external_validation/`](experiments/external_validation/).
 
 ### Reproducing theory
 
-Gossip convergence time vs. network size (5 seeds per point, average degree 8), fitted log-log slope:
+Gossip convergence time vs. network size (20 seeds per point, average degree 8, time to 1% of the initial variance), fitted log-log slope with a bootstrap 95% CI:
 
-| Topology | Slope | Meaning |
+| Topology | Slope (95% CI) | Meaning |
 |---|---:|---|
-| Ring | 0.99 | Grows linearly with n *at this threshold* (see below) |
-| Watts–Strogatz | 0.16 | Nearly flat |
-| Barabási–Albert | 0.11 | Nearly flat |
-| Erdős–Rényi | 0.05 | Flat |
+| Ring | 1.37 (1.24–1.49) | Superlinear at this threshold; about quadratic at a strict one (below) |
+| Barabási–Albert | 0.11 (0.09–0.12) | Nearly flat |
+| Watts–Strogatz | 0.11 (0.08–0.14) | Nearly flat |
+| Erdős–Rényi | 0.08 (0.05–0.10) | Nearly flat |
 
-This matches mixing-time theory qualitatively: well-connected graphs converge in roughly constant time, and a cycle doesn't. The study was re-run end to end on the current engine, and every slope reproduced. Details: [`experiments/gossip_topology_validation/`](experiments/gossip_topology_validation/).
+This matches mixing-time theory: well-connected graphs converge in roughly constant time, and a cycle doesn't. Details: [`experiments/gossip_topology_validation/`](experiments/gossip_topology_validation/).
 
-The ring's linear slope is an artifact of the 1% convergence threshold. At a 1e-4 threshold the ring is about quadratic (fitted slope 1.82 for synchronous push gossip, 1.78 for Boyd et al.'s asynchronous pairwise gossip), which matches the classical O(n²) result. Details: [`experiments/async_gossip_validation/`](experiments/async_gossip_validation/).
+The ring's exponent depends on the threshold. At 1e-4 it is about quadratic (1.83, CI 1.78–1.87, for synchronous push gossip; 1.80, CI 1.75–1.84, for Boyd et al.'s asynchronous pairwise gossip), matching the classical O(n²) result; at 1% it is about 1.35 for both. An earlier version reported "linear at 1%" (slope 0.99); with independent seeds that didn't hold. Details: [`experiments/async_gossip_validation/`](experiments/async_gossip_validation/).
 
-Raft leader election reproduces the qualitative findings of the Raft paper (Ongaro & Ousterhout 2014, Fig. 16). From a cold start without timeout randomization, no leader is ever elected. A 150–300 ms range elects in the first term every time. Timeouts near the network delay cause about 26 unnecessary re-elections per 5 seconds. In the paper's actual scenario, crashing the leader of a running cluster, a 150–300 ms range restores a leader in a median of 186 ms (p95 325 ms). Election Safety (at most one leader per term) held in all 11,000 trials across both studies. Details: [`experiments/raft_election_validation/`](experiments/raft_election_validation/).
+Raft leader election reproduces the qualitative findings of the Raft paper (Ongaro & Ousterhout 2014, Fig. 16). From a cold start without timeout randomization, no leader is ever elected. A 150–300 ms range elects in the first term in almost every trial (mean winning term 1.01). Timeouts near the network delay cause about 27 unnecessary re-elections per 5 seconds. In the paper's actual scenario, crashing the leader of a running cluster, a 150–300 ms range restores a leader in a median of 185 ms (95% CI 183–188, p95 335 ms), and at every range a crash needs a second election round more often than a cold start does. Election Safety (at most one leader per term) held in all 11,000 trials across both studies. Details: [`experiments/raft_election_validation/`](experiments/raft_election_validation/).
 
-With per-message latency, gossip convergence time grows linearly with mean delay (R² ≥ 0.997). At equal mean, exponential delays converge 23% faster than constant ones at mean 16 but slower at mean 1, so the shape of the delay distribution matters, not just its average. Details: [`experiments/latency_validation/`](experiments/latency_validation/).
+With per-message latency, gossip convergence time grows linearly with mean delay (R² ≥ 0.997). At equal mean, exponential delays converge 19% faster (95% CI 16–23%) than constant ones at mean 16 but slower at mean 1, so the shape of the delay distribution matters, not just its average. Details: [`experiments/latency_validation/`](experiments/latency_validation/).
 
-Under churn, gossip degrades gracefully: with half the agents down at any moment, the running agents still converge, 2–3× slower, with no cliff anywhere in between (t ∝ (1 − f)^−1 to (1 − f)^−1.5). Agreement across *every* agent, crashed ones included, is a different matter: with long outages it waits for the last agent that crashed before consensus formed to come back, and a simple model of that predicts the time within 10% (up to 20% of agents down). Lost messages match f(1 − f)·n·k·T within 4%. Details: [`experiments/churn_convergence_validation/`](experiments/churn_convergence_validation/).
+Under churn, gossip degrades gracefully: with half the agents down at any moment, the running agents still converge, 3–3.5× slower, with no cliff anywhere in between (t ∝ (1 − f)^−1.5 to (1 − f)^−1.8, 40 seeds per point). Agreement across *every* agent, crashed ones included, is a different matter: with long outages it waits for agents that crashed before consensus formed to come back, and at 10% down takes about twice as long as the running agents do. Churn doesn't bias the consensus value, and lost messages match f(1 − f)·n·k·T within 2.5%. Details: [`experiments/churn_convergence_validation/`](experiments/churn_convergence_validation/).
 
 ### Tests
 
-**898 passing on each of Python 3.10, 3.11, 3.12 and 3.13** (unit, integration, regression). Seven of the suites are *contract tests that discover their targets automatically*, so they also cover plugins and files that don't exist yet:
+**906 passing on each of Python 3.10, 3.11, 3.12 and 3.13** (unit, integration, regression). Seven of the suites are *contract tests that discover their targets automatically*, so they also cover plugins and files that don't exist yet:
 - every behavior × protocol pairing delivers exactly once per intended recipient
 - no topology generator scales quadratically
 - every module respects the layering (`plugins` → `domain`, `ports` only), with relative imports resolved
