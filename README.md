@@ -61,10 +61,10 @@ virtual_time,value
 
 | Plugin type | Included |
 |---|---|
-| Behaviors | Gossip averaging, leader election (max-id flooding), SIR epidemic, asynchronous pairwise gossip (Boyd et al.), Raft leader election |
+| Behaviors | Gossip averaging, leader election (max-id flooding), SIR epidemic, asynchronous pairwise gossip (Boyd et al.), Raft leader election, single-server queue (M/M/1) |
 | Protocols | Gossip (point-to-point), broadcast, lossy (configurable drop rate), latency (constant, uniform, exponential or lognormal per-message delay, plus loss) |
 | Topologies | Ring, 2-D grid (optional wrap), Erdős–Rényi, Watts–Strogatz, Barabási–Albert |
-| Metrics | Convergence variance, message count, S/I/R counts, leader-consensus fraction, full per-agent state trace, topology edge list, run fingerprint (SHA-256 per tick), Raft elections and election-safety violations, running agents and lost messages under churn, consensus among running vs. all agents |
+| Metrics | Convergence variance, message count, S/I/R counts, leader-consensus fraction, full per-agent state trace, topology edge list, run fingerprint (SHA-256 per tick), Raft elections and election-safety violations, running agents and lost messages under churn, consensus among running vs. all agents, queue waits and occupancy |
 | Exporters | CSV |
 | Churn (optional) | Scheduled faults with state-based targeting ("crash whoever is leader at t=1000"), random Poisson failure/recovery |
 

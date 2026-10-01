@@ -102,10 +102,8 @@ def test_discovery_found_the_plugins():
 
 @pytest.mark.parametrize("protocol_cls", PROTOCOLS, ids=lambda c: c.__name__)
 @pytest.mark.parametrize("behavior_cls", BEHAVIORS, ids=lambda c: c.__name__)
-def test_every_behavior_protocol_pair_delivers_once_per_neighbor(behavior_cls, protocol_cls):
-    topology, neighbors = _star_topology()
-    sender = AgentId(0)
-
+def _first_traffic(behavior_cls, sender, neighbors):
+    """What `sender` sends on its first step and on the timers that step sets."""
     behavior = behavior_cls()
     rng = random.Random(1)
     state = behavior.initialize(sender, BEHAVIOR_CONFIG, rng)
@@ -124,9 +122,30 @@ def test_every_behavior_protocol_pair_delivers_once_per_neighbor(behavior_cls, p
     for timer in result.set_timers:
         fired = behavior.on_timer(sender, result.next_state, timer.tag, neighbors, timer.delay)
         outbound.extend(fired.outbound_messages)
-    if not outbound:
-        pytest.skip(f"{behavior_cls.__name__} sends nothing on its first step or first timers")
+    return outbound
 
+
+@pytest.mark.parametrize("protocol_cls", PROTOCOLS, ids=lambda c: c.__name__)
+@pytest.mark.parametrize("behavior_cls", BEHAVIORS, ids=lambda c: c.__name__)
+def test_every_behavior_protocol_pair_delivers_once_per_neighbor(behavior_cls, protocol_cls):
+    # Try the sender in every role the star offers -- the centre (agent 0)
+    # and a leaf. A behavior can give agents roles by id (QueueBehavior's
+    # agent 0 is a server that never sends), and testing only the centre
+    # would skip such a behavior entirely. Skip only if NO role sends.
+    topology, _ = _star_topology()
+    cases = []
+    for sender in (AgentId(0), AgentId(1)):
+        outbound = _first_traffic(behavior_cls, sender, topology.neighbors(sender))
+        if outbound:
+            cases.append((sender, outbound))
+    if not cases:
+        pytest.skip(f"{behavior_cls.__name__} sends nothing on its first step or first timers, in any role")
+    for sender, outbound in cases:
+        _check_deliveries(behavior_cls, protocol_cls, topology, sender, outbound)
+
+
+def _check_deliveries(behavior_cls, protocol_cls, topology, sender, outbound):
+    neighbors = topology.neighbors(sender)
     protocol = protocol_cls()
     protocol.initialize(topology, PROTOCOL_CONFIG, random.Random(1))
 
@@ -185,7 +204,7 @@ def test_every_behavior_protocol_pair_delivers_once_per_neighbor(behavior_cls, p
     want = [expected[a] for a in sorted(expected)]
     assert got == want, (
         f"{behavior_cls.__name__} + {protocol_cls.__name__} delivered {got} copies "
-        f"per agent (agent 0 is the sender); the messages asked for {want}. Under a "
+        f"per agent (agent {sender} is the sender); the messages asked for {want}. Under a "
         f"lossless protocol each intended copy must arrive exactly once. A multiple "
         f"of the intended count means the behavior enumerated neighbors AND the "
         f"protocol fanned out (deliveries multiplied by degree); fewer means "
