@@ -11,17 +11,17 @@
     "numpy": "2.2.6"
   },
   "scenarios": {
-    "simul8/async_gossip": {
+    "samesim/async_gossip": {
       "status": "ok",
       "hash": "c189d5f583b260a152645ca6754bb0ad5bab2948f865946ab14b89791756cf21",
       "repeatable": true
     },
-    "simul8/sir": {
+    "samesim/sir": {
       "status": "ok",
       "hash": "940391d014bc9a4bd549742b4b4c1b00474d535e4fa531c0c25a08ec667ceacc",
       "repeatable": true
     },
-    "simul8/gossip": {
+    "samesim/gossip": {
       "status": "ok",
       "hash": "8f3efec0aaf02fadb507447b2037143dfad3439b4ee78dea5f97d4535d0eab04",
       "repeatable": true
