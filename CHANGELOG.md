@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- `CITATION.cff`, `CONTRIBUTING.md`, and project links on PyPI.
+
 ## 0.2.1 — 2026-10
 
 ### Added

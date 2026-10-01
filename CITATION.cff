@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use SameSim in your research, please cite it as below."
+title: "SameSim: bit-reproducible discrete-event simulation of message-passing agents"
+abstract: >-
+  A deterministic discrete-event simulator for message-passing agents on
+  dynamic networks (gossip, consensus, epidemics, queues, opinion dynamics).
+  The same seed gives the same run, bit for bit, on Linux, macOS and Windows
+  and on Python 3.10-3.13.
+type: software
+authors:
+  - given-names: Agnivesh
+    family-names: Kumar
+version: 0.2.1
+date-released: 2026-10-01
+license: MIT
+repository-code: "https://github.com/ImCYMBIOT/samesim"
+url: "https://pypi.org/project/samesim/"
+keywords:
+  - discrete-event simulation
+  - distributed algorithms
+  - gossip protocols
+  - agent-based modeling
+  - reproducibility

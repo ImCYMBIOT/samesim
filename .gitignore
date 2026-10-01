@@ -80,3 +80,6 @@ filestructure.txt
 
 # The determinism survey's per-platform fingerprints are data, not run output
 !experiments/determinism_survey/results/
+
+# JOSS paper draft, kept local for now
+paper/

@@ -70,7 +70,7 @@ virtual_time,value
 | Exporters | CSV |
 | Churn (optional) | Scheduled faults with state-based targeting ("crash whoever is leader at t=1000"), random Poisson failure/recovery |
 
-All eight shipped example configs (`samesim examples`) finish in under 3 seconds each (seven of them in under a second), including interpreter startup.
+All ten shipped example configs (`samesim examples`) finish in under 3 seconds each (eight of them in under a second), including interpreter startup.
 
 ## By the numbers
 
@@ -214,6 +214,14 @@ pip install -e ".[dev]"
 pytest                  # ~90 s
 pytest -m "not slow"    # skip the scale tests
 ```
+
+## Contributing
+
+Bug reports, questions and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Citing SameSim
+
+If you use SameSim in research, please cite it using [CITATION.cff](CITATION.cff) (GitHub's "Cite this repository" button gives BibTeX and APA), and publish the run's digest with your results so others can confirm they reproduced the identical run.
 
 ## License
 

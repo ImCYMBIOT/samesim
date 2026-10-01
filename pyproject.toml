@@ -29,6 +29,12 @@ dev = [
     "pytest-cov>=4.1",
 ]
 
+[project.urls]
+Homepage = "https://github.com/ImCYMBIOT/samesim"
+Documentation = "https://github.com/ImCYMBIOT/samesim/blob/main/docs/user_guide.md"
+Issues = "https://github.com/ImCYMBIOT/samesim/issues"
+Changelog = "https://github.com/ImCYMBIOT/samesim/blob/main/CHANGELOG.md"
+
 [project.scripts]
 samesim = "samesim.cli.main:main"
 
