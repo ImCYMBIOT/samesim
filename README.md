@@ -133,6 +133,10 @@ With per-message latency, gossip convergence time grows linearly with mean delay
 
 Under churn, gossip degrades gracefully: with half the agents down at any moment, the running agents still converge, 3–3.5× slower, with no cliff anywhere in between (t ∝ (1 − f)^−1.5 to (1 − f)^−1.8, 40 seeds per point). Agreement across *every* agent, crashed ones included, is a different matter: with long outages it waits for agents that crashed before consensus formed to come back, and at 10% down takes about twice as long as the running agents do. Churn doesn't bias the consensus value, and lost messages match f(1 − f)·n·k·T within 2.5%. Details: [`experiments/churn_convergence_validation/`](experiments/churn_convergence_validation/).
 
+### Reproducibility across platforms, measured
+
+The same fixed-seed scenarios in Simul8, SimPy, Mesa, NDlib and plain Python, on Linux, macOS and Windows × Python 3.10–3.13, with identical library versions. Simul8's runs were bit-identical in all 12 combinations. Two things broke bit-identity in ordinary Python model code: CPython 3.12's change to float `sum()` (an averaging model in Mesa or plain Python gives different results on 3.10–3.11 and 3.12–3.13), and the platform C math library, whose `log`, `exp`, `pow`, `sin` and random variates differ in the last bit between operating systems (e.g. at least 0.1% of `random.expovariate` draws). Simul8's `portable_math` was identical everywhere. Details: [`experiments/determinism_survey/`](experiments/determinism_survey/).
+
 ### Tests
 
 **1042 passing on each of Python 3.10, 3.11, 3.12 and 3.13** (unit, integration, regression). Seven of the suites are *contract tests that discover their targets automatically*, so they also cover plugins and files that don't exist yet:

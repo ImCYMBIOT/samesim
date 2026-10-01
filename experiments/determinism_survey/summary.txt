@@ -1,0 +1,38 @@
+12 runs: Linux 3.10, Linux 3.11, Linux 3.12, Linux 3.13, macOS 3.10, macOS 3.11, macOS 3.12, macOS 3.13, Windows 3.10, Windows 3.11, Windows 3.12, Windows 3.13.
+Library versions identical in every run: True ({'mesa': '3.0.3', 'ndlib': '6.0.0', 'networkx': '3.4.2', 'numpy': '2.2.6', 'simpy': '4.1.2'})
+
+| Scenario | Same seed, same output everywhere? | Groups of identical output |
+|---|---|---|
+| `simul8/async_gossip` | **yes** | all 12 |
+| `simul8/sir` | **yes** | all 12 |
+| `simul8/gossip` | **yes** | all 12 |
+| `simpy/mm1` | **yes** | all 12 |
+| `simpy/mm1_service` | no: 3 different results | Linux 3.10/3.11/3.12/3.13; macOS 3.10/3.11/3.12/3.13; Windows 3.10/3.11/3.12/3.13 |
+| `mesa/voter` | **yes** | all 12 |
+| `mesa/gossip` | no: 2 different results | Linux 3.10/3.11, macOS 3.10/3.11, Windows 3.10/3.11; Linux 3.12/3.13, macOS 3.12/3.13, Windows 3.12/3.13 |
+| `ndlib/sir` | **yes** | all 12 |
+| `python/gossip` | no: 2 different results | Linux 3.10/3.11, macOS 3.10/3.11, Windows 3.10/3.11; Linux 3.12/3.13, macOS 3.12/3.13, Windows 3.12/3.13 |
+| `libm/log` | no: 3 different results | Linux 3.10/3.11/3.12/3.13; macOS 3.10/3.11/3.12/3.13; Windows 3.10/3.11/3.12/3.13 |
+| `libm/exp` | no: 3 different results | Linux 3.10/3.11/3.12/3.13; macOS 3.10/3.11/3.12/3.13; Windows 3.10/3.11/3.12/3.13 |
+| `libm/pow` | no: 3 different results | Linux 3.10/3.11/3.12/3.13; macOS 3.10/3.11/3.12/3.13; Windows 3.10/3.11/3.12/3.13 |
+| `libm/sin` | no: 3 different results | Linux 3.10/3.11/3.12/3.13; macOS 3.10/3.11/3.12/3.13; Windows 3.10/3.11/3.12/3.13 |
+| `libm/expovariate` | no: 3 different results | Linux 3.10/3.11/3.12/3.13; macOS 3.10/3.11/3.12/3.13; Windows 3.10/3.11/3.12/3.13 |
+| `libm/gauss` | no: 3 different results | Linux 3.10/3.11/3.12/3.13; macOS 3.10/3.11/3.12/3.13; Windows 3.10/3.11/3.12/3.13 |
+| `libm/lognormvariate` | no: 3 different results | Linux 3.10/3.11/3.12/3.13; macOS 3.10/3.11/3.12/3.13; Windows 3.10/3.11/3.12/3.13 |
+| `portable/log` | **yes** | all 12 |
+| `portable/exp` | **yes** | all 12 |
+| `portable/expovariate` | **yes** | all 12 |
+| `portable/normalvariate` | **yes** | all 12 |
+| `portable/lognormvariate` | **yes** | all 12 |
+
+How often the platform math library disagrees: blocks of 100 outputs (of 2,000) that differ between operating systems, Python 3.12:
+
+| Function | Linux vs macOS | Linux vs Windows | macOS vs Windows |
+|---|---:|---:|---:|
+| `log` | 81 | 60 | 74 |
+| `exp` | 325 | 753 | 804 |
+| `pow` | 303 | 158 | 290 |
+| `sin` | 1964 | 1914 | 1989 |
+| `expovariate` | 214 | 322 | 293 |
+| `gauss` | 1944 | 1877 | 1970 |
+| `lognormvariate` | 309 | 811 | 860 |
