@@ -1,0 +1,18 @@
+2000 seeds per tool; each seed is one graph, shared by both tools.
+
+| Tool | Runs reaching consensus | P(opinion 1 wins) | Mean M(0) (prediction) | Wins − M(0), 95% CI | ≡ 0 within ±0.03 (TOST p) | Wins − naive 0.10, 95% CI |
+|---|---:|---:|---:|---:|---:|---:|
+| simul8 | 2000 / 2000 | 0.267 | 0.272 | -0.005 ± 0.019 | 0.0063 | +0.167 ± 0.019 |
+| mesa | 2000 / 2000 | 0.255 | 0.272 | -0.017 ± 0.019 | 0.097 | +0.154 ± 0.019 |
+
+Simul8 − Mesa win rate: +0.012; equivalent within ±0.03 (TOST p = 0.097)
+Consensus tick: Simul8 mean 43.2, median 32; Mesa mean 42.7, median 31; KS p = 0.21
+
+Throughput, agent-updates per second of run time (median, IQR):
+
+| Tool | Updates/s | IQR |
+|---|---:|---:|
+| simul8 | 139,213 | 120,986–151,600 |
+| mesa | 1,026,714 | 914,497–1,123,623 |
+
+Mesa / Simul8: 7.4×
