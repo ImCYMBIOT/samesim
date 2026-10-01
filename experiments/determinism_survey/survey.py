@@ -13,7 +13,9 @@ Scenarios, each written the way the tool's documentation writes models:
                           Poisson clocks, exponential latency
     simul8/sir            examples/sir_random.yaml
     simul8/gossip         examples/gossip_1000_agents.yaml: float averaging
-    simpy/mm1             M/M/1 queue with random.expovariate, the SimPy idiom
+    simpy/mm1             M/M/1 queue with random.expovariate, the SimPy idiom;
+                          records each customer's arrival, start and end time
+    simpy/mm1_service     the same run, recording each drawn service time
     mesa/voter            synchronous voter model (integer state)
     mesa/gossip           push-gossip averaging, mean via sum() / len
     ndlib/sir             NDlib SIRModel on a NetworkX G(n, p) graph
@@ -79,18 +81,34 @@ def _simul8(example: str) -> str:
 # ------------------------------------------------------------------- SimPy
 
 def simpy_mm1() -> str:
+    return _simpy_mm1()[0]
+
+
+def simpy_mm1_service() -> str:
+    return _simpy_mm1()[1]
+
+
+def _simpy_mm1():
+    """One M/M/1 run; returns hashes of (event times, drawn service times).
+
+    The two differ in how they meet a last-bit difference in a draw: added
+    to a clock near 20,000, a difference of ~1e-16 is far below the float
+    spacing there (~4e-12) and usually rounds away; a service time recorded
+    as drawn keeps it."""
     import simpy
     rng = random.Random(SEED)
     env = simpy.Environment()
     server = simpy.Resource(env, capacity=1)
-    log = []
+    log, services = [], []
 
     def customer():
         arrival = env.now
         with server.request() as req:
             yield req
             start = env.now
-            yield env.timeout(rng.expovariate(1.0))
+            service = rng.expovariate(1.0)
+            services.append(service)
+            yield env.timeout(service)
         log.append((arrival, start, env.now))
 
     def source():
@@ -100,7 +118,7 @@ def simpy_mm1() -> str:
 
     env.process(source())
     env.run(until=20_000)
-    return digest(log)
+    return digest(log), digest(services)
 
 
 # -------------------------------------------------------------------- Mesa
@@ -273,6 +291,7 @@ SCENARIOS = {
     "simul8/sir": ("simul8", lambda: _simul8("sir_random.yaml")),
     "simul8/gossip": ("simul8", lambda: _simul8("gossip_1000_agents.yaml")),
     "simpy/mm1": ("simpy", simpy_mm1),
+    "simpy/mm1_service": ("simpy", simpy_mm1_service),
     "mesa/voter": ("mesa", mesa_voter),
     "mesa/gossip": ("mesa", mesa_gossip),
     "ndlib/sir": ("ndlib", ndlib_sir),
