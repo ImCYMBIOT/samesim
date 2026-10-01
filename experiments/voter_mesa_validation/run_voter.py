@@ -95,6 +95,14 @@ def run_simul8(seed: int) -> dict:
             "consensus_tick": t, "updates_per_s": N * (len(rows) - 1) / wall}
 
 
+
+def _mesa_seed(seed):
+    """Mesa >= 3.1 takes rng=; 3.0 only seed=. Both seed model.random the same way."""
+    import inspect
+    import mesa
+    return {"rng": seed} if "rng" in inspect.signature(mesa.Model.__init__).parameters else {"seed": seed}
+
+
 class VoterAgent(mesa.Agent):
     def __init__(self, model, node: int, opinion: int):
         super().__init__(model)
@@ -110,7 +118,7 @@ class VoterAgent(mesa.Agent):
 
 class VoterModel(mesa.Model):
     def __init__(self, adj: dict[int, list[int]], seed: int):
-        super().__init__(rng=seed)
+        super().__init__(**_mesa_seed(seed))
         self.adj = adj
         self.by_node = {n: VoterAgent(self, n, 1 if n < ONES else 0) for n in sorted(adj)}
 

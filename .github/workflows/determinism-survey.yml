@@ -1,0 +1,29 @@
+name: determinism-survey
+
+# Manual only. Runs experiments/determinism_survey/survey.py -- fixed-seed
+# scenarios in Simul8, SimPy, Mesa, NDlib and plain Python -- on every
+# OS x Python combination and uploads each run's fingerprints. Comparing the
+# fingerprints shows which tools give bit-identical results across versions
+# and platforms. Not a test: other tools differing is a finding, not a failure.
+on:
+  workflow_dispatch:
+
+jobs:
+  survey:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install -e . -r experiments/determinism_survey/requirements.txt
+      - run: python experiments/determinism_survey/survey.py --out survey-${{ matrix.os }}-${{ matrix.python-version }}.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: survey-${{ matrix.os }}-${{ matrix.python-version }}
+          path: survey-${{ matrix.os }}-${{ matrix.python-version }}.json

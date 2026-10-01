@@ -1,0 +1,9 @@
+# Identical versions on every Python 3.10-3.13 and OS, so a differing hash
+# can only come from the interpreter or the platform, not a library upgrade.
+# (These are the newest releases supporting all four Python versions.)
+simpy==4.1.2
+mesa==3.0.3
+ndlib==6.0.0
+networkx==3.4.2
+numpy==2.2.6
+scipy==1.15.3
