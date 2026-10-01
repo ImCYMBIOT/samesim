@@ -26,6 +26,6 @@ from .app.api import run, validate
 from .app.catalog import discover_plugins, list_examples
 from .app.experiment_runner import RunResult
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 __all__ = ["run", "validate", "list_examples", "discover_plugins", "RunResult", "__version__"]

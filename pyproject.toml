@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "samesim"
-version = "0.2.0"
+version = "0.2.1"
 description = "Same seed, same simulation: a deterministic discrete-event simulator for message-passing agents"
 readme = "README.md"
 license = {text = "MIT"}
