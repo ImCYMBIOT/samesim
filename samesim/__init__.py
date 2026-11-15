@@ -20,12 +20,17 @@ From Python:
 
     samesim.validate("my_study.yaml")   # every check a run does, without running
 
+    s = samesim.session("gossip_ring")  # the same run, under your control
+    s.run_until(10.0); s.step()         # advance by time, or one event
+    result = s.finish()
+
 run() keeps results in memory and writes files only when output_dir is given.
 """
-from .app.api import run, validate
+from .app.api import run, session, validate
 from .app.catalog import discover_plugins, list_examples
-from .app.experiment_runner import RunResult
+from .app.experiment_runner import RunResult, Session
 
 __version__ = "0.2.1"
 
-__all__ = ["run", "validate", "list_examples", "discover_plugins", "RunResult", "__version__"]
+__all__ = ["run", "session", "validate", "list_examples", "discover_plugins", "RunResult", "Session",
+           "__version__"]

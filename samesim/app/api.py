@@ -22,7 +22,7 @@ import yaml
 from ..domain.experiment import ExperimentConfig
 from .catalog import find_example, list_examples
 from .config_loader import ConfigLoader
-from .experiment_runner import ExperimentRunner, RunResult
+from .experiment_runner import ExperimentRunner, RunResult, Session
 
 ConfigLike = "dict[str, Any] | str | Path"
 
@@ -58,6 +58,15 @@ def run(config: dict[str, Any] | str | Path, output_dir: str | Path | None = Non
     """Run an experiment. Writes result files only if output_dir is given."""
     raw = prepare(config, seed=seed, overrides=overrides)
     return ExperimentRunner().run(raw, output_dir, write=output_dir is not None)
+
+
+def session(config: dict[str, Any] | str | Path, *, seed: int | None = None,
+            overrides: dict[str, Any] | None = None) -> Session:
+    """Set a run up without running it; advance it with the returned Session.
+
+    Stepping a session to its end gives exactly the run samesim.run() gives.
+    """
+    return ExperimentRunner().open(prepare(config, seed=seed, overrides=overrides))
 
 
 def validate(config: dict[str, Any] | str | Path, *, seed: int | None = None,
