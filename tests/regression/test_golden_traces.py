@@ -100,6 +100,7 @@ TOPOLOGY_CONFIGS = {
     "WattsStrogatzTopology": {"k": 4, "rewire_probability": 0.2},
     "BarabasiAlbertTopology": {"m": 2},
     "GridTopology": {"wrap": True},
+    "GeometricTopology": {"radius": 0.25},
 }
 
 

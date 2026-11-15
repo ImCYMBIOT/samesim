@@ -104,7 +104,8 @@ class TopologyManager:
             nbrs(b).discard(a)
         for a, s in touched.items():
             adjacency[a] = frozenset(s)
-        self._topology = TopologyGraph(agent_ids=agent_ids, adjacency=adjacency)
+        self._topology = TopologyGraph(agent_ids=agent_ids, adjacency=adjacency,
+                                       positions=old.positions)
         return self._topology
 
     def neighbors(self, agent_id: AgentId) -> frozenset[AgentId]:
