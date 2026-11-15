@@ -41,10 +41,10 @@ Config keys: none.
 from __future__ import annotations
 
 import hashlib
-import json
 from collections.abc import Mapping
 from typing import Any
 
+from ...domain.canonical import canonical_json
 from ...domain.event import (
     AgentStateChangedEvent,
     Event,
@@ -63,23 +63,8 @@ from ...ports.metric_collector import MetricCollectorPort
 _NAME = MetricName("trace_digest")
 
 
-def _canonical(value: Any) -> Any:
-    """Reduce a value to JSON-serializable form with a single fixed ordering."""
-    if isinstance(value, Mapping):
-        return {str(k): _canonical(v) for k, v in value.items()}
-    if isinstance(value, (set, frozenset)):
-        return sorted((_canonical(v) for v in value), key=repr)
-    if isinstance(value, (list, tuple)):
-        return [_canonical(v) for v in value]
-    if value is None or isinstance(value, (bool, int, float, str)):
-        return value
-    return repr(value)
-
-
 def _encode(record: Any) -> bytes:
-    return json.dumps(
-        _canonical(record), sort_keys=True, separators=(",", ":")
-    ).encode("utf-8") + b"\n"
+    return canonical_json(record).encode("utf-8") + b"\n"
 
 
 class TraceDigestMetric(MetricCollectorPort):
