@@ -58,6 +58,22 @@ samesim run my_study.yaml --seed 7 \
 Errors print one line, with a suggestion when a name is misspelled; add
 `--log-level DEBUG` for the full traceback.
 
+- **`{experiment}_trace.jsonl`**, if the run lists `EventTraceMetric` and
+  `JsonlTraceExporter`. Line 1 is a header with the experiment, seed,
+  topology, agent positions (if any) and initial states; every further line
+  is one event, in the order it happened:
+
+  ```
+  {"arrive":2.0,"broadcast":false,"from":3,"id":7,"kind":"send","payload":{"value":0.42},"seq":18,"t":1.0,"to":4}
+  {"broadcast":false,"from":3,"id":7,"kind":"deliver","payload":{"value":0.42},"seq":31,"t":2.0,"to":4}
+  {"agent":4,"kind":"state","seq":40,"state":{"value":0.37},"t":2.0}
+  ```
+
+  A `send` carries the time the message is due (`arrive`), so a message can
+  be followed while in flight. The file is byte-identical for the same
+  config and seed. In Python, `trace_events(result.series["event_trace"])`
+  from `samesim.plugins.metrics.event_trace` gives the same events as dicts.
+
 `samesim visualize` builds a self-contained HTML dashboard: a chart per
 metric, plus a network animation when the run included `StateTraceMetric`
 and `TopologyMetric`. The page loads its charting libraries from public
@@ -82,6 +98,27 @@ samesim.run({...}, output_dir="results")            # a config dict; writes file
 `samesim.run` accepts a YAML path, an example name or a dict in the YAML
 file's shape. It keeps results in memory and writes files only when given
 `output_dir`.
+
+### One step at a time
+
+`samesim.session` takes the same arguments as `samesim.run`, sets the run
+up and stops before its first event. You then advance it yourself:
+
+```python
+s = samesim.session("raft_leader_crash", seed=7)
+s.run_until(1000.0)          # every event due at or before t = 1000
+event = s.step()             # dispatch one event and get it back; None at the end
+s.time, s.next_event_time    # where the run stands, and when the next event is due
+s.series["raft_elections"]   # every metric, as recorded so far
+s.run()                      # everything that is left
+result = s.finish()          # a RunResult; finish("results") also writes files
+```
+
+A session advanced to its end is the same run as `samesim.run`, with the
+same digest, however it was paused along the way. Calling `finish()`
+earlier ends the run at that point. Use it to inspect a run in the middle,
+to drive one from a debugger or a user interface, or to stop on a
+condition no config can express.
 
 ## 3. The config file
 
@@ -278,6 +315,7 @@ any behavior works with any protocol.
 | `random_graph.ErdosRenyiTopology` | G(n, p). `1.0` gives a complete graph. | `edge_probability` (0.01) |
 | `watts_strogatz.WattsStrogatzTopology` | Small world: ring lattice of degree k, rewired. | `k` (4, even), `rewire_probability` (0.1) |
 | `barabasi_albert.BarabasiAlbertTopology` | Scale-free, preferential attachment. | `m` (2) |
+| `geometric.GeometricTopology` | Random geometric graph: agents placed in a rectangle, linked when within `radius` of each other. The graph keeps each agent's position. | `radius` (required), `width` (1.0), `height` (1.0), `positions` (random; or one `[x, y]` per agent) |
 
 ### Metrics (`metrics.*`)
 
@@ -297,6 +335,7 @@ None take options. The series name is the file suffix in the output.
 | `voter_metrics.VoterMetric` | `voter` | Fraction holding opinion 1 per tick, tagged with the degree-weighted fraction (the martingale whose start value is the win probability) |
 | `queue_metrics.QueueMetric` | `queue` | For `QueueBehavior`: each customer's wait in queue (with time in system), and per tick the integral of the number in system, so any window's time-average can be computed |
 | `trace_digest.TraceDigestMetric` | `trace_digest` | SHA-256 fingerprint of the whole run so far, per tick (section 9) |
+| `event_trace.EventTraceMetric` | `event_trace` | Every event in dispatch order: sends (with their due time), deliveries, losses, state changes, timers, churn changes and ticks (large; section 8) |
 
 ### Churn (`dynamics.*`)
 
@@ -310,6 +349,7 @@ None take options. The series name is the file suffix in the output.
 | Class | Output |
 |---|---|
 | `csv_exporter.CsvExporter` | One CSV per metric, into the `--output` directory |
+| `jsonl_trace.JsonlTraceExporter` | `{experiment}_trace.jsonl`: the event trace, one JSON object per line. Needs `EventTraceMetric`. |
 
 ## 8. What a run writes
 
