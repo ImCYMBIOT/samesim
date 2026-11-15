@@ -37,6 +37,7 @@ from ..core.randomness_manager import RandomnessManager
 from ..core.scheduler import Scheduler
 from ..core.time_manager import TimeManager
 from ..core.topology_manager import TopologyManager
+from ..domain.event import Event
 from ..domain.experiment import ExperimentConfig
 from ..domain.ids import AgentId
 from ..domain.metric import MetricSeries
@@ -274,6 +275,111 @@ class _Prepared:
     persistence_adapters: list[PersistencePort]
 
 
+class Session:
+    """One run, advanced under the caller's control.
+
+    Created by samesim.session(...) or ExperimentRunner.open(...).
+
+        s = samesim.session("gossip_ring")
+        s.run_until(10.0)            # everything due at or before t=10
+        event = s.step()             # the next event, or None at the end
+        s.series["convergence_variance"]   # metrics so far
+        result = s.finish()          # a RunResult, as samesim.run returns
+
+    Advancing a session to its end dispatches exactly the events
+    samesim.run() does, in the same order, so the result and its digest are
+    identical. finish() before the end stops the run where it stands.
+    """
+
+    def __init__(self, config: ExperimentConfig, prepared: _Prepared, runner: "ExperimentRunner") -> None:
+        self._config = config
+        self._prepared = prepared
+        self._runner = runner
+        self._wall = 0.0
+        self._result: RunResult | None = None
+
+    @property
+    def config(self) -> ExperimentConfig:
+        """The resolved experiment configuration."""
+        return self._config
+
+    @property
+    def time(self) -> float:
+        """Virtual time of the last event dispatched (0.0 before the first)."""
+        return float(self._prepared.engine.current_time)
+
+    @property
+    def next_event_time(self) -> float | None:
+        """When the next event is due, or None if the run has nothing left."""
+        t = self._prepared.engine.next_event_time
+        return None if t is None else float(t)
+
+    @property
+    def finished(self) -> bool:
+        """True once finish() has been called."""
+        return self._prepared.engine.is_finished
+
+    @property
+    def events_processed(self) -> int:
+        """Events dispatched so far."""
+        return self._prepared.engine.events_processed
+
+    @property
+    def series(self) -> dict[str, MetricSeries]:
+        """Every metric's series as it stands now, keyed by series name."""
+        return {str(s.name): s for s in self._prepared.metrics_engine.get_all_series()}
+
+    def step(self) -> Event | None:
+        """Dispatch the next event and return it; None when none is left."""
+        start = time.perf_counter()
+        try:
+            return self._prepared.engine.step()
+        finally:
+            self._wall += time.perf_counter() - start
+
+    def run_until(self, virtual_time: float) -> int:
+        """Dispatch every event due at or before virtual_time; return how many."""
+        start = time.perf_counter()
+        try:
+            return self._prepared.engine.run_until(virtual_time)
+        finally:
+            self._wall += time.perf_counter() - start
+
+    def run(self) -> None:
+        """Dispatch every remaining event."""
+        engine = self._prepared.engine
+        start = time.perf_counter()
+        try:
+            while engine.step() is not None:
+                pass
+        finally:
+            self._wall += time.perf_counter() - start
+
+    def finish(self, output_dir: Path | str | None = None) -> RunResult:
+        """End the run where it stands and return its results.
+
+        Writes result files only if output_dir is given. Calling it again
+        returns the same RunResult and writes nothing more.
+        """
+        if self._result is not None:
+            return self._result
+        prepared, config = self._prepared, self._config
+        prepared.engine.finish()
+        series = prepared.metrics_engine.get_all_series()
+        written_paths: list[str] = []
+        if output_dir is not None:
+            output_path = Path(output_dir)
+            output_path.mkdir(parents=True, exist_ok=True)
+            for adapter in prepared.persistence_adapters:
+                for path in adapter.write(series, config, output_path):
+                    written_paths.append(str(path))
+                    logger.info("Wrote results: %s", path)
+            self._runner._write_summaries(config, self._wall, written_paths, output_path)
+        self._result = RunResult(config=config, series={str(s.name): s for s in series},
+                                 wall_clock_seconds=self._wall, output_files=written_paths)
+        return self._result
+
+
 class ExperimentRunner:
     """Assembles and runs a simulation experiment from a YAML config file.
 
@@ -333,25 +439,20 @@ class ExperimentRunner:
         Returns:
             The metric series, the resolved config and run time.
         """
+        session = self.open(config)
+        session.run()
+        if not write:
+            return session.finish()
+        return session.finish(output_dir if output_dir else Path("./results"))
+
+    def open(self, config: ExperimentConfig | dict[str, Any] | Path | str) -> "Session":
+        """Set a run up and hand back a Session to advance it step by step.
+
+        Does everything run() does before the first event (and raises what
+        it would raise); dispatches nothing.
+        """
         config = self.resolve(config)
-        prepared = self._prepare(config)
-
-        start_wall_time = time.perf_counter()
-        prepared.engine.run()
-        elapsed_wall_time = time.perf_counter() - start_wall_time
-
-        series = prepared.metrics_engine.get_all_series()
-        written_paths: list[str] = []
-        if write:
-            output_path = Path(output_dir) if output_dir else Path("./results")
-            output_path.mkdir(parents=True, exist_ok=True)
-            for adapter in prepared.persistence_adapters:
-                for path in adapter.write(series, config, output_path):
-                    written_paths.append(str(path))
-                    logger.info("Wrote results: %s", path)
-            self._write_summaries(config, elapsed_wall_time, written_paths, output_path)
-        return RunResult(config=config, series={str(s.name): s for s in series},
-                         wall_clock_seconds=elapsed_wall_time, output_files=written_paths)
+        return Session(config, self._prepare(config), self)
 
     def _prepare(self, config: ExperimentConfig) -> _Prepared:
         """Steps 2-8: everything before the first event."""

@@ -62,6 +62,7 @@ from ..domain.event import (
     Event,
     MessageDeliveredEvent,
     MessageLostEvent,
+    MessageSentEvent,
     SimulationEndedEvent,
     SimulationStartedEvent,
     TickEvent,
@@ -169,12 +170,22 @@ class SimulationEngine:
         self._wake_pending: dict[AgentId, VirtualTime] = {}
         self._timers: dict[tuple[AgentId, str], EventId] = {}
 
+        # Run lifecycle: start() -> step()/run_until() ... -> finish().
+        self._started: bool = False
+        self._finished: bool = False
+        self._events_processed: int = 0
+        # MessageSentEvents are built only if a collector asked for them
+        # (decided in start(), once every collector is registered).
+        self._emit_sent: bool = False
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
 
     def run(self) -> None:
         """Execute the simulation from t=0 to termination.
+
+        Equivalent to start(), step() until it returns None, then finish().
 
         Termination conditions (first that triggers):
             1. The next queued event's virtual_time exceeds
@@ -183,6 +194,23 @@ class SimulationEngine:
                processed; only events strictly beyond it are excluded).
             2. EventQueue is empty (no more events to process)
         """
+        self.start()
+        while self.step() is not None:
+            pass
+        self.finish()
+
+    def start(self) -> None:
+        """Schedule the bootstrap events. Dispatches nothing.
+
+        Called once, by run() or by the first step() / run_until().
+
+        Raises:
+            RuntimeError: if the engine was already started (single-use).
+        """
+        if self._started:
+            raise RuntimeError("SimulationEngine.start() called twice: an engine runs one experiment")
+        self._started = True
+        self._emit_sent = self._metrics.has_subscribers(MessageSentEvent)
         logger.info(
             "Simulation '%s' starting | agents=%d | max_time=%.1f | seed=%d",
             self._config.name,
@@ -209,33 +237,75 @@ class SimulationEngine:
         if self._dynamics is not None:
             self._schedule_dynamics(VirtualTime(0.0))
 
-        events_processed = 0
-        max_virtual_time = self._config.simulation.max_virtual_time
+    def step(self) -> Event | None:
+        """Dispatch the next event and return it, or None if none is left.
 
-        while self._scheduler.has_events():
-            # Peek before dequeuing: stop only once the *next* event would
-            # fall strictly beyond the window, so every event AT
-            # max_virtual_time (including the final TickEvent and any
-            # deliveries landing exactly then) is still fully drained,
-            # rather than breaking after the first such event and silently
-            # dropping the rest of that same-instant batch.
+        "Left" means queued at or before max_virtual_time: the peek happens
+        before dequeuing, so every event AT max_virtual_time (the final
+        TickEvent and any deliveries landing exactly then) is still
+        dispatched, and only events strictly beyond it are excluded.
+
+        Stepping a run to its end dispatches exactly the events run() does,
+        in the same order: run() is this loop. Starts the engine if needed.
+
+        Raises:
+            RuntimeError: if finish() has already been called.
+        """
+        if self._finished:
+            raise RuntimeError("SimulationEngine.step() after finish(): the run is over")
+        if not self._started:
+            self.start()
+        next_time = self._scheduler.peek_next_time()
+        if next_time is None:
+            return None
+        if next_time > self._config.simulation.max_virtual_time:
+            logger.info(
+                "Termination: max_virtual_time=%.1f reached (next event at t=%.1f is beyond it)",
+                self._config.simulation.max_virtual_time,
+                float(next_time),
+            )
+            return None
+        event = self._scheduler.next_event()
+        if event is None:
+            return None
+        self._time.advance(event.virtual_time)
+        self._dispatch(event)
+        self._events_processed += 1
+        return event
+
+    def run_until(self, virtual_time: float) -> int:
+        """Dispatch every event due at or before virtual_time.
+
+        The run then stands just after the last event at or before that
+        time: everything simultaneous with it has happened, nothing later
+        has. Returns the number of events dispatched by this call.
+        """
+        if self._finished:
+            raise RuntimeError("SimulationEngine.run_until() after finish(): the run is over")
+        if not self._started:
+            self.start()
+        dispatched = 0
+        while True:
             next_time = self._scheduler.peek_next_time()
-            if next_time is not None and next_time > max_virtual_time:
-                logger.info(
-                    "Termination: max_virtual_time=%.1f reached (next event at t=%.1f is beyond it)",
-                    max_virtual_time,
-                    float(next_time),
-                )
+            if next_time is None or next_time > virtual_time:
                 break
-
-            event = self._scheduler.next_event()
-            if event is None:
+            if self.step() is None:
                 break
+            dispatched += 1
+        return dispatched
 
-            self._time.advance(event.virtual_time)
-            self._dispatch(event)
-            events_processed += 1
+    def finish(self) -> None:
+        """End the run where it stands: emit SimulationEndedEvent to metrics.
 
+        After a full run that is the final event's time. After a partial
+        one (run_until, then finish) it is the time reached, and events
+        still queued are never dispatched. Calling it again does nothing.
+        """
+        if self._finished:
+            return
+        if not self._started:
+            self.start()
+        self._finished = True
         # Emit the end marker synchronously (not through the queue)
         end_event = SimulationEndedEvent(
             event_id=self._next_event_id(),
@@ -246,9 +316,36 @@ class SimulationEngine:
         logger.info(
             "Simulation '%s' complete | events_processed=%d | final_time=%.1f",
             self._config.name,
-            events_processed,
+            self._events_processed,
             float(self._time.current_time),
         )
+
+    @property
+    def current_time(self) -> VirtualTime:
+        """Virtual time of the last event dispatched (0.0 before the first)."""
+        return self._time.current_time
+
+    @property
+    def next_event_time(self) -> VirtualTime | None:
+        """When step() would next dispatch, or None if it would return None."""
+        if self._finished:
+            return None
+        if not self._started:
+            return VirtualTime(0.0)
+        next_time = self._scheduler.peek_next_time()
+        if next_time is None or next_time > self._config.simulation.max_virtual_time:
+            return None
+        return next_time
+
+    @property
+    def is_finished(self) -> bool:
+        """True once finish() has run."""
+        return self._finished
+
+    @property
+    def events_processed(self) -> int:
+        """Events dispatched so far."""
+        return self._events_processed
 
     # ------------------------------------------------------------------
     # Internal dispatch
@@ -395,6 +492,15 @@ class SimulationEngine:
         for msg in result.outbound_messages:
             for delivery in self._comm.route(msg, agent_id, topology):
                 delivery_time = self._arrival_time(delivery.delay, now)
+                if self._emit_sent:
+                    self._metrics.on_event(MessageSentEvent(
+                        event_id=self._next_event_id(),
+                        virtual_time=now,
+                        source_id=agent_id,
+                        recipient_id=delivery.recipient_id,
+                        message=delivery.message,
+                        arrival_time=delivery_time,
+                    ), now)
                 if delivery_time is None:
                     continue  # lands after the run ends; never observable
                 self._scheduler.schedule(MessageDeliveredEvent(

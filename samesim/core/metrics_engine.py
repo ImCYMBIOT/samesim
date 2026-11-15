@@ -62,6 +62,13 @@ class MetricsEngine:
         for collector in self._subscriptions.get(event_type, []):
             collector.on_event(event, virtual_time)
 
+    def has_subscribers(self, event_type: type[Event]) -> bool:
+        """Whether any registered collector subscribed to this event type.
+
+        Lets the engine skip building events nobody will read.
+        """
+        return bool(self._subscriptions.get(event_type))
+
     def get_all_series(self) -> list[MetricSeries]:
         """Return the accumulated MetricSeries from all registered collectors."""
         return [c.get_series() for c in self._collectors]
