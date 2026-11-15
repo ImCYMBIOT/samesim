@@ -3,6 +3,19 @@
 ## Unreleased
 
 ### Added
+- `samesim.session(config)`: a run you advance yourself, with `step()` (one
+  event), `run_until(t)`, `run()` and `finish()`, and metrics readable in
+  between. Stepped to its end it is the same run as `samesim.run`, digest
+  included. `SimulationEngine` gains `start()`, `step()`, `run_until()` and
+  `finish()`; `run()` is now that loop.
+- `MessageSentEvent`: metrics can observe a message as it leaves, with the
+  time it is due. Built only when a collector subscribes.
+- `EventTraceMetric` and `JsonlTraceExporter`: the whole run, event by
+  event, in memory and as a self-describing JSON Lines file.
+- `GeometricTopology`: agents placed in a rectangle and linked when within
+  a radius. `TopologyGraph` can now carry agent `positions`.
+- `samesim.domain.canonical`: the canonical JSON form the digest already
+  used, shared with the trace.
 - `CITATION.cff`, `CONTRIBUTING.md`, and project links on PyPI.
 
 ## 0.2.1 — 2026-10

@@ -57,6 +57,7 @@ CONFIGS: dict[str, dict] = {
     "BarabasiAlbertTopology": {"m": 4},
     "GridTopology": {"wrap": True},
     "RingTopology": {},
+    "GeometricTopology": {"__degree__": 8.0},  # radius derived from n
 }
 
 SIZES = (1_000, 2_000, 4_000, 8_000)
@@ -87,6 +88,10 @@ def _config_for(generator_cls: type, n: int) -> dict:
     density = config.pop("__density__", None)
     if density is not None:
         config["edge_probability"] = density / (n - 1)
+    degree = config.pop("__degree__", None)
+    if degree is not None:
+        # In the unit square, expected degree is (n - 1) * pi * radius^2.
+        config["radius"] = math.sqrt(degree / (math.pi * (n - 1)))
     return config
 
 

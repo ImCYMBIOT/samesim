@@ -96,6 +96,27 @@ class MessageDeliveredEvent(Event):
 
 
 @dataclass(frozen=True)
+class MessageSentEvent(Event):
+    """A message left its sender, bound for one recipient.
+
+    Emitted to metrics (not scheduled) when a behavior's outbound message is
+    routed: once per delivery the protocol returned, so a broadcast to k
+    neighbors is k of these and a message the protocol dropped is none.
+    virtual_time is the send time; arrival_time is when the matching
+    MessageDeliveredEvent (or MessageLostEvent) is due, or None if that
+    falls after the run ends. Under synchronous activation arrival_time is
+    the tick that consumes the message.
+
+    Purely an observation: it changes nothing about the run. The engine
+    builds it only when some collector subscribes to it.
+    """
+
+    recipient_id: AgentId = field(kw_only=True)
+    message: "Message" = field(kw_only=True)  # type: ignore[name-defined]  # noqa: F821
+    arrival_time: Optional[VirtualTime] = field(kw_only=True)
+
+
+@dataclass(frozen=True)
 class AgentStateChangedEvent(Event):
     """An agent's state was updated this tick.
 
@@ -173,6 +194,7 @@ from .message import Message  # noqa: E402 — must be after class definitions
 # Patch the forward reference so isinstance checks work at runtime.
 MessageDeliveredEvent.__dataclass_fields__["message"].type = Message
 MessageLostEvent.__dataclass_fields__["message"].type = Message
+MessageSentEvent.__dataclass_fields__["message"].type = Message
 
 from .topology_change import TopologyChange  # noqa: E402
 
