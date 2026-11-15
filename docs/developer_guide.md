@@ -85,6 +85,16 @@ samesim/
 8. Metric series go to the persistence plugins, then `summary.json` and
    `summary.md` are written.
 
+Step 7 is a loop anyone can drive. `SimulationEngine.run()` is `start()`
+(schedule the bootstrap events), `step()` until it returns `None` (dispatch
+one event each), then `finish()` (emit `SimulationEndedEvent`).
+`run_until(t)` dispatches everything due at or before `t`.
+`ExperimentRunner.open(config)` does steps 1-6 and returns a `Session` that
+exposes those calls, which is what `samesim.session()` hands to users.
+Because `run()` is that same loop, a stepped run cannot differ from an
+unbroken one; `tests/integration/test_stepping.py` checks it on every
+example.
+
 ### Event priorities
 
 When events share a virtual time, the lower priority number runs first:
@@ -286,6 +296,11 @@ generate(agent_ids, config, rng) -> TopologyGraph
 Must be pure and must include every agent in the adjacency, with an empty
 set for isolated agents. It must not be quadratic; see section 6.
 
+A generator that places agents in space also sets `positions` on the graph
+(a tuple of floats per agent), as `GeometricTopology` does. The engine
+never reads them and carries them through churn unchanged; protocols and
+metrics may use them, and agents that join later have none.
+
 ### MetricCollectorPort: one measured series
 
 ```python
@@ -297,9 +312,14 @@ reset() -> None
 ```
 
 Subscribe to as few event types as you need. The event types are in
-`samesim/domain/event.py`: ticks, deliveries, state changes, timer firings,
-topology changes and lost messages. `on_setup` gives read-only copies,
-never the core objects.
+`samesim/domain/event.py`: ticks, sends, deliveries, state changes, timer
+firings, topology changes and lost messages. `on_setup` gives read-only
+copies, never the core objects.
+
+`MessageSentEvent` is built only when some collector subscribes to it, so
+it costs nothing otherwise. It takes event ids of its own, which shifts the
+ids of later events without changing their order; nothing in a run may
+depend on an id's value.
 
 ### TopologyDynamicsPort: churn
 
